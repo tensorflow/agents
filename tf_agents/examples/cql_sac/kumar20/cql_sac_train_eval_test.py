@@ -20,11 +20,9 @@ from __future__ import division
 from __future__ import print_function
 
 from gym import error
-
 import rlds
 import tensorflow as tf
 import tensorflow_datasets as tfds
-
 from tf_agents.examples.cql_sac.kumar20 import cql_sac_train_eval
 
 _ENV_NAME = 'antmaze-medium-play-v0'
@@ -33,7 +31,25 @@ _COUNT = 10
 
 
 def _load_test_rlds(dataset_name: str) -> tf.data.Dataset:
-  with tfds.testing.mock_data(num_examples=20):
+  count = 20
+
+  def as_dataset(*args, **kwargs):
+    del args, kwargs
+    obs_dim = 29
+    act_dim = 8
+    steps = {
+        rlds.OBSERVATION: [[float(i)] * obs_dim for i in range(count + 1)],
+        rlds.ACTION: [[float(i)] * act_dim for i in range(count + 1)],
+        rlds.REWARD: [float(j) for j in list(range(count))] + [0.0],
+        rlds.DISCOUNT: [float(1)] * (count + 1),
+        rlds.IS_FIRST: [i == 0 for i in range(count)] + [True],
+        rlds.IS_LAST: [i == count - 1 for i in range(count + 1)],
+        rlds.IS_TERMINAL: [False for i in range(count + 1)],
+    }
+    episode = {rlds.STEPS: [tf.data.Dataset.from_tensor_slices(steps)]}
+    return tf.data.Dataset.from_tensor_slices(episode)
+
+  with tfds.testing.mock_data(as_dataset_fn=as_dataset, num_examples=count):
     return rlds.load(dataset_name)
 
 
@@ -52,7 +68,8 @@ class CqlSacTrainEval(tf.test.TestCase):
         eval_episodes=1,
         data_take=_COUNT,
         data_prefetch=1,
-        pad_end_of_episodes=True)
+        pad_end_of_episodes=True,
+    )
 
   def testTransformationsTrainingSuccess(self):
     root_dir = self.get_temp_dir()
@@ -69,7 +86,8 @@ class CqlSacTrainEval(tf.test.TestCase):
         eval_episodes=1,
         data_take=_COUNT,
         data_prefetch=1,
-        pad_end_of_episodes=True)
+        pad_end_of_episodes=True,
+    )
 
   def testIncorrectDatasetTrainingFails(self):
     root_dir = self.get_temp_dir()
@@ -87,7 +105,8 @@ class CqlSacTrainEval(tf.test.TestCase):
           eval_episodes=1,
           data_take=_COUNT,
           data_prefetch=1,
-          pad_end_of_episodes=True)
+          pad_end_of_episodes=True,
+      )
 
   def testIncorrectEnvironmentTrainingFails(self):
     root_dir = self.get_temp_dir()
@@ -105,7 +124,8 @@ class CqlSacTrainEval(tf.test.TestCase):
           eval_episodes=1,
           data_take=_COUNT,
           data_prefetch=1,
-          pad_end_of_episodes=True)
+          pad_end_of_episodes=True,
+      )
 
 
 if __name__ == '__main__':

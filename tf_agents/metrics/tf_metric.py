@@ -46,8 +46,7 @@ class TFStepMetric(tf.Module):
 
     Args:
       *args:
-      **kwargs: A mini-batch of inputs to the Metric, as passed to
-        `__call__()`.
+      **kwargs: A mini-batch of inputs to the Metric, as passed to `__call__()`.
     """
     raise NotImplementedError('Metrics must define a call() member function')
 
@@ -110,7 +109,8 @@ class TFStepMetric(tf.Module):
     result = self.result()
     if train_step is not None:
       summaries.append(
-          tf.compat.v2.summary.scalar(name=tag, data=result, step=train_step))
+          tf.compat.v2.summary.scalar(name=tag, data=result, step=train_step)
+      )
     if prefix:
       prefix += '_'
     for step_metric in step_metrics:
@@ -120,10 +120,9 @@ class TFStepMetric(tf.Module):
       step_tag = '{}vs_{}/{}'.format(prefix, step_metric.name, self.name)
       # Summaries expect the step value to be an int64.
       step = tf.cast(step_metric.result(), tf.int64)
-      summaries.append(tf.compat.v2.summary.scalar(
-          name=step_tag,
-          data=result,
-          step=step))
+      summaries.append(
+          tf.compat.v2.summary.scalar(name=step_tag, data=result, step=step)
+      )
     return summaries
 
 
@@ -152,8 +151,8 @@ class TFHistogramStepMetric(TFStepMetric):
     result = self.result()
     if train_step is not None:
       summaries.append(
-          tf.compat.v2.summary.histogram(
-              name=tag, data=result, step=train_step))
+          tf.compat.v2.summary.histogram(name=tag, data=result, step=train_step)
+      )
     if prefix:
       prefix += '_'
     for step_metric in step_metrics:
@@ -164,8 +163,8 @@ class TFHistogramStepMetric(TFStepMetric):
       # Summaries expect the step value to be an int64.
       step = tf.cast(step_metric.result(), tf.int64)
       summaries.append(
-          tf.compat.v2.summary.histogram(
-              name=step_tag, data=result, step=step))
+          tf.compat.v2.summary.histogram(name=step_tag, data=result, step=step)
+      )
     return summaries
 
 
@@ -215,14 +214,17 @@ class TFMultiMetricStepMetric(TFStepMetric):
       # index.
       metric_name = single_metric_name + str(metric_index)
       # In case there is a valid individual name for each metric, use it.
-      if (metric_index < len(self.metric_names) and
-          len(result_list) == len(self.metric_names) and
-          self.metric_names[metric_index] is not None):
+      if (
+          metric_index < len(self.metric_names)
+          and len(result_list) == len(self.metric_names)
+          and self.metric_names[metric_index] is not None
+      ):
         metric_name = self.metric_names[metric_index]
       tag = common.join_scope(tag, metric_name)
       if train_step is not None:
         summaries.append(
-            tf.compat.v2.summary.scalar(name=tag, data=result, step=train_step))
+            tf.compat.v2.summary.scalar(name=tag, data=result, step=train_step)
+        )
     if prefix:
       prefix += '_'
     for metric_index, result in enumerate(result_list):
@@ -235,17 +237,19 @@ class TFMultiMetricStepMetric(TFStepMetric):
         # index.
         metric_name = single_metric_name + str(metric_index)
         # In case there is a valid individual name for each metric, use it.
-        if (metric_index < len(self.metric_names) and
-            len(result_list) == len(self.metric_names) and
-            self.metric_names[metric_index] is not None):
+        if (
+            metric_index < len(self.metric_names)
+            and len(result_list) == len(self.metric_names)
+            and self.metric_names[metric_index] is not None
+        ):
           metric_name = self.metric_names[metric_index]
-        step_tag = '{}vs_{}/{}/{}'.format(prefix, step_metric.name,
-                                          self.name, metric_name)
+        step_tag = '{}vs_{}/{}/{}'.format(
+            prefix, step_metric.name, self.name, metric_name
+        )
         # Summaries expect the step value to be an int64.
         step = tf.cast(step_metric.result(), tf.int64)
-        summaries.append(tf.compat.v2.summary.scalar(
-            name=step_tag,
-            data=result,
-            step=step))
+        summaries.append(
+            tf.compat.v2.summary.scalar(name=step_tag, data=result, step=step)
+        )
 
     return summaries

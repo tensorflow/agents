@@ -45,9 +45,9 @@ class BatchedPyPolicy(py_policy.PyPolicy):
   shared mutex locks (from the threading module).
   """
 
-  def __init__(self,
-               policies: Sequence[py_policy.PyPolicy],
-               multithreading: bool = True):
+  def __init__(
+      self, policies: Sequence[py_policy.PyPolicy], multithreading: bool = True
+  ):
     """Batch together multiple (non-batched) py policies.
 
     The policies can be different but must use the same action and
@@ -55,12 +55,11 @@ class BatchedPyPolicy(py_policy.PyPolicy):
 
     Args:
       policies: List python policies (must be non-batched).
-      multithreading: Python bool describing whether interactions with the
-        given policies should happen in their own threadpool.  If `False`,
-        then all interaction is performed serially in the current thread.
-
-        This may be combined with `TFPyPolicy(..., py_policy_is_batched=True)`
-        to ensure that multiple policies are all run in the same thread.
+      multithreading: Python bool describing whether interactions with the given
+        policies should happen in their own threadpool.  If `False`, then all
+        interaction is performed serially in the current thread.  This may be
+        combined with `TFPyPolicy(..., py_policy_is_batched=True)` to ensure
+        that multiple policies are all run in the same thread.
 
     Raises:
       ValueError: If policies is not a list or tuple, or is zero length, or if
@@ -80,26 +79,29 @@ class BatchedPyPolicy(py_policy.PyPolicy):
     self._policy_step_spec = self._policies[0].policy_step_spec
     self._trajectory_spec = self._policies[0].trajectory_spec
     self._collect_data_spec = self._policies[0].collect_data_spec
-    self._observation_and_action_constraint_splitter = \
-        self._policies[0].observation_and_action_constraint_splitter
+    self._observation_and_action_constraint_splitter = self._policies[
+        0
+    ].observation_and_action_constraint_splitter
 
-    self._validate_spec(py_policy.PyPolicy.time_step_spec,
-                        self._time_step_spec)
-    self._validate_spec(py_policy.PyPolicy.action_spec,
-                        self._action_spec)
-    self._validate_spec(py_policy.PyPolicy.policy_state_spec,
-                        self._policy_state_spec)
-    self._validate_spec(py_policy.PyPolicy.info_spec,
-                        self._info_spec)
-    self._validate_spec(py_policy.PyPolicy.policy_step_spec,
-                        self._policy_step_spec)
-    self._validate_spec(py_policy.PyPolicy.trajectory_spec,
-                        self._trajectory_spec)
-    self._validate_spec(py_policy.PyPolicy.collect_data_spec,
-                        self._collect_data_spec)
+    self._validate_spec(py_policy.PyPolicy.time_step_spec, self._time_step_spec)
+    self._validate_spec(py_policy.PyPolicy.action_spec, self._action_spec)
+    self._validate_spec(
+        py_policy.PyPolicy.policy_state_spec, self._policy_state_spec
+    )
+    self._validate_spec(py_policy.PyPolicy.info_spec, self._info_spec)
+    self._validate_spec(
+        py_policy.PyPolicy.policy_step_spec, self._policy_step_spec
+    )
+    self._validate_spec(
+        py_policy.PyPolicy.trajectory_spec, self._trajectory_spec
+    )
+    self._validate_spec(
+        py_policy.PyPolicy.collect_data_spec, self._collect_data_spec
+    )
     self._validate_spec(
         py_policy.PyPolicy.observation_and_action_constraint_splitter,
-        self._observation_and_action_constraint_splitter)
+        self._observation_and_action_constraint_splitter,
+    )
 
     # Create a multiprocessing threadpool for execution.
     if multithreading:
@@ -110,7 +112,8 @@ class BatchedPyPolicy(py_policy.PyPolicy):
         self._action_spec,
         self._policy_state_spec,
         self._info_spec,
-        self._observation_and_action_constraint_splitter)
+        self._observation_and_action_constraint_splitter,
+    )
 
   def __del__(self):
     """Join external processes, if necessary."""
@@ -120,10 +123,12 @@ class BatchedPyPolicy(py_policy.PyPolicy):
 
   def _validate_spec(self, policy_spec_method, spec_to_match):
     # pytype: disable=attribute-error
-    if any(policy_spec_method.__get__(p) != spec_to_match
-           for p in self._policies):
+    if any(
+        policy_spec_method.__get__(p) != spec_to_match for p in self._policies
+    ):
       raise ValueError(
-          "All policies must have the same specs.  Saw: %s" % self._policies)
+          "All policies must have the same specs.  Saw: %s" % self._policies
+      )
     # pytype: enable=attribute-error
 
   def _execute(self, fn, iterable):
@@ -135,16 +140,19 @@ class BatchedPyPolicy(py_policy.PyPolicy):
   def _get_initial_state(self, batch_size: int) -> types.NestedArray:
     if self._num_policies == 1:  # pytype: disable=attribute-error  # trace-all-classes
       return nest_utils.batch_nested_array(
-          self._policies[0].get_initial_state())  # pytype: disable=attribute-error  # trace-all-classes
+          self._policies[0].get_initial_state()  # pytype: disable=attribute-error  # trace-all-classes
+      )
     else:
       infos = self._execute(_execute_get_initial_state, self._policies)  # pytype: disable=attribute-error  # trace-all-classes
       infos = nest_utils.unbatch_nested_array(infos)
       return nest_utils.stack_nested_arrays(infos)
 
-  def _action(self,
-              time_step: ts.TimeStep,
-              policy_state: types.NestedArray,
-              seed: Optional[types.Seed] = None) -> ps.PolicyStep:
+  def _action(
+      self,
+      time_step: ts.TimeStep,
+      policy_state: types.NestedArray,
+      seed: Optional[types.Seed] = None,
+  ) -> ps.PolicyStep:
     """Forward a batch of time_step and policy_states to the wrapped policies.
 
     Args:
@@ -164,7 +172,8 @@ class BatchedPyPolicy(py_policy.PyPolicy):
     """
     if seed is not None:
       raise NotImplementedError(
-          "seed is not supported; but saw seed: {}".format(seed))
+          "seed is not supported; but saw seed: {}".format(seed)
+      )
     if self._num_policies == 1:  # pytype: disable=attribute-error  # trace-all-classes
       time_step = nest_utils.unbatch_nested_array(time_step)
       policy_state = nest_utils.unbatch_nested_array(policy_state)
@@ -175,20 +184,26 @@ class BatchedPyPolicy(py_policy.PyPolicy):
       if len(unstacked_time_steps) != len(self._policies):  # pytype: disable=attribute-error  # trace-all-classes
         raise ValueError(
             "Primary dimension of time_step items does not match "
-            "batch size: %d vs. %d" % (len(unstacked_time_steps),
-                                       len(self._policies)))  # pytype: disable=attribute-error  # trace-all-classes
+            "batch size: %d vs. %d"
+            % (len(unstacked_time_steps), len(self._policies))  # pytype: disable=attribute-error  # trace-all-classes
+        )
       unstacked_policy_states = [()] * len(unstacked_time_steps)
       if policy_state:
         unstacked_policy_states = nest_utils.unstack_nested_arrays(policy_state)
         if len(unstacked_policy_states) != len(self._policies):  # pytype: disable=attribute-error  # trace-all-classes
           raise ValueError(
               "Primary dimension of policy_state items does not match "
-              "batch size: %d vs. %d" % (len(unstacked_policy_states),
-                                         len(self._policies)))  # pytype: disable=attribute-error  # trace-all-classes
-      policy_steps = self._execute(_execute_policy,
-                                   zip(self._policies,  # pytype: disable=attribute-error  # trace-all-classes
-                                       unstacked_time_steps,
-                                       unstacked_policy_states))
+              "batch size: %d vs. %d"
+              % (len(unstacked_policy_states), len(self._policies))  # pytype: disable=attribute-error  # trace-all-classes
+          )
+      policy_steps = self._execute(
+          _execute_policy,
+          zip(
+              self._policies,  # pytype: disable=attribute-error  # trace-all-classes
+              unstacked_time_steps,
+              unstacked_policy_states,
+          ),
+      )
       return nest_utils.stack_nested_arrays(policy_steps)
 
 

@@ -22,7 +22,6 @@ from __future__ import print_function
 from absl import flags
 from absl import logging
 import tensorflow as tf
-
 from tf_agents.system import system_multiprocessing as multiprocessing
 from tf_agents.train import ppo_learner
 from tf_agents.train import ppo_learner_test_utils
@@ -56,16 +55,21 @@ class DistributedPpoLearnerTest(test_utils.TestCase):
     # dataset.
     num_collected_episodes = 20
     traj = ppo_learner_test_utils.create_trajectories(
-        n_time_steps=n_time_steps, batch_size=batch_size)
+        n_time_steps=n_time_steps, batch_size=batch_size
+    )
     info = ()
 
     def dataset_fn():
       return tf.data.Dataset.from_tensors(
-          (traj, info),).repeat(num_collected_episodes)
+          (traj, info),
+      ).repeat(num_collected_episodes)
 
     with tpu_strategy.scope():
-      print('Number of devices for the strategy: {}'.format(
-          tpu_strategy.num_replicas_in_sync))
+      print(
+          'Number of devices for the strategy: {}'.format(
+              tpu_strategy.num_replicas_in_sync
+          )
+      )
       fake_agent = ppo_learner_test_utils.FakePPOAgent(tpu_strategy)
 
     learner = ppo_learner.PPOLearner(
@@ -80,24 +84,28 @@ class DistributedPpoLearnerTest(test_utils.TestCase):
         # Disable shuffling to have deterministic input into agent.train.
         shuffle_buffer_size=1,
         triggers=None,
-        strategy=tpu_strategy)
+        strategy=tpu_strategy,
+    )
 
     learner.run()
 
     # Check that fake agent was called the expected number of times.
     num_train_frames = (
-        num_collected_episodes * batch_size * n_time_steps * num_epochs)
+        num_collected_episodes * batch_size * n_time_steps * num_epochs
+    )
     num_minibatches = num_train_frames / minibatch_size
     num_minibatches_per_replica = int(num_minibatches / num_replicas)
-    self.assertEqual(fake_agent.train_called_times.numpy(),
-                     num_minibatches_per_replica)
+    self.assertEqual(
+        fake_agent.train_called_times.numpy(), num_minibatches_per_replica
+    )
 
     # Check that fake agent was called the expected number of times the second
     # time it is called.
     fake_agent.reset()
     learner.run()
-    self.assertEqual(fake_agent.train_called_times.numpy(),
-                     num_minibatches_per_replica)
+    self.assertEqual(
+        fake_agent.train_called_times.numpy(), num_minibatches_per_replica
+    )
 
 
 if __name__ == '__main__':

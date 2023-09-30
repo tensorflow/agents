@@ -23,7 +23,6 @@ from typing import Mapping, Optional, Sequence, Text, Tuple, Union
 
 from absl import logging
 import tensorflow.compat.v2 as tf
-
 from tf_agents.agents import tf_agent
 from tf_agents.metrics import py_metric
 from tf_agents.policies import async_policy_saver
@@ -56,8 +55,9 @@ class PolicySavedModelTrigger(interval_trigger.IntervalTrigger):
       async_saving: bool = False,
       metadata_metrics: Optional[Mapping[Text, py_metric.PyMetric]] = None,
       start: int = 0,
-      extra_concrete_functions: Optional[Sequence[
-          Tuple[str, policy_saver.def_function.Function]]] = None,
+      extra_concrete_functions: Optional[
+          Sequence[Tuple[str, policy_saver.def_function.Function]]
+      ] = None,
       batch_size: Optional[int] = None,
       use_nest_path_signatures: bool = True,
       save_greedy_policy=True,
@@ -102,8 +102,10 @@ class PolicySavedModelTrigger(interval_trigger.IntervalTrigger):
         signature takes as input `(time_step, policy_state)`.
     """
     if async_saving and metadata_metrics:
-      raise NotImplementedError('Support for metadata_metrics is not '
-                                'implemented for async policy saver.')
+      raise NotImplementedError(
+          'Support for metadata_metrics is not '
+          'implemented for async policy saver.'
+      )
 
     self._agent = agent
     self._train_step = train_step
@@ -124,30 +126,36 @@ class PolicySavedModelTrigger(interval_trigger.IntervalTrigger):
       if save_greedy_policy:
         greedy = greedy_policy.GreedyPolicy(agent.policy)
 
-    self._raw_policy_saver = self._build_saver(raw_policy, batch_size,
-                                               use_nest_path_signatures)
+    self._raw_policy_saver = self._build_saver(
+        raw_policy, batch_size, use_nest_path_signatures
+    )
     savers = [(self._raw_policy_saver, learner.RAW_POLICY_SAVED_MODEL_DIR)]
 
     if save_collect_policy:
-      collect_policy_saver = self._build_saver(agent.collect_policy, batch_size,
-                                               use_nest_path_signatures)
+      collect_policy_saver = self._build_saver(
+          agent.collect_policy, batch_size, use_nest_path_signatures
+      )
 
       savers.append(
-          (collect_policy_saver, learner.COLLECT_POLICY_SAVED_MODEL_DIR))
+          (collect_policy_saver, learner.COLLECT_POLICY_SAVED_MODEL_DIR)
+      )
 
     if save_greedy_policy:
-      greedy_policy_saver = self._build_saver(greedy, batch_size,
-                                              use_nest_path_signatures)
+      greedy_policy_saver = self._build_saver(
+          greedy, batch_size, use_nest_path_signatures
+      )
       savers.append(
-          (greedy_policy_saver, learner.GREEDY_POLICY_SAVED_MODEL_DIR))
+          (greedy_policy_saver, learner.GREEDY_POLICY_SAVED_MODEL_DIR)
+      )
 
     extra_concrete_functions = extra_concrete_functions or []
     for saver, _ in savers:
       for name, fn in extra_concrete_functions:
         saver.register_concrete_function(name, fn)
 
-    self._checkpoint_dir = os.path.join(saved_model_dir,
-                                        learner.POLICY_CHECKPOINT_DIR)
+    self._checkpoint_dir = os.path.join(
+        saved_model_dir, learner.POLICY_CHECKPOINT_DIR
+    )
 
     # TODO(b/173815037): Use a TF-Agents util to check for whether a saved
     # policy already exists.
@@ -157,7 +165,8 @@ class PolicySavedModelTrigger(interval_trigger.IntervalTrigger):
         saver.save(os.path.join(saved_model_dir, path))
 
     super(PolicySavedModelTrigger, self).__init__(
-        interval, self._save_fn, start=start)
+        interval, self._save_fn, start=start
+    )
 
   def _build_saver(
       self,
@@ -182,17 +191,19 @@ class PolicySavedModelTrigger(interval_trigger.IntervalTrigger):
     for k, v in self._metadata_metrics.items():
       self._metadata[k].assign(v.result())
     self._raw_policy_saver.save_checkpoint(
-        os.path.join(self._checkpoint_dir,
-                     'policy_checkpoint_%010d' % self._train_step.numpy()))
+        os.path.join(
+            self._checkpoint_dir,
+            'policy_checkpoint_%010d' % self._train_step.numpy(),
+        )
+    )
 
 
 class StepPerSecondLogTrigger(interval_trigger.IntervalTrigger):
   """Logs train_steps_per_second."""
 
-  def __init__(self,
-               train_step: tf.Variable,
-               interval: int,
-               log_to_terminal: bool = True):
+  def __init__(
+      self, train_step: tf.Variable, interval: int, log_to_terminal: bool = True
+  ):
     """Initializes a StepPerSecondLogTrigger.
 
     Args:
@@ -207,8 +218,9 @@ class StepPerSecondLogTrigger(interval_trigger.IntervalTrigger):
     self._log_to_terminal = log_to_terminal
     self._step_timer = step_per_second_tracker.StepPerSecondTracker(train_step)
 
-    super(StepPerSecondLogTrigger, self).__init__(interval,
-                                                  self._log_steps_per_sec)
+    super(StepPerSecondLogTrigger, self).__init__(
+        interval, self._log_steps_per_sec
+    )
 
   def _log_steps_per_sec(self) -> None:
     steps_per_sec = self._step_timer.steps_per_second()
@@ -218,16 +230,20 @@ class StepPerSecondLogTrigger(interval_trigger.IntervalTrigger):
       logging.info('Step: %d, %.3f steps/sec', step, steps_per_sec)
     with tf.compat.v2.summary.record_if(True):
       with tf.name_scope('RunTime/'):
-        tf.summary.scalar(name='train_steps_per_sec',
-                          data=steps_per_sec,
-                          step=step)
+        tf.summary.scalar(
+            name='train_steps_per_sec', data=steps_per_sec, step=step
+        )
 
 
 class ReverbCheckpointTrigger(interval_trigger.IntervalTrigger):
   """Checkpoints data from Reverb replay buffer."""
 
-  def __init__(self, train_step: tf.Variable, interval: int,
-               reverb_client: types.ReverbClient):
+  def __init__(
+      self,
+      train_step: tf.Variable,
+      interval: int,
+      reverb_client: types.ReverbClient,
+  ):
     """Initializes a StepPerSecondLogTrigger.
 
     Args:

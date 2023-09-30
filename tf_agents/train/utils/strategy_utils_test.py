@@ -17,7 +17,6 @@
 
 from absl.testing.absltest import mock
 import tensorflow.compat.v2 as tf
-
 from tf_agents.train.utils import strategy_utils
 from tf_agents.utils import test_utils
 
@@ -35,9 +34,13 @@ class StrategyUtilsTest(test_utils.TestCase):
   @mock.patch.object(tf.tpu.experimental, 'initialize_tpu_system')
   @mock.patch.object(tf.config, 'experimental_connect_to_cluster')
   @mock.patch.object(tf.distribute.cluster_resolver, 'TPUClusterResolver')
-  def test_tpu_strategy(self, mock_tpu_cluster_resolver,
-                        mock_experimental_connect_to_cluster,
-                        mock_initialize_tpu_system, mock_tpu_strategy):
+  def test_tpu_strategy(
+      self,
+      mock_tpu_cluster_resolver,
+      mock_experimental_connect_to_cluster,
+      mock_initialize_tpu_system,
+      mock_tpu_strategy,
+  ):
     resolver = mock.MagicMock()
     mock_tpu_cluster_resolver.return_value = resolver
     mock_strategy = mock.MagicMock()

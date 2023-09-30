@@ -18,7 +18,6 @@
 N: number of samples
 B: batch size
 A: action size
-
 """
 
 from __future__ import absolute_import
@@ -43,9 +42,9 @@ class ActionsSampler(object):
 
     Args:
       action_spec: A nest of BoundedTensorSpec representing the actions.
-      sample_clippers: A list of callables that are applied to
-        the generated samples. These callables take in a nested structure
-        matching the action_spec and must return a matching structure.
+      sample_clippers: A list of callables that are applied to the generated
+        samples. These callables take in a nested structure matching the
+        action_spec and must return a matching structure.
       sample_rejecters: A list of callables that will reject samples and return
         a mask tensor.
     """
@@ -59,8 +58,8 @@ class ActionsSampler(object):
 
     Args:
       target_sample_indices: A [B, M] sized tensor indicating the index
-      samples: A nested structure corresponding to action_spec. Each action is
-        a [B, N, A] sized tensor.
+      samples: A nested structure corresponding to action_spec. Each action is a
+        [B, N, A] sized tensor.
 
     Returns:
       distribution_params: Distribution related parameters refitted to
@@ -69,19 +68,15 @@ class ActionsSampler(object):
     raise NotImplementedError('refit_distribution not implemented.')
 
   @abc.abstractmethod
-  def sample_batch_and_clip(
-      self,
-      num_samples,
-      distribution_params,
-      state=None):
+  def sample_batch_and_clip(self, num_samples, distribution_params, state=None):
     """Samples and clips a batch of actions [N, B, A] with distribution params.
 
     Args:
       num_samples: Number of actions to sample each round.
       distribution_params: Distribution related parameters. The sampler will use
         it to sample actions.
-      state: Nested state tensor constructed according to oberservation_spec
-        of the task.
+      state: Nested state tensor constructed according to oberservation_spec of
+        the task.
 
     Returns:
       actions: batch containing the full action vector
@@ -105,6 +100,7 @@ class SampleClipper(object):
     Args:
       actions: An [N, B, A] Tensor representing sampled actions.
       state: Nested state tensor.
+
     Returns:
       actions: An [N, B, A] Tensor representing clipped actions.
     """
@@ -127,8 +123,8 @@ class SampleRejecter(object):
     Args:
       actions: An [N, B, A] Tensor representing sampled actions.
       state: Nested state tensor.
+
     Returns:
       actions: An [N, B, A] Tensor representing clipped actions.
     """
     raise NotImplementedError('clip not implemented.')
-

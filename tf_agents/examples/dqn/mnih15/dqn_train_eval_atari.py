@@ -53,17 +53,26 @@ from tf_agents.utils import common
 
 FLAGS = flags.FLAGS
 
-flags.DEFINE_string('root_dir', os.getenv('TEST_UNDECLARED_OUTPUTS_DIR'),
-                    'Root directory for writing logs/summaries/checkpoints.')
+flags.DEFINE_string(
+    'root_dir',
+    os.getenv('TEST_UNDECLARED_OUTPUTS_DIR'),
+    'Root directory for writing logs/summaries/checkpoints.',
+)
 flags.DEFINE_integer(
-    'reverb_port', None,
-    'Port for reverb server, if None, use a randomly chosen unused port.')
+    'reverb_port',
+    None,
+    'Port for reverb server, if None, use a randomly chosen unused port.',
+)
 flags.DEFINE_integer(
-    'num_iterations', 50000000,
-    'Total number iterations to perform, defaults to 50M collect steps.')
+    'num_iterations',
+    50000000,
+    'Total number iterations to perform, defaults to 50M collect steps.',
+)
 flags.DEFINE_integer(
-    'eval_interval', 250000,
-    'Number of train steps between evaluations. Set to 0 to skip.')
+    'eval_interval',
+    250000,
+    'Number of train steps between evaluations. Set to 0 to skip.',
+)
 flags.DEFINE_multi_string('gin_file', None, 'Paths to the gin-config files.')
 flags.DEFINE_multi_string('gin_bindings', None, 'Gin binding parameters.')
 
@@ -75,15 +84,18 @@ def create_q_network(num_actions):
   conv2d = functools.partial(
       tf.keras.layers.Conv2D,
       activation=tf.keras.activations.relu,
-      kernel_initializer=kernel_initializer)
+      kernel_initializer=kernel_initializer,
+  )
   dense = functools.partial(
       tf.keras.layers.Dense,
       activation=tf.keras.activations.relu,
-      kernel_initializer=kernel_initializer)
+      kernel_initializer=kernel_initializer,
+  )
   logits = functools.partial(
       tf.keras.layers.Dense,
       activation=None,
-      kernel_initializer=kernel_initializer)
+      kernel_initializer=kernel_initializer,
+  )
 
   return sequential.Sequential(
       # We divide the grayscale pixel values by 255 here rather than storing
@@ -95,8 +107,9 @@ def create_q_network(num_actions):
           conv2d(64, (3, 3), 1),
           tf.keras.layers.Flatten(),
           dense(512),
-          logits(num_actions)
-      ])
+          logits(num_actions),
+      ]
+  )
 
 
 @gin.configurable
@@ -127,29 +140,31 @@ def train_eval(
     policy_save_interval=250000,
     eval_interval=1000,
     eval_episodes=30,
-    debug_summaries=True):
+    debug_summaries=True,
+):
   """Trains and evaluates DQN."""
 
   collect_env = suite_atari.load(
       env_name,
       max_episode_steps=max_episode_frames_collect,
-      gym_env_wrappers=suite_atari.DEFAULT_ATARI_GYM_WRAPPERS_WITH_STACKING)
+      gym_env_wrappers=suite_atari.DEFAULT_ATARI_GYM_WRAPPERS_WITH_STACKING,
+  )
   eval_env = suite_atari.load(
       env_name,
       max_episode_steps=max_episode_frames_eval,
-      gym_env_wrappers=suite_atari.DEFAULT_ATARI_GYM_WRAPPERS_WITH_STACKING)
+      gym_env_wrappers=suite_atari.DEFAULT_ATARI_GYM_WRAPPERS_WITH_STACKING,
+  )
 
   unused_observation_tensor_spec, action_tensor_spec, time_step_tensor_spec = (
-      spec_utils.get_tensor_specs(collect_env))
+      spec_utils.get_tensor_specs(collect_env)
+  )
 
   train_step = train_utils.create_train_step()
 
   num_actions = action_tensor_spec.maximum - action_tensor_spec.minimum + 1
   epsilon = tf.compat.v1.train.polynomial_decay(
-      1.0,
-      train_step,
-      epsilon_decay_period,
-      end_learning_rate=epsilon_greedy)
+      1.0, train_step, epsilon_decay_period, end_learning_rate=epsilon_greedy
+  )
   agent = dqn_agent.DqnAgent(
       time_step_tensor_spec,
       action_tensor_spec,
@@ -163,12 +178,14 @@ def train_eval(
           rho=0.95,
           momentum=0.95,
           epsilon=0.01,
-          centered=True),
+          centered=True,
+      ),
       td_errors_loss_fn=common.element_wise_huber_loss,
       gamma=gamma,
       reward_scale_factor=reward_scale_factor,
       train_step_counter=train_step,
-      debug_summaries=debug_summaries)
+      debug_summaries=debug_summaries,
+  )
 
   table_name = 'uniform_table'
   sequence_length = n_step_update + 1
@@ -177,20 +194,25 @@ def train_eval(
       max_size=replay_capacity,
       sampler=reverb.selectors.Uniform(),
       remover=reverb.selectors.Fifo(),
-      rate_limiter=reverb.rate_limiters.MinSize(1))
+      rate_limiter=reverb.rate_limiters.MinSize(1),
+  )
   reverb_server = reverb.Server([table], port=reverb_port)
   reverb_replay = reverb_replay_buffer.ReverbReplayBuffer(
       agent.collect_data_spec,
       sequence_length=sequence_length,
       table_name=table_name,
-      local_server=reverb_server)
+      local_server=reverb_server,
+  )
   rb_observer = reverb_utils.ReverbAddTrajectoryObserver(
-      reverb_replay.py_client, table_name,
+      reverb_replay.py_client,
+      table_name,
       sequence_length=sequence_length,
-      stride_length=1)
+      stride_length=1,
+  )
 
   dataset = reverb_replay.as_dataset(
-      sample_batch_size=batch_size, num_steps=2).prefetch(3)
+      sample_batch_size=batch_size, num_steps=2
+  ).prefetch(3)
   experience_dataset_fn = lambda: dataset
 
   saved_model_dir = os.path.join(root_dir, learner.POLICY_SAVED_MODEL_DIR)
@@ -202,7 +224,8 @@ def train_eval(
           agent,
           train_step,
           interval=policy_save_interval,
-          metadata_metrics={triggers.ENV_STEP_METADATA_KEY: env_step_metric}),
+          metadata_metrics={triggers.ENV_STEP_METADATA_KEY: env_step_metric},
+      ),
       triggers.StepPerSecondLogTrigger(train_step, interval=100),
   ]
 
@@ -211,24 +234,28 @@ def train_eval(
       train_step,
       agent,
       experience_dataset_fn,
-      triggers=learning_triggers)
+      triggers=learning_triggers,
+  )
 
   # If we haven't trained yet make sure we collect some random samples first to
   # fill up the Replay Buffer with some experience.
-  random_policy = random_py_policy.RandomPyPolicy(collect_env.time_step_spec(),
-                                                  collect_env.action_spec())
+  random_policy = random_py_policy.RandomPyPolicy(
+      collect_env.time_step_spec(), collect_env.action_spec()
+  )
   initial_collect_actor = actor.Actor(
       collect_env,
       random_policy,
       train_step,
       steps_per_run=initial_collect_steps,
-      observers=[rb_observer])
+      observers=[rb_observer],
+  )
   logging.info('Doing initial collect.')
   initial_collect_actor.run()
 
   tf_collect_policy = agent.collect_policy
-  collect_policy = py_tf_eager_policy.PyTFEagerPolicy(tf_collect_policy,
-                                                      use_tf_function=True)
+  collect_policy = py_tf_eager_policy.PyTFEagerPolicy(
+      tf_collect_policy, use_tf_function=True
+  )
 
   collect_actor = actor.Actor(
       collect_env,
@@ -242,8 +269,9 @@ def train_eval(
   )
 
   tf_greedy_policy = agent.policy
-  greedy_policy = py_tf_eager_policy.PyTFEagerPolicy(tf_greedy_policy,
-                                                     use_tf_function=True)
+  greedy_policy = py_tf_eager_policy.PyTFEagerPolicy(
+      tf_greedy_policy, use_tf_function=True
+  )
 
   eval_actor = actor.Actor(
       eval_env,
@@ -279,7 +307,8 @@ def main(_):
       FLAGS.root_dir,
       num_iterations=FLAGS.num_iterations,
       reverb_port=FLAGS.reverb_port,
-      eval_interval=FLAGS.eval_interval)
+      eval_interval=FLAGS.eval_interval,
+  )
 
 
 if __name__ == '__main__':

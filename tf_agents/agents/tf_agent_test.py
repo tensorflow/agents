@@ -20,9 +20,9 @@ from __future__ import division
 from __future__ import print_function
 
 import copy
+
 import numpy as np
 import tensorflow as tf
-
 from tf_agents.agents import data_converter
 from tf_agents.agents import test_util
 from tf_agents.agents import tf_agent
@@ -44,11 +44,13 @@ class LossInfoTest(tf.test.TestCase):
 
 class MyAgent(tf_agent.TFAgent):
 
-  def __init__(self,
-               time_step_spec=None,
-               action_spec=None,
-               training_data_spec=None,
-               train_sequence_length=None):
+  def __init__(
+      self,
+      time_step_spec=None,
+      action_spec=None,
+      training_data_spec=None,
+      train_sequence_length=None,
+  ):
     if time_step_spec is None:
       obs_spec = {'obs': tf.TensorSpec([], tf.float32)}
       time_step_spec = ts.time_step_spec(obs_spec)
@@ -60,9 +62,11 @@ class MyAgent(tf_agent.TFAgent):
         policy=policy,
         collect_policy=policy,
         train_sequence_length=train_sequence_length,
-        training_data_spec=training_data_spec)
+        training_data_spec=training_data_spec,
+    )
     self._as_trajectory = data_converter.AsTrajectory(
-        self.data_context, sequence_length=train_sequence_length)
+        self.data_context, sequence_length=train_sequence_length
+    )
 
   def _train(self, experience, weights=None, extra=None):
     experience = self._as_trajectory(experience)
@@ -79,32 +83,47 @@ class TFAgentTest(tf.test.TestCase):
 
   def testChecksTrainSequenceLength(self):
     agent = MyAgent(train_sequence_length=2)
-    experience = tensor_spec.sample_spec_nest(agent.collect_data_spec,
-                                              outer_dims=(2, 20,))
-    with self.assertRaisesRegex(
-        ValueError, 'The agent was configured'):
+    experience = tensor_spec.sample_spec_nest(
+        agent.collect_data_spec,
+        outer_dims=(
+            2,
+            20,
+        ),
+    )
+    with self.assertRaisesRegex(ValueError, 'The agent was configured'):
       agent.train(experience)
 
   def testDataContext(self):
-    agent = MyAgent(training_data_spec=(
-        trajectory.Trajectory(
-            observation={'obs': tf.TensorSpec([], tf.float32)},
-            action=(),
-            policy_info={'info': tf.TensorSpec([], tf.int32)},
-            reward=tf.TensorSpec([], tf.float32, name='reward'),
-            step_type=tf.TensorSpec([], tf.int32, name='step_type'),
-            next_step_type=tf.TensorSpec([], tf.int32, name='next_step_type'),
-            discount=tensor_spec.BoundedTensorSpec([], tf.float32, 0.0, 1.0,
-                                                   name='discount'),
-        )))
-    self.assertEqual(agent.data_context.time_step_spec,
-                     ts.time_step_spec({'obs': tf.TensorSpec([], tf.float32)}))
-    self.assertEqual(agent.collect_data_context.time_step_spec,
-                     ts.time_step_spec({'obs': tf.TensorSpec([], tf.float32)}))
+    agent = MyAgent(
+        training_data_spec=(
+            trajectory.Trajectory(
+                observation={'obs': tf.TensorSpec([], tf.float32)},
+                action=(),
+                policy_info={'info': tf.TensorSpec([], tf.int32)},
+                reward=tf.TensorSpec([], tf.float32, name='reward'),
+                step_type=tf.TensorSpec([], tf.int32, name='step_type'),
+                next_step_type=tf.TensorSpec(
+                    [], tf.int32, name='next_step_type'
+                ),
+                discount=tensor_spec.BoundedTensorSpec(
+                    [], tf.float32, 0.0, 1.0, name='discount'
+                ),
+            )
+        )
+    )
+    self.assertEqual(
+        agent.data_context.time_step_spec,
+        ts.time_step_spec({'obs': tf.TensorSpec([], tf.float32)}),
+    )
+    self.assertEqual(
+        agent.collect_data_context.time_step_spec,
+        ts.time_step_spec({'obs': tf.TensorSpec([], tf.float32)}),
+    )
     self.assertEqual(agent.data_context.action_spec, ())
     self.assertEqual(agent.collect_data_context.action_spec, ())
-    self.assertEqual(agent.data_context.info_spec,
-                     {'info': tf.TensorSpec([], tf.int32)})
+    self.assertEqual(
+        agent.data_context.info_spec, {'info': tf.TensorSpec([], tf.int32)}
+    )
     self.assertEqual(agent.collect_data_context.info_spec, ())
 
   def testTrainIgnoresExtraFields(self):
@@ -114,16 +133,22 @@ class TFAgentTest(tf.test.TestCase):
         lambda x: x[tf.newaxis, ...],
         trajectory.from_episode(
             observation={
-                'obs': tf.constant([1.0]), 'ignored': tf.constant([2.0])},
+                'obs': tf.constant([1.0]),
+                'ignored': tf.constant([2.0]),
+            },
             action=(),
             policy_info=(),
-            reward=tf.constant([1.0])))
+            reward=tf.constant([1.0]),
+        ),
+    )
     loss_info = agent.train(experience, extra=extra)
     reduced_experience = experience._replace(
-        observation=copy.copy(experience.observation))
+        observation=copy.copy(experience.observation)
+    )
     del reduced_experience.observation['ignored']
     tf.nest.map_structure(
-        self.assertAllEqual, (reduced_experience, extra), loss_info.extra)
+        self.assertAllEqual, (reduced_experience, extra), loss_info.extra
+    )
 
   def testLoss(self):
     agent = MyAgent()
@@ -134,16 +159,18 @@ class TFAgentTest(tf.test.TestCase):
             observation={'obs': tf.constant([1.0])},
             action=(),
             policy_info=(),
-            reward=tf.constant([1.0])))
+            reward=tf.constant([1.0]),
+        ),
+    )
     test_util.test_loss_and_train_output(
         test=self,
         expect_equal_loss_values=True,
         agent=agent,
         experience=experience,
-        extra=extra)
+        extra=extra,
+    )
 
   def testLossNotMatching(self):
-
     class MyAgentWithLossNotMatching(MyAgent):
 
       def _loss(self, experience, weights=None, extra=None, training=False):
@@ -157,29 +184,33 @@ class TFAgentTest(tf.test.TestCase):
             observation={'obs': tf.constant([1.0])},
             action=(),
             policy_info=(),
-            reward=tf.constant([1.0])))
+            reward=tf.constant([1.0]),
+        ),
+    )
 
     with self.assertRaisesRegex(
         ValueError,
         r'.*`LossInfo` from train\(\) and `LossInfo` from loss\(\) do not have '
-        'matching structures.*'):
+        'matching structures.*',
+    ):
       test_util.test_loss_and_train_output(
           test=self,
           expect_equal_loss_values=True,
           agent=agent,
           experience=experience,
-          extra=extra)
+          extra=extra,
+      )
 
 
 class AgentSpecTest(test_utils.TestCase):
 
   def testConvertToProperTimeStepSpecWhenCreatingAgent(self):
-    py_time_step_spec = ts.time_step_spec(
-        array_spec.ArraySpec([2], np.float32))
+    py_time_step_spec = ts.time_step_spec(array_spec.ArraySpec([2], np.float32))
     action_spec = tensor_spec.BoundedTensorSpec([1], tf.float32, -1, 1)
     agent = MyAgent(time_step_spec=py_time_step_spec, action_spec=action_spec)
     self.assertIsInstance(
-        agent.time_step_spec.observation, tensor_spec.TensorSpec)
+        agent.time_step_spec.observation, tensor_spec.TensorSpec
+    )
 
 
 if __name__ == '__main__':

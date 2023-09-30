@@ -50,17 +50,14 @@ def example_nested_spec(dtype):
   if dtype in (np.uint8, np.uint16):
     low += -low
   return {
-      "array_spec_1":
-          array_spec.ArraySpec((2, 3), dtype),
-      "bounded_spec_1":
-          array_spec.BoundedArraySpec((2, 3), dtype, low, high),
-      "empty_shape":
-          array_spec.BoundedArraySpec((), dtype, low, high),
+      "array_spec_1": array_spec.ArraySpec((2, 3), dtype),
+      "bounded_spec_1": array_spec.BoundedArraySpec((2, 3), dtype, low, high),
+      "empty_shape": array_spec.BoundedArraySpec((), dtype, low, high),
       "dict_spec": {
-          "array_spec_2":
-              array_spec.ArraySpec((2, 3), dtype),
-          "bounded_spec_2":
-              array_spec.BoundedArraySpec((2, 3), dtype, low, high)
+          "array_spec_2": array_spec.ArraySpec((2, 3), dtype),
+          "bounded_spec_2": array_spec.BoundedArraySpec(
+              (2, 3), dtype, low, high
+          ),
       },
       "tuple_spec": (
           array_spec.ArraySpec((2, 3), dtype),
@@ -68,8 +65,10 @@ def example_nested_spec(dtype):
       ),
       "list_spec": [
           array_spec.ArraySpec((2, 3), dtype),
-          (array_spec.ArraySpec((2, 3), dtype),
-           array_spec.BoundedArraySpec((2, 3), dtype, low, high)),
+          (
+              array_spec.ArraySpec((2, 3), dtype),
+              array_spec.BoundedArraySpec((2, 3), dtype, low, high),
+          ),
       ],
   }
 
@@ -102,7 +101,7 @@ class NestExampleEncodeUtilsTest(tf.test.TestCase, parameterized.TestCase):
     le_sample = {
         "a": np.array([100, 25000]).astype("<i2"),
         "b": np.array([-5, 80000000]).astype("<i4"),
-        "c": np.array([12.5, np.pi]).astype("<f4")
+        "c": np.array([12.5, np.pi]).astype("<f4"),
     }
 
     example_proto = serializer(le_sample)
@@ -113,7 +112,7 @@ class NestExampleEncodeUtilsTest(tf.test.TestCase, parameterized.TestCase):
     be_sample = {
         "a": np.array([100, 25000]).astype(">i2"),
         "b": np.array([-5, 80000000]).astype(">i4"),
-        "c": np.array([12.5, np.pi]).astype(">f4")
+        "c": np.array([12.5, np.pi]).astype(">f4"),
     }
 
     example_proto = serializer(be_sample)
@@ -134,25 +133,29 @@ class NestExampleEncodeUtilsTest(tf.test.TestCase, parameterized.TestCase):
     if not common.has_eager_been_enabled():
       self.skipTest("Image compression only supported in TF2.x")
 
-    gin.parse_config_files_and_bindings([], """
+    gin.parse_config_files_and_bindings(
+        [],
+        """
     _get_feature_encoder.compress_image=True
     _get_feature_parser.compress_image=True
-    """)
+    """,
+    )
     spec = {
         "image": array_spec.ArraySpec((128, 128, 3), np.uint8),
-        "mask": array_spec.ArraySpec((128, 128, 1), np.uint8)
+        "mask": array_spec.ArraySpec((128, 128, 1), np.uint8),
     }
     serializer = example_encoding.get_example_serializer(spec)
     decoder = example_encoding.get_example_decoder(spec)
 
     sample = {
         "image": 128 * np.ones([128, 128, 3], dtype=np.uint8),
-        "mask": 128 * np.ones([128, 128, 1], dtype=np.uint8)
+        "mask": 128 * np.ones([128, 128, 1], dtype=np.uint8),
     }
     example_proto = serializer(sample)
 
     recovered = self.evaluate(decoder(example_proto))
     tf.nest.map_structure(np.testing.assert_almost_equal, sample, recovered)
+
 
 if __name__ == "__main__":
   tf.test.main()

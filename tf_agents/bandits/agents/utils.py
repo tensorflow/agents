@@ -30,8 +30,9 @@ from tf_agents.typing import types
 from tf_agents.utils import nest_utils
 
 
-def sum_reward_weighted_observations(r: types.Tensor,
-                                     x: types.Tensor) -> types.Tensor:
+def sum_reward_weighted_observations(
+    r: types.Tensor, x: types.Tensor
+) -> types.Tensor:
   """Calculates an update used by some Bandit algorithms.
 
   Given an observation `x` and corresponding reward `r`, the weigthed
@@ -56,7 +57,8 @@ def sum_reward_weighted_observations(r: types.Tensor,
 
 @gin.configurable
 def build_laplacian_over_ordinal_integer_actions(
-    action_spec: types.BoundedTensorSpec) -> types.Tensor:
+    action_spec: types.BoundedTensorSpec,
+) -> types.Tensor:
   """Build the unnormalized Laplacian matrix over ordinal integer actions.
 
   Assuming integer actions, this functions builds the (unnormalized) Laplacian
@@ -82,8 +84,9 @@ def build_laplacian_over_ordinal_integer_actions(
   for i in range(num_actions - 1):
     adjacency_matrix[i, i + 1] = 1.0
     adjacency_matrix[i + 1, i] = 1.0
-  laplacian_matrix = np.diag(np.sum(adjacency_matrix,
-                                    axis=0)) - adjacency_matrix
+  laplacian_matrix = (
+      np.diag(np.sum(adjacency_matrix, axis=0)) - adjacency_matrix
+  )
   return laplacian_matrix
 
 
@@ -103,23 +106,26 @@ def compute_pairwise_distances(input_vecs: types.Tensor) -> types.Tensor:
   """
   r = tf.reduce_sum(input_vecs * input_vecs, axis=1, keepdims=True)
   pdistance_matrix = (
-      r - 2 * tf.matmul(input_vecs, input_vecs, transpose_b=True)
-      + tf.transpose(r))
+      r
+      - 2 * tf.matmul(input_vecs, input_vecs, transpose_b=True)
+      + tf.transpose(r)
+  )
   return tf.cast(pdistance_matrix, dtype=tf.float32)
 
 
 @gin.configurable
-def build_laplacian_nearest_neighbor_graph(input_vecs: types.Tensor,
-                                           k: int = 1) -> types.Tensor:
+def build_laplacian_nearest_neighbor_graph(
+    input_vecs: types.Tensor, k: int = 1
+) -> types.Tensor:
   """Build the Laplacian matrix of a nearest neighbor graph.
 
   Given input embedding vectors, this utility returns the Laplacian matrix of
   the induced k-nearest-neighbor graph.
 
   Args:
-    input_vecs: a `Tensor`. Input embedding vectors (one per row).  Shaped
+    input_vecs: a `Tensor`. Input embedding vectors (one per row). Shaped
       `[num_vectors, ...]`.
-    k : an integer. Number of nearest neighbors to use.
+    k: an integer. Number of nearest neighbors to use.
 
   Returns:
     The graph Laplacian matrix. A dense float `Tensor` of shape
@@ -130,27 +136,29 @@ def build_laplacian_nearest_neighbor_graph(input_vecs: types.Tensor,
   pdistance_matrix = compute_pairwise_distances(input_vecs)
   sorted_indices = tf.argsort(values=pdistance_matrix)
   selected_indices = tf.reshape(sorted_indices[:, 1 : k + 1], [-1, 1])
-  rng = tf.tile(
-      tf.expand_dims(tf.range(num_actions), axis=-1), [1, k])
+  rng = tf.tile(tf.expand_dims(tf.range(num_actions), axis=-1), [1, k])
   rng = tf.reshape(rng, [-1, 1])
   full_indices = tf.concat([rng, selected_indices], axis=1)
   adjacency_matrix = tf.zeros([num_actions, num_actions], dtype=tf.float32)
   adjacency_matrix = tf.tensor_scatter_nd_update(
       tensor=adjacency_matrix,
       indices=full_indices,
-      updates=tf.ones([k * num_actions], dtype=tf.float32))
+      updates=tf.ones([k * num_actions], dtype=tf.float32),
+  )
   # Symmetrize it.
   adjacency_matrix = adjacency_matrix + tf.transpose(adjacency_matrix)
   adjacency_matrix = tf.minimum(
-      adjacency_matrix, tf.ones_like(adjacency_matrix))
+      adjacency_matrix, tf.ones_like(adjacency_matrix)
+  )
   degree_matrix = tf.linalg.tensor_diag(tf.reduce_sum(adjacency_matrix, axis=1))
   laplacian_matrix = degree_matrix - adjacency_matrix
   return laplacian_matrix
 
 
 def process_experience_for_neural_agents(
-    experience: types.NestedTensor, accepts_per_arm_features: bool,
-    training_data_spec: types.NestedTensorSpec
+    experience: types.NestedTensor,
+    accepts_per_arm_features: bool,
+    training_data_spec: types.NestedTensorSpec,
 ) -> Tuple[types.NestedTensor, types.Tensor, types.Tensor]:
   """Processes the experience and prepares it for the network of the agent.
 
@@ -168,7 +176,8 @@ def process_experience_for_neural_agents(
       function of the neural agent.
   """
   flattened_experience, _ = nest_utils.flatten_multi_batched_nested_tensors(
-      experience, training_data_spec)
+      experience, training_data_spec
+  )
 
   observation = flattened_experience.observation
   action = flattened_experience.action
@@ -182,7 +191,8 @@ def process_experience_for_neural_agents(
   # only one action, we fill the action field with zeros.
   chosen_arm_features = flattened_experience.policy_info.chosen_arm_features
   observation[bandit_spec_utils.PER_ARM_FEATURE_KEY] = tf.nest.map_structure(
-      lambda t: tf.expand_dims(t, axis=1), chosen_arm_features)
+      lambda t: tf.expand_dims(t, axis=1), chosen_arm_features
+  )
   action = tf.zeros_like(action)
   if bandit_spec_utils.NUM_ACTIONS_FEATURE_KEY in observation:
     # This change is not crucial but since in training there will be only one
@@ -190,6 +200,7 @@ def process_experience_for_neural_agents(
     # value for `num_actions` be less than or equal to the maximum available
     # number of actions.
     observation[bandit_spec_utils.NUM_ACTIONS_FEATURE_KEY] = tf.ones_like(
-        observation[bandit_spec_utils.NUM_ACTIONS_FEATURE_KEY])
+        observation[bandit_spec_utils.NUM_ACTIONS_FEATURE_KEY]
+    )
 
   return observation, action, reward

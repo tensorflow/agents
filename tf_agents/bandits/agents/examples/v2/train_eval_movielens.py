@@ -21,9 +21,9 @@ from __future__ import print_function
 
 import functools
 import os
+
 from absl import app
 from absl import flags
-
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 from tf_agents.bandits.agents import dropout_thompson_sampling_agent as dropout_ts_agent
 from tf_agents.bandits.agents import lin_ucb_agent
@@ -38,18 +38,29 @@ from tf_agents.bandits.networks import global_and_arm_feature_network
 from tf_agents.environments import tf_py_environment
 from tf_agents.networks import q_network
 
-flags.DEFINE_string('root_dir', os.getenv('TEST_UNDECLARED_OUTPUTS_DIR'),
-                    'Root directory for writing logs/summaries/checkpoints.')
 flags.DEFINE_string(
-    'data_path', '',
-    'Location of the movielens dataset. If you downloaded the dataset from Kaggle, set this param to the path of u.data file'
+    'root_dir',
+    os.getenv('TEST_UNDECLARED_OUTPUTS_DIR'),
+    'Root directory for writing logs/summaries/checkpoints.',
+)
+flags.DEFINE_string(
+    'data_path',
+    '',
+    'Location of the movielens dataset. If you downloaded the dataset from'
+    ' Kaggle, set this param to the path of u.data file',
 )
 flags.DEFINE_enum(
-    'agent', 'LinUCB', ['LinUCB', 'LinTS', 'epsGreedy', 'DropoutTS'],
+    'agent',
+    'LinUCB',
+    ['LinUCB', 'LinTS', 'epsGreedy', 'DropoutTS'],
     'Which agent to use. Possible values: `LinUCB`, `LinTS`, `epsGreedy`,'
-    ' `DropoutTS`.')
-flags.DEFINE_bool('per_arm', False, 'Whether to  use the per arm version of the'
-                  ' movielens environment.')
+    ' `DropoutTS`.',
+)
+flags.DEFINE_bool(
+    'per_arm',
+    False,
+    'Whether to  use the per arm version of the movielens environment.',
+)
 
 FLAGS = flags.FLAGS
 
@@ -86,23 +97,27 @@ def main(unused_argv):
         RANK_K,
         BATCH_SIZE,
         num_actions=NUM_ACTIONS,
-        csv_delimiter='\t')
+        csv_delimiter='\t',
+    )
   else:
     env = movielens_py_environment.MovieLensPyEnvironment(
         data_path,
         RANK_K,
         BATCH_SIZE,
         num_movies=NUM_ACTIONS,
-        csv_delimiter='\t')
+        csv_delimiter='\t',
+    )
   environment = tf_py_environment.TFPyEnvironment(env)
 
   optimal_reward_fn = functools.partial(
       environment_utilities.compute_optimal_reward_with_movielens_environment,
-      environment=environment)
+      environment=environment,
+  )
 
   optimal_action_fn = functools.partial(
       environment_utilities.compute_optimal_action_with_movielens_environment,
-      environment=environment)
+      environment=environment,
+  )
 
   if FLAGS.agent == 'LinUCB':
     agent = lin_ucb_agent.LinearUCBAgent(
@@ -111,26 +126,28 @@ def main(unused_argv):
         tikhonov_weight=0.001,
         alpha=AGENT_ALPHA,
         dtype=tf.float32,
-        accepts_per_arm_features=FLAGS.per_arm)
+        accepts_per_arm_features=FLAGS.per_arm,
+    )
   elif FLAGS.agent == 'LinTS':
     agent = lin_ts_agent.LinearThompsonSamplingAgent(
         time_step_spec=environment.time_step_spec(),
         action_spec=environment.action_spec(),
         dtype=tf.float32,
-        accepts_per_arm_features=FLAGS.per_arm)
+        accepts_per_arm_features=FLAGS.per_arm,
+    )
   elif FLAGS.agent == 'epsGreedy':
     if FLAGS.per_arm:
-      network = (
-          global_and_arm_feature_network
-          .create_feed_forward_dot_product_network(
-              environment.time_step_spec().observation,
-              global_layers=LAYERS,
-              arm_layers=LAYERS))
+      network = global_and_arm_feature_network.create_feed_forward_dot_product_network(
+          environment.time_step_spec().observation,
+          global_layers=LAYERS,
+          arm_layers=LAYERS,
+      )
     else:
       network = q_network.QNetwork(
           input_tensor_spec=environment.time_step_spec().observation,
           action_spec=environment.action_spec(),
-          fc_layer_params=LAYERS)
+          fc_layer_params=LAYERS,
+      )
     agent = eps_greedy_agent.NeuralEpsilonGreedyAgent(
         time_step_spec=environment.time_step_spec(),
         action_spec=environment.action_spec(),
@@ -138,26 +155,31 @@ def main(unused_argv):
         optimizer=tf.compat.v1.train.AdamOptimizer(learning_rate=LR),
         epsilon=EPSILON,
         emit_policy_info='predicted_rewards_mean',
-        info_fields_to_inherit_from_greedy=['predicted_rewards_mean'])
+        info_fields_to_inherit_from_greedy=['predicted_rewards_mean'],
+    )
   elif FLAGS.agent == 'DropoutTS':
     train_step_counter = tf.compat.v1.train.get_or_create_global_step()
 
     def dropout_fn():
       return tf.math.maximum(
-          tf.math.reciprocal_no_nan(1.01 +
-                                    tf.cast(train_step_counter, tf.float32)),
-          0.0003)
+          tf.math.reciprocal_no_nan(
+              1.01 + tf.cast(train_step_counter, tf.float32)
+          ),
+          0.0003,
+      )
 
     agent = dropout_ts_agent.DropoutThompsonSamplingAgent(
         time_step_spec=environment.time_step_spec(),
         action_spec=environment.action_spec(),
         dropout_rate=dropout_fn,
         network_layers=LAYERS,
-        optimizer=tf.compat.v1.train.AdamOptimizer(learning_rate=LR))
+        optimizer=tf.compat.v1.train.AdamOptimizer(learning_rate=LR),
+    )
 
   regret_metric = tf_bandit_metrics.RegretMetric(optimal_reward_fn)
   suboptimal_arms_metric = tf_bandit_metrics.SuboptimalArmsMetric(
-      optimal_action_fn)
+      optimal_action_fn
+  )
 
   trainer.train(
       root_dir=FLAGS.root_dir,
@@ -165,7 +187,8 @@ def main(unused_argv):
       environment=environment,
       training_loops=TRAINING_LOOPS,
       steps_per_loop=STEPS_PER_LOOP,
-      additional_metrics=[regret_metric, suboptimal_arms_metric])
+      additional_metrics=[regret_metric, suboptimal_arms_metric],
+  )
 
 
 if __name__ == '__main__':

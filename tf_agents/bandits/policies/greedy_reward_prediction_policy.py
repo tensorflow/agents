@@ -17,13 +17,13 @@
 
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 import tensorflow_probability as tfp
-
 from tf_agents.bandits.policies import reward_prediction_base_policy
 from tf_agents.policies import utils as policy_utilities
 
 
 class GreedyRewardPredictionPolicy(
-    reward_prediction_base_policy.RewardPredictionBasePolicy):
+    reward_prediction_base_policy.RewardPredictionBasePolicy
+):
   """Class to build GreedyNNPredictionPolicies."""
 
   def _action_distribution(self, mask, predicted_rewards):
@@ -32,20 +32,24 @@ class GreedyRewardPredictionPolicy(
     batch_size = tf.shape(predicted_rewards)[0]
     if mask is not None:
       actions = policy_utilities.masked_argmax(
-          predicted_rewards, mask, output_type=self.action_spec.dtype)
+          predicted_rewards, mask, output_type=self.action_spec.dtype
+      )
     else:
       actions = tf.argmax(
-          predicted_rewards, axis=-1, output_type=self.action_spec.dtype)
+          predicted_rewards, axis=-1, output_type=self.action_spec.dtype
+      )
 
     actions += self._action_offset
 
-    bandit_policy_values = tf.fill([batch_size, 1],
-                                   policy_utilities.BanditPolicyType.GREEDY)
+    bandit_policy_values = tf.fill(
+        [batch_size, 1], policy_utilities.BanditPolicyType.GREEDY
+    )
     return tfp.distributions.Deterministic(loc=actions), bandit_policy_values
 
   def _distribution(self, time_step, policy_state):
-    step = super(GreedyRewardPredictionPolicy,
-                 self)._distribution(time_step, policy_state)
+    step = super(GreedyRewardPredictionPolicy, self)._distribution(
+        time_step, policy_state
+    )
     # Greedy is deterministic, so we know the chosen arm features here. We
     # save it here so the chosen arm features get correctly returned by
     # `tf_agents.policies.epsilon_greey_policy.EpsilonGreedyPolicy` wrapping a

@@ -18,9 +18,9 @@ from __future__ import absolute_import
 
 import random
 from typing import Optional, Text
+
 import gin
 import numpy as np
-
 from tf_agents.bandits.environments import bandit_py_environment
 from tf_agents.bandits.environments import dataset_utilities
 from tf_agents.specs import array_spec
@@ -43,18 +43,20 @@ class MovieLensPyEnvironment(bandit_py_environment.BanditPyEnvironment):
   The reward of recommending item `j` to user `i` is provided as A_{ij}.
   """
 
-  def __init__(self,
-               data_dir: Text,
-               rank_k: int,
-               batch_size: int = 1,
-               num_movies: int = 20,
-               csv_delimiter: Text = ',',
-               name: Optional[Text] = 'movielens'):
+  def __init__(
+      self,
+      data_dir: Text,
+      rank_k: int,
+      batch_size: int = 1,
+      num_movies: int = 20,
+      csv_delimiter: Text = ',',
+      name: Optional[Text] = 'movielens',
+  ):
     """Initializes the MovieLens Bandit environment.
 
     Args:
-      data_dir: (string) Directory where the data lies (in text form).
-      rank_k : (int) Which rank to use in the matrix factorization.
+      data_dir: (string) Directory where the data lies (in text form). rank_k :
+        (int) Which rank to use in the matrix factorization.
       batch_size: (int) Number of observations generated per call.
       num_movies: (int) Only the first `num_movies` movies will be used by the
         environment. The rest is cut out from the data.
@@ -67,7 +69,8 @@ class MovieLensPyEnvironment(bandit_py_environment.BanditPyEnvironment):
 
     # Compute the matrix factorization.
     self._data_matrix = dataset_utilities.load_movielens_data(
-        data_dir, delimiter=csv_delimiter)
+        data_dir, delimiter=csv_delimiter
+    )
     # Keep only the first items.
     self._data_matrix = self._data_matrix[:, :num_movies]
     # Filter the users with no iterm rated.
@@ -81,7 +84,8 @@ class MovieLensPyEnvironment(bandit_py_environment.BanditPyEnvironment):
     # Keep only the largest singular values.
     self._u_hat = u[:, :rank_k] * np.sqrt(s[:rank_k])
     self._v_hat = np.transpose(
-        np.transpose(vh[:rank_k, :]) * np.sqrt(s[:rank_k]))
+        np.transpose(vh[:rank_k, :]) * np.sqrt(s[:rank_k])
+    )
     self._approx_ratings_matrix = np.matmul(self._u_hat, self._v_hat)
 
     self._current_users = np.zeros(batch_size)
@@ -92,19 +96,20 @@ class MovieLensPyEnvironment(bandit_py_environment.BanditPyEnvironment):
         dtype=np.int32,
         minimum=0,
         maximum=self._num_actions - 1,
-        name='action')
+        name='action',
+    )
     observation_spec = array_spec.ArraySpec(
-        shape=(self._context_dim,), dtype=np.float64, name='observation')
+        shape=(self._context_dim,), dtype=np.float64, name='observation'
+    )
     self._time_step_spec = ts.time_step_spec(observation_spec)
     self._observation = np.zeros((self._batch_size, self._context_dim))
 
-    self._optimal_action_table = np.argmax(
-        self._approx_ratings_matrix, axis=1)
-    self._optimal_reward_table = np.max(
-        self._approx_ratings_matrix, axis=1)
+    self._optimal_action_table = np.argmax(self._approx_ratings_matrix, axis=1)
+    self._optimal_reward_table = np.max(self._approx_ratings_matrix, axis=1)
 
     super(MovieLensPyEnvironment, self).__init__(
-        observation_spec, self._action_spec, name=name)
+        observation_spec, self._action_spec, name=name
+    )
 
   @property
   def batch_size(self):
@@ -117,7 +122,8 @@ class MovieLensPyEnvironment(bandit_py_environment.BanditPyEnvironment):
   def _observe(self):
     """Returns the u vectors of a random sample of users."""
     sampled_users = random.sample(
-        range(self._effective_num_users), self._batch_size)
+        range(self._effective_num_users), self._batch_size
+    )
     self._previous_users = self._current_users
     self._current_users = sampled_users
     batched_observations = self._u_hat[sampled_users]

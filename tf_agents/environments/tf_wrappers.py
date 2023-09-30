@@ -23,7 +23,6 @@ from __future__ import division
 from __future__ import print_function
 
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
-
 from tf_agents.environments import tf_environment
 from tf_agents.specs import tensor_spec
 
@@ -78,17 +77,16 @@ class OneHotActionWrapper(TFEnvironmentBaseWrapper):
     self._validate_action_spec()
 
   def _validate_action_spec(self):
-
     def _validate(action_spec):
       if action_spec.dtype.is_integer and len(action_spec.shape.as_list()) > 1:
         raise ValueError(
             'OneHotActionWrapper only supports actions with at most one '
-            'dimension! action_spec: {}'.format(action_spec))
+            'dimension! action_spec: {}'.format(action_spec)
+        )
 
     tf.nest.map_structure(_validate, self._env.action_spec())
 
   def action_spec(self):
-
     def convert_to_one_hot(action_spec):
       """Convert action_spec to one_hot format."""
       if action_spec.dtype.is_integer:
@@ -100,7 +98,8 @@ class OneHotActionWrapper(TFEnvironmentBaseWrapper):
             dtype=action_spec.dtype,
             minimum=0,
             maximum=1,
-            name='one_hot_action_spec')
+            name='one_hot_action_spec',
+        )
       else:
         return action_spec
 

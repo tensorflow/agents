@@ -20,9 +20,9 @@ from __future__ import print_function
 
 import abc
 from typing import List, Optional, Sequence, Text
+
 import gin
 import tensorflow as tf
-
 from tf_agents.agents import data_converter
 from tf_agents.agents import tf_agent
 from tf_agents.bandits.policies import mixture_policy
@@ -33,8 +33,10 @@ from tf_agents.utils import nest_utils
 
 
 def _dynamic_partition_of_nested_tensors(
-    nested_tensor: types.NestedTensor, partitions: types.Int,
-    num_partitions: int) -> List[types.NestedTensor]:
+    nested_tensor: types.NestedTensor,
+    partitions: types.Int,
+    num_partitions: int,
+) -> List[types.NestedTensor]:
   """This function takes a nested structure and partitions every element of it.
 
   Specifically it outputs a list of nest that all have the same structure as the
@@ -57,7 +59,8 @@ def _dynamic_partition_of_nested_tensors(
     return [nested_tensor] * num_partitions
   partitioned_flat_tensors = [
       tf.dynamic_partition(
-          data=t, partitions=partitions, num_partitions=num_partitions)
+          data=t, partitions=partitions, num_partitions=num_partitions
+      )
       for t in flattened_tensors
   ]
   list_of_partitions = list(map(list, zip(*partitioned_flat_tensors)))
@@ -79,10 +82,12 @@ class MixtureAgent(tf_agent.TFAgent):
   compatible with XLA.
   """
 
-  def __init__(self,
-               mixture_distribution: types.Distribution,
-               agents: Sequence[tf_agent.TFAgent],
-               name: Optional[Text] = None):
+  def __init__(
+      self,
+      mixture_distribution: types.Distribution,
+      agents: Sequence[tf_agent.TFAgent],
+      name: Optional[Text] = None,
+  ):
     """Initializes an instance of `MixtureAgent`.
 
     Args:
@@ -114,9 +119,11 @@ class MixtureAgent(tf_agent.TFAgent):
     policies = [agent.collect_policy for agent in agents]
     policy = mixture_policy.MixturePolicy(mixture_distribution, policies)
     super(MixtureAgent, self).__init__(
-        time_step_spec, action_spec, policy, policy, train_sequence_length=None)
+        time_step_spec, action_spec, policy, policy, train_sequence_length=None
+    )
     self._as_trajectory = data_converter.AsTrajectory(
-        self.data_context, sequence_length=None)
+        self.data_context, sequence_length=None
+    )
 
   def _initialize(self):
     tf.compat.v1.variables_initializer(self.variables)
@@ -127,44 +134,56 @@ class MixtureAgent(tf_agent.TFAgent):
   @abc.abstractmethod
   def _update_mixture_distribution(self, experience):
     """This function updates the mixture weights given training experience."""
-    raise NotImplementedError('`_update_mixture_distribution` should be '
-                              'implemented by subclasses of `MixtureAgent`.')
+    raise NotImplementedError(
+        '`_update_mixture_distribution` should be '
+        'implemented by subclasses of `MixtureAgent`.'
+    )
 
   def _train(self, experience, weights=None):
     del weights  # unused
     experience = self._as_trajectory(experience)
 
     reward, _ = nest_utils.flatten_multi_batched_nested_tensors(
-        experience.reward, self._time_step_spec.reward)
+        experience.reward, self._time_step_spec.reward
+    )
     action, _ = nest_utils.flatten_multi_batched_nested_tensors(
-        experience.action, self._action_spec)
+        experience.action, self._action_spec
+    )
     observation, _ = nest_utils.flatten_multi_batched_nested_tensors(
-        experience.observation, self._time_step_spec.observation)
+        experience.observation, self._time_step_spec.observation
+    )
     policy_choice, _ = nest_utils.flatten_multi_batched_nested_tensors(
         experience.policy_info[mixture_policy.MIXTURE_AGENT_ID],
-        self._time_step_spec.reward)
+        self._time_step_spec.reward,
+    )
     original_infos, _ = nest_utils.flatten_multi_batched_nested_tensors(
         experience.policy_info[mixture_policy.SUBPOLICY_INFO],
-        self._original_info_spec)
+        self._original_info_spec,
+    )
 
     partitioned_nested_infos = nest_utils.batch_nested_tensors(
-        _dynamic_partition_of_nested_tensors(original_infos, policy_choice,
-                                             self._num_agents))
+        _dynamic_partition_of_nested_tensors(
+            original_infos, policy_choice, self._num_agents
+        )
+    )
 
     partitioned_nested_rewards = [
         nest_utils.batch_nested_tensors(t)
-        for t in _dynamic_partition_of_nested_tensors(reward, policy_choice,
-                                                      self._num_agents)
+        for t in _dynamic_partition_of_nested_tensors(
+            reward, policy_choice, self._num_agents
+        )
     ]
     partitioned_nested_actions = [
         nest_utils.batch_nested_tensors(t)
-        for t in _dynamic_partition_of_nested_tensors(action, policy_choice,
-                                                      self._num_agents)
+        for t in _dynamic_partition_of_nested_tensors(
+            action, policy_choice, self._num_agents
+        )
     ]
     partitioned_nested_observations = [
         nest_utils.batch_nested_tensors(t)
         for t in _dynamic_partition_of_nested_tensors(
-            observation, policy_choice, self._num_agents)
+            observation, policy_choice, self._num_agents
+        )
     ]
     loss = 0
     for k in range(self._num_agents):
@@ -173,7 +192,8 @@ class MixtureAgent(tf_agent.TFAgent):
           action=partitioned_nested_actions[k],
           policy_info=partitioned_nested_infos[k],
           reward=partitioned_nested_rewards[k],
-          discount=tf.zeros_like(partitioned_nested_rewards[k]))
+          discount=tf.zeros_like(partitioned_nested_rewards[k]),
+      )
       loss_info = self._agents[k].train(per_policy_experience)
       loss += loss_info.loss
     common.function_in_tf1()(self._update_mixture_distribution)(experience)

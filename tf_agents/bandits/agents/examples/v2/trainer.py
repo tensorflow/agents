@@ -20,8 +20,8 @@ from __future__ import division
 from __future__ import print_function
 
 import os
-from absl import logging
 
+from absl import logging
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 from tf_agents.bandits.replay_buffers import bandit_replay_buffer
 from tf_agents.drivers import dynamic_step_driver
@@ -37,38 +37,44 @@ STEP_CHECKPOINT_NAME = 'step'
 CHECKPOINT_FILE_PREFIX = 'ckpt'
 
 
-def _get_replay_buffer(data_spec, batch_size, steps_per_loop,
-                       async_steps_per_loop):
+def _get_replay_buffer(
+    data_spec, batch_size, steps_per_loop, async_steps_per_loop
+):
   """Return a `TFUniformReplayBuffer` for the given `agent`."""
   return bandit_replay_buffer.BanditReplayBuffer(
       data_spec=data_spec,
       batch_size=batch_size,
-      max_length=steps_per_loop * async_steps_per_loop)
+      max_length=steps_per_loop * async_steps_per_loop,
+  )
 
 
 def set_expected_shape(experience, num_steps):
   """Sets expected shape."""
+
   def set_time_dim(input_tensor, steps):
     tensor_shape = input_tensor.shape.as_list()
     if len(tensor_shape) < 2:
       raise ValueError(
           'input_tensor is expected to be of rank-2, but found otherwise: '
-          f'input_tensor={input_tensor}, tensor_shape={tensor_shape}')
+          f'input_tensor={input_tensor}, tensor_shape={tensor_shape}'
+      )
     tensor_shape[1] = steps
     input_tensor.set_shape(tensor_shape)
+
   tf.nest.map_structure(lambda t: set_time_dim(t, num_steps), experience)
 
 
-def _get_training_loop(driver, replay_buffer, agent, steps,
-                       async_steps_per_loop):
+def _get_training_loop(
+    driver, replay_buffer, agent, steps, async_steps_per_loop
+):
   """Returns a `tf.function` that runs the driver and training loops.
 
   Args:
     driver: an instance of `Driver`.
     replay_buffer: an instance of `ReplayBuffer`.
     agent: an instance of `TFAgent`.
-    steps: an integer indicating how many driver steps should be
-      executed and presented to the trainer during each training loop.
+    steps: an integer indicating how many driver steps should be executed and
+      presented to the trainer during each training loop.
     async_steps_per_loop: an integer. In each training loop, the driver runs
       this many times, and then the agent gets asynchronously trained over this
       many batches sampled from the replay buffer.
@@ -86,13 +92,16 @@ def _get_training_loop(driver, replay_buffer, agent, steps,
     for batch_id in range(async_steps_per_loop):
       driver.run()
       _export_metrics_and_summaries(
-          step=train_step * async_steps_per_loop + batch_id, metrics=metrics)
+          step=train_step * async_steps_per_loop + batch_id, metrics=metrics
+      )
     batch_size = driver.env.batch_size
     dataset_it = iter(
         replay_buffer.as_dataset(
             sample_batch_size=batch_size,
             num_steps=steps,
-            single_deterministic_pass=True))
+            single_deterministic_pass=True,
+        )
+    )
     for batch_id in range(async_steps_per_loop):
       experience, unused_buffer_info = dataset_it.get_next()
       set_expected_shape(experience, steps)
@@ -100,7 +109,8 @@ def _get_training_loop(driver, replay_buffer, agent, steps,
       export_utils.export_metrics(
           step=train_step * async_steps_per_loop + batch_id,
           metrics=[],
-          loss_info=loss_info)
+          loss_info=loss_info,
+      )
 
     replay_buffer.clear()
 
@@ -113,32 +123,35 @@ def restore_and_get_checkpoint_manager(root_dir, agent, metrics, step_metric):
   trackable_objects[AGENT_CHECKPOINT_NAME] = agent
   trackable_objects[STEP_CHECKPOINT_NAME] = step_metric
   checkpoint = tf.train.Checkpoint(**trackable_objects)
-  checkpoint_manager = tf.train.CheckpointManager(checkpoint=checkpoint,
-                                                  directory=root_dir,
-                                                  max_to_keep=5)
+  checkpoint_manager = tf.train.CheckpointManager(
+      checkpoint=checkpoint, directory=root_dir, max_to_keep=5
+  )
   latest = checkpoint_manager.latest_checkpoint
   if latest is not None:
     logging.info('Restoring checkpoint from %s.', latest)
     checkpoint.restore(latest)
     logging.info('Successfully restored to step %s.', step_metric.result())
   else:
-    logging.info('Did not find a pre-existing checkpoint. '
-                 'Starting from scratch.')
+    logging.info(
+        'Did not find a pre-existing checkpoint. Starting from scratch.'
+    )
   return checkpoint_manager
 
 
-def train(root_dir,
-          agent,
-          environment,
-          training_loops,
-          steps_per_loop,
-          async_steps_per_loop=None,
-          additional_metrics=(),
-          get_replay_buffer_fn=None,
-          get_training_loop_fn=None,
-          training_data_spec_transformation_fn=None,
-          save_policy=True,
-          resume_training_loops=False):
+def train(
+    root_dir,
+    agent,
+    environment,
+    training_loops,
+    steps_per_loop,
+    async_steps_per_loop=None,
+    additional_metrics=(),
+    get_replay_buffer_fn=None,
+    get_training_loop_fn=None,
+    training_data_spec_transformation_fn=None,
+    save_policy=True,
+    resume_training_loops=False,
+):
   """Perform `training_loops` iterations of training.
 
   Checkpoint results.
@@ -183,9 +196,9 @@ def train(root_dir,
     training_data_spec_transformation_fn: Optional function that transforms the
       data items before they get to the replay buffer.
     save_policy: (bool) whether to save the policy or not.
-    resume_training_loops: A boolean flag indicating whether
-      `training_loops` should be enforced relatively to the initial (True) or
-      the last (False) checkpoint.
+    resume_training_loops: A boolean flag indicating whether `training_loops`
+      should be enforced relatively to the initial (True) or the last (False)
+      checkpoint.
   """
 
   # TODO(b/127641485): create evaluation loop with configurable metrics.
@@ -193,36 +206,44 @@ def train(root_dir,
     data_spec = agent.policy.trajectory_spec
   else:
     data_spec = training_data_spec_transformation_fn(
-        agent.policy.trajectory_spec)
+        agent.policy.trajectory_spec
+    )
   if async_steps_per_loop is None:
     async_steps_per_loop = 1
   if get_replay_buffer_fn is None:
     get_replay_buffer_fn = _get_replay_buffer
-  replay_buffer = get_replay_buffer_fn(data_spec, environment.batch_size,
-                                       steps_per_loop, async_steps_per_loop)
+  replay_buffer = get_replay_buffer_fn(
+      data_spec, environment.batch_size, steps_per_loop, async_steps_per_loop
+  )
 
   # `step_metric` records the number of individual rounds of bandit interaction;
   # that is, (number of trajectories) * batch_size.
   step_metric = tf_metrics.EnvironmentSteps()
   metrics = [
       tf_metrics.NumberOfEpisodes(),
-      tf_metrics.AverageEpisodeLengthMetric(batch_size=environment.batch_size)
+      tf_metrics.AverageEpisodeLengthMetric(batch_size=environment.batch_size),
   ] + list(additional_metrics)
 
   # If the reward anything else than a single scalar, we're adding multimetric
   # average reward.
-  if isinstance(environment.reward_spec(),
-                dict) or environment.reward_spec().shape != tf.TensorShape(()):
-    metrics += [tf_metrics.AverageReturnMultiMetric(
-        reward_spec=environment.reward_spec(),
-        batch_size=environment.batch_size)]
+  if isinstance(
+      environment.reward_spec(), dict
+  ) or environment.reward_spec().shape != tf.TensorShape(()):
+    metrics += [
+        tf_metrics.AverageReturnMultiMetric(
+            reward_spec=environment.reward_spec(),
+            batch_size=environment.batch_size,
+        )
+    ]
   if not isinstance(environment.reward_spec(), dict):
     metrics += [
-        tf_metrics.AverageReturnMetric(batch_size=environment.batch_size)]
+        tf_metrics.AverageReturnMetric(batch_size=environment.batch_size)
+    ]
 
   if training_data_spec_transformation_fn is not None:
     add_batch_fn = lambda data: replay_buffer.add_batch(  # pylint: disable=g-long-lambda
-        training_data_spec_transformation_fn(data))
+        training_data_spec_transformation_fn(data)
+    )
   else:
     add_batch_fn = replay_buffer.add_batch
 
@@ -232,34 +253,40 @@ def train(root_dir,
       env=environment,
       policy=agent.collect_policy,
       num_steps=steps_per_loop * environment.batch_size,
-      observers=observers)
+      observers=observers,
+  )
 
   if get_training_loop_fn is None:
     get_training_loop_fn = _get_training_loop
-  training_loop = get_training_loop_fn(driver, replay_buffer, agent,
-                                       steps_per_loop, async_steps_per_loop)
+  training_loop = get_training_loop_fn(
+      driver, replay_buffer, agent, steps_per_loop, async_steps_per_loop
+  )
   checkpoint_manager = restore_and_get_checkpoint_manager(
-      root_dir, agent, metrics, step_metric)
+      root_dir, agent, metrics, step_metric
+  )
   train_step_counter = tf.compat.v1.train.get_or_create_global_step()
   if save_policy:
     saver = policy_saver.PolicySaver(
-        agent.policy, train_step=train_step_counter)
+        agent.policy, train_step=train_step_counter
+    )
 
   summary_writer = tf.summary.create_file_writer(root_dir)
   summary_writer.set_as_default()
 
   if resume_training_loops:
     train_step_count_per_loop = (
-        steps_per_loop * environment.batch_size * async_steps_per_loop)
+        steps_per_loop * environment.batch_size * async_steps_per_loop
+    )
     last_checkpointed_step = step_metric.result().numpy()
     if last_checkpointed_step % train_step_count_per_loop != 0:
       raise ValueError(
-          f'Last checkpointed step is expected to be a multiple of '
+          'Last checkpointed step is expected to be a multiple of '
           'steps_per_loop * batch_size * async_steps_per_loop, but found '
           f'otherwise: last checkpointed step: {last_checkpointed_step}, '
           f'steps_per_loop: {steps_per_loop}, batch_size: '
           f'{environment.batch_size}, async_steps_per_loop: '
-          f'{async_steps_per_loop}')
+          f'{async_steps_per_loop}'
+      )
     starting_loop = last_checkpointed_step // train_step_count_per_loop
   else:
     starting_loop = 0

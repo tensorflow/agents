@@ -20,11 +20,10 @@ from __future__ import division
 from __future__ import print_function
 
 import functools
-from absl.testing.absltest import mock
 
+from absl.testing.absltest import mock
 import gin
 import gym
-
 from tf_agents.environments import py_environment
 from tf_agents.environments import suite_gym
 from tf_agents.environments import wrappers
@@ -50,7 +49,8 @@ class SuiteGymTest(test_utils.TestCase):
   def test_load_disable_wrappers_applied(self):
     duration_wrapper = functools.partial(wrappers.TimeLimit, duration=10)
     env = suite_gym.load(
-        'CartPole-v1', max_episode_steps=0, env_wrappers=(duration_wrapper,))
+        'CartPole-v1', max_episode_steps=0, env_wrappers=(duration_wrapper,)
+    )
     self.assertIsInstance(env, py_environment.PyEnvironment)
     self.assertIsInstance(env, wrappers.TimeLimit)
 
@@ -72,13 +72,13 @@ class SuiteGymTest(test_utils.TestCase):
     env = suite_gym.load('MountainCar-v0', gym_kwargs={'goal_velocity': 21})
     self.assertEqual(env.unwrapped.goal_velocity, 21)
 
-    env = suite_gym.load('MountainCar-v0',
-                         gym_kwargs={'goal_velocity': 50})
+    env = suite_gym.load('MountainCar-v0', gym_kwargs={'goal_velocity': 50})
     self.assertEqual(env.unwrapped.goal_velocity, 50)
 
   def test_load_gym_render_kwargs(self):
-    env = suite_gym.load('CartPole-v1',
-                         render_kwargs={'width': 96, 'height': 128})
+    env = suite_gym.load(
+        'CartPole-v1', render_kwargs={'width': 96, 'height': 128}
+    )
     gym_env = env.gym
     self.assertIsInstance(gym_env, gym.Env)
     gym_env.render = mock.MagicMock()
@@ -88,8 +88,9 @@ class SuiteGymTest(test_utils.TestCase):
 
   def test_wrap_gym_render_kwargs(self):
     gym_env = gym.make('CartPole-v1')
-    env = suite_gym.wrap_env(gym_env,
-                             render_kwargs={'width': 96, 'height': 128})
+    env = suite_gym.wrap_env(
+        gym_env, render_kwargs={'width': 96, 'height': 128}
+    )
     gym_env.render = mock.MagicMock()
     # render_kwargs should be passed to them underlying gym env's render().
     env.render()

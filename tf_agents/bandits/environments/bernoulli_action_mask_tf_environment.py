@@ -45,7 +45,6 @@ from typing import Callable
 import gin
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 import tensorflow_probability as tfp
-
 from tf_agents.bandits.environments import bandit_tf_environment
 from tf_agents.policies import utils as policy_utilities
 from tf_agents.trajectories import time_step as ts
@@ -63,21 +62,26 @@ def _maybe_add_one_action(mask):
   extra_actions = tf.one_hot(
       tf.random.uniform([batch_size], 0, num_actions, dtype=tf.int32),
       depth=num_actions,
-      dtype=tf.int32)
+      dtype=tf.int32,
+  )
   cond = tf.cast(tf.equal(tf.reduce_max(mask, axis=1), 1), tf.bool)
   return tf.compat.v1.where(cond, mask, extra_actions)
 
 
 @gin.configurable
-class BernoulliActionMaskTFEnvironment(bandit_tf_environment.BanditTFEnvironment
-                                      ):
+class BernoulliActionMaskTFEnvironment(
+    bandit_tf_environment.BanditTFEnvironment
+):
   """An environment wrapper that adds action masks to observations."""
 
-  def __init__(self,
-               original_environment: bandit_tf_environment.BanditTFEnvironment,
-               action_constraint_join_fn: Callable[
-                   [types.TensorSpec, types.TensorSpec], types.TensorSpec],
-               action_probability: float):
+  def __init__(
+      self,
+      original_environment: bandit_tf_environment.BanditTFEnvironment,
+      action_constraint_join_fn: Callable[
+          [types.TensorSpec, types.TensorSpec], types.TensorSpec
+      ],
+      action_probability: float,
+  ):
     """Initializes a `BernoulliActionMaskTFEnvironment`.
 
     Args:
@@ -97,22 +101,27 @@ class BernoulliActionMaskTFEnvironment(bandit_tf_environment.BanditTFEnvironment
     self._batch_size = self._original_environment.batch_size
     action_spec = self._original_environment.action_spec()
     observation_spec_without_mask = (
-        self._original_environment.time_step_spec().observation)
+        self._original_environment.time_step_spec().observation
+    )
     self._num_actions = policy_utilities.get_num_actions_from_tensor_spec(
-        action_spec)
+        action_spec
+    )
 
     mask_spec = tf.TensorSpec([self._num_actions], dtype=tf.int32)
     joined_observation_spec = self._action_constraint_join_fn(
-        observation_spec_without_mask, mask_spec)
+        observation_spec_without_mask, mask_spec
+    )
     time_step_spec = ts.time_step_spec(joined_observation_spec)
 
     self._current_mask = tf.compat.v2.Variable(
-        tf.ones([self.batch_size, self._num_actions], dtype=tf.int32))
+        tf.ones([self.batch_size, self._num_actions], dtype=tf.int32)
+    )
 
     super(BernoulliActionMaskTFEnvironment, self).__init__(
         time_step_spec=time_step_spec,
         action_spec=action_spec,
-        batch_size=self._batch_size)
+        batch_size=self._batch_size,
+    )
 
   @property
   def original_environment(self):
@@ -121,7 +130,8 @@ class BernoulliActionMaskTFEnvironment(bandit_tf_environment.BanditTFEnvironment
   @common.function
   def _check_action_with_mask(self, action):
     is_allowed = tf.gather(
-        self._current_mask, tf.expand_dims(action, axis=1), batch_dims=1)
+        self._current_mask, tf.expand_dims(action, axis=1), batch_dims=1
+    )
     tf.assert_equal(is_allowed, 1, message='Action not in allowed action set.')
 
   @common.function
@@ -136,7 +146,8 @@ class BernoulliActionMaskTFEnvironment(bandit_tf_environment.BanditTFEnvironment
     # pylint: disable=protected-access
     original_observation = self._original_environment._observe()
     mask = tfd.Bernoulli(self._action_probability).sample(
-        sample_shape=[self._batch_size, self._num_actions])
+        sample_shape=[self._batch_size, self._num_actions]
+    )
     mask = _maybe_add_one_action(mask)
     tf.compat.v1.assign(self._current_mask, mask)
 

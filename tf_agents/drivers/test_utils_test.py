@@ -16,7 +16,6 @@
 """Tests for tf_agents.drivers.test_utils."""
 from absl.testing import parameterized
 import numpy as np
-
 from tf_agents.drivers import test_utils as driver_test_utils
 from tf_agents.trajectories import time_step as ts
 from tf_agents.trajectories import trajectory
@@ -34,13 +33,14 @@ class TestUtilsTest(parameterized.TestCase, test_utils.TestCase):
       ('BatchOfTwoTrajectorieOfLengthNine', 2, 9),
       ('BatchOfFiveTrajectorieOfLengthThree', 5, 3),
       ('BatchOfFiveTrajectorieOfLengthSeven', 5, 7),
-      ('BatchOfFiveTrajectorieOfLengthNine', 5, 9)
+      ('BatchOfFiveTrajectorieOfLengthNine', 5, 9),
   ])
   def testNumEpisodesObserverEpisodeTotal(self, batch_size, traj_len):
-    single_trajectory = np.concatenate([[ts.StepType.FIRST],
-                                        np.repeat(ts.StepType.MID,
-                                                  traj_len - 2),
-                                        [ts.StepType.LAST]])
+    single_trajectory = np.concatenate([
+        [ts.StepType.FIRST],
+        np.repeat(ts.StepType.MID, traj_len - 2),
+        [ts.StepType.LAST],
+    ])
     step_type = np.tile(single_trajectory, (batch_size, 1))
 
     traj = trajectory.Trajectory(
@@ -50,7 +50,8 @@ class TestUtilsTest(parameterized.TestCase, test_utils.TestCase):
         reward=np.random.rand(batch_size, traj_len),
         discount=np.ones((batch_size, traj_len)),
         step_type=step_type,
-        next_step_type=np.zeros((batch_size, traj_len)))
+        next_step_type=np.zeros((batch_size, traj_len)),
+    )
 
     observer = driver_test_utils.NumEpisodesObserver()
     observer(traj)

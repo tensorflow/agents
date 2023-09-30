@@ -65,8 +65,9 @@ class EpisodicTable(tf.Module):
       else:
         return _create_unique_slot_name(spec, count + 1)
 
-    self._slots = tf.nest.map_structure(_create_unique_slot_name,
-                                        self._tensor_spec)
+    self._slots = tf.nest.map_structure(
+        _create_unique_slot_name, self._tensor_spec
+    )
     self._flattened_slots = tf.nest.flatten(self._slots)
     self._flattened_specs = tf.nest.flatten(self._tensor_spec)
 
@@ -77,14 +78,17 @@ class EpisodicTable(tf.Module):
           empty_key=-1,
           deleted_key=-2,
           name=slot_name,
-          default_value=_empty_slot(spec))
+          default_value=_empty_slot(spec),
+      )
 
-    self._storage = tf.nest.map_structure(_create_storage, self._tensor_spec,
-                                          self._slots)
+    self._storage = tf.nest.map_structure(
+        _create_storage, self._tensor_spec, self._slots
+    )
     self._variables = tf.nest.flatten(self._storage)
     self._slot2variable_map = dict(zip(self._flattened_slots, self._variables))
     self._slot2spec_map = dict(
-        zip(self._flattened_slots, self._flattened_specs))
+        zip(self._flattened_slots, self._flattened_specs)
+    )
 
   @property
   def slots(self):
@@ -108,8 +112,9 @@ class EpisodicTable(tf.Module):
       A Tensor with first dimension equal to the length of tensor_list.
     """
     tensor_list.shape.assert_has_rank(0)
-    value = list_ops.tensor_list_stack(tensor_list,
-                                       self._slot2spec_map[slot].dtype)
+    value = list_ops.tensor_list_stack(
+        tensor_list, self._slot2spec_map[slot].dtype
+    )
     value.set_shape([None] + self._slot2spec_map[slot].shape.as_list())
     return value
 
@@ -146,8 +151,9 @@ class EpisodicTable(tf.Module):
     """
     row = tf.convert_to_tensor(value=row, dtype=tf.int64)
     row.shape.assert_has_rank(0)
-    return tf.nest.map_structure(self._stack_tensor_list, self.slots,
-                                 self.get_episode_lists(row))
+    return tf.nest.map_structure(
+        self._stack_tensor_list, self.slots, self.get_episode_lists(row)
+    )
 
   def append(self, row, values):
     """Returns ops for appending multiple time values at the given row.
@@ -163,15 +169,19 @@ class EpisodicTable(tf.Module):
     row = tf.convert_to_tensor(value=row, dtype=tf.int64)
     flattened_values = tf.nest.flatten(values)
     append_ops = []
-    for spec, slot, value in zip(self._flattened_specs, self._flattened_slots,
-                                 flattened_values):
+    for spec, slot, value in zip(
+        self._flattened_specs, self._flattened_slots, flattened_values
+    ):
       var_slot = self._slot2variable_map[slot].lookup(row)
       value_as_tl = list_ops.tensor_list_from_tensor(
-          value, element_shape=tf.cast(spec.shape.as_list(), dtype=tf.int64))
+          value, element_shape=tf.cast(spec.shape.as_list(), dtype=tf.int64)
+      )
       new_value = list_ops.tensor_list_concat_lists(
-          var_slot, value_as_tl, element_dtype=spec.dtype)
+          var_slot, value_as_tl, element_dtype=spec.dtype
+      )
       append_ops.append(
-          self._slot2variable_map[slot].insert_or_assign(row, new_value))
+          self._slot2variable_map[slot].insert_or_assign(row, new_value)
+      )
     return tf.group(*append_ops)
 
   def add(self, rows, values):
@@ -196,7 +206,8 @@ class EpisodicTable(tf.Module):
       var_slots = self._slot2variable_map[slot].lookup(rows)
       new_value = list_ops.tensor_list_push_back_batch(var_slots, value)
       write_ops.append(
-          self._slot2variable_map[slot].insert_or_assign(rows, new_value))
+          self._slot2variable_map[slot].insert_or_assign(rows, new_value)
+      )
     return tf.group(*write_ops)
 
   def extend(self, rows, episode_lists):
@@ -219,13 +230,16 @@ class EpisodicTable(tf.Module):
 
     write_ops = []
     for spec, slot, existing_list, episode_list in zip(
-        self._flattened_specs, self._flattened_slots, flat_existing_lists,
-        flat_episode_lists):
+        self._flattened_specs,
+        self._flattened_slots,
+        flat_existing_lists,
+        flat_episode_lists,
+    ):
       extended_list = list_ops.tensor_list_concat_lists(
-          existing_list, episode_list, element_dtype=spec.dtype)
+          existing_list, episode_list, element_dtype=spec.dtype
+      )
       slot_variable = self._slot2variable_map[slot]
-      write_ops.append(
-          slot_variable.insert_or_assign(rows, extended_list))
+      write_ops.append(slot_variable.insert_or_assign(rows, extended_list))
     return tf.group(*write_ops)
 
   def clear(self):
@@ -238,7 +252,9 @@ class EpisodicTable(tf.Module):
     for slot in self._flattened_slots:
       clear_ops.append(
           self._slot2variable_map[slot].erase(
-              tf.range(self._capacity, dtype=tf.int64)))
+              tf.range(self._capacity, dtype=tf.int64)
+          )
+      )
     return tf.group(*clear_ops)
 
   def clear_rows(self, rows):
@@ -246,6 +262,7 @@ class EpisodicTable(tf.Module):
 
     Args:
       rows: A list/tensor of location(s) to clear values.
+
     Returns:
       Ops for clearing the values at rows.
     """
@@ -254,5 +271,6 @@ class EpisodicTable(tf.Module):
     for spec, slot in zip(self._flattened_specs, self._flattened_slots):
       new_value = tf.fill([tf.size(input=rows)], _empty_slot(spec))
       clear_ops.append(
-          self._slot2variable_map[slot].insert_or_assign(rows, new_value))
+          self._slot2variable_map[slot].insert_or_assign(rows, new_value)
+      )
     return tf.group(*clear_ops)

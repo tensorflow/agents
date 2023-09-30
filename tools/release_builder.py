@@ -39,22 +39,28 @@ import os
 from absl import app
 from absl import flags
 from absl import logging
-
 from git import Repo
 from git.exc import GitCommandError
 from git.exc import InvalidGitRepositoryError
 
 flags.DEFINE_string('branch_hash', None, 'Hash to build release branch from.')
-flags.DEFINE_string('release_number', None,
-                    'Release number, e.g. 0.6.0 or 0.6.0.rc0.')
-flags.DEFINE_string('version_file', None,
-                    'relative path to the version file in repo')
-flags.DEFINE_string('git_repo', None, 'Full github repo path.')
-flags.DEFINE_string('working_dir', None,
-                    'Full path to the directory to check the code out into.')
 flags.DEFINE_string(
-    'mode', 'branch', 'Set to "branch" to version and create branch and tag to '
-    'create the tag.')
+    'release_number', None, 'Release number, e.g. 0.6.0 or 0.6.0.rc0.'
+)
+flags.DEFINE_string(
+    'version_file', None, 'relative path to the version file in repo'
+)
+flags.DEFINE_string('git_repo', None, 'Full github repo path.')
+flags.DEFINE_string(
+    'working_dir',
+    None,
+    'Full path to the directory to check the code out into.',
+)
+flags.DEFINE_string(
+    'mode',
+    'branch',
+    'Set to "branch" to version and create branch and tag to create the tag.',
+)
 
 flags.mark_flag_as_required('release_number')
 flags.mark_flag_as_required('git_repo')
@@ -65,8 +71,9 @@ FLAGS = flags.FLAGS
 class ReleaseBuilder(object):
   """Helps to build releases through scripting of steps."""
 
-  def __init__(self, git_repo, version_file, release_number, working_dir,
-               branch_hash):
+  def __init__(
+      self, git_repo, version_file, release_number, working_dir, branch_hash
+  ):
     """Initialize ReleaseBuilder class.
 
     Args:
@@ -78,7 +85,8 @@ class ReleaseBuilder(object):
       branch_hash: Git hash to use to create the new branch if needed.
     """
     self.major, self.minor, self.patch, self.release = (
-        self._parse_version_input(release_number))
+        self._parse_version_input(release_number)
+    )
     self.branch_name = 'r{}.{}.{}'.format(self.major, self.minor, self.patch)
     self.tag_name = 'v{}.{}.{}'.format(self.major, self.minor, self.patch)
     self.branch_hash = branch_hash
@@ -96,8 +104,10 @@ class ReleaseBuilder(object):
       updated = self._update_version_file()
       if updated:
         self.repo.remotes.origin.push(self.branch_name)
-        logging.info('Version file updated and pushed to remote %s',
-                     self.repo.remotes.origin.url)
+        logging.info(
+            'Version file updated and pushed to remote %s',
+            self.repo.remotes.origin.url,
+        )
 
   def create_tag(self):
     """Creates a tag from the branch."""
@@ -162,8 +172,11 @@ class ReleaseBuilder(object):
     file_path = os.path.join(self.repo.working_tree_dir, self.version_file)
     self._update_version_numbers(file_path)
     return self._commit_file(
-        self.version_file, 'Version updated for release {}.{}.{}{}.'.format(
-            self.major, self.minor, self.patch, self.release))
+        self.version_file,
+        'Version updated for release {}.{}.{}{}.'.format(
+            self.major, self.minor, self.patch, self.release
+        ),
+    )
 
   def _update_version_numbers(self, file_path):
     """Updates the version variables in the project's version file.
@@ -214,9 +227,13 @@ class ReleaseBuilder(object):
         self.repo.git.checkout('origin/' + self.branch_name, b=self.branch_name)
       except GitCommandError:
         self.repo.create_head(
-            self.branch_name, commit=self.branch_hash).checkout()
-        logging.info('Created branch %s from hash %s.', self.repo.active_branch,
-                     self.branch_hash)
+            self.branch_name, commit=self.branch_hash
+        ).checkout()
+        logging.info(
+            'Created branch %s from hash %s.',
+            self.repo.active_branch,
+            self.branch_hash,
+        )
 
     self.repo.git.push('--set-upstream', 'origin', self.branch_name)
     logging.info('Branch pushed to remote %s.', self.repo.remotes.origin.url)
@@ -241,9 +258,13 @@ class ReleaseBuilder(object):
 
 def main(_):
   logging.set_verbosity(logging.INFO)
-  release_build = ReleaseBuilder(FLAGS.git_repo, FLAGS.version_file,
-                                 FLAGS.release_number, FLAGS.working_dir,
-                                 FLAGS.branch_hash)
+  release_build = ReleaseBuilder(
+      FLAGS.git_repo,
+      FLAGS.version_file,
+      FLAGS.release_number,
+      FLAGS.working_dir,
+      FLAGS.branch_hash,
+  )
   if 'branch' in FLAGS.mode:
     release_build.create_release_branch()
   elif 'tag' in FLAGS.mode:

@@ -23,14 +23,14 @@ import copy
 from typing import Any, List, Mapping, Optional, Sequence, Text, Tuple, Union
 
 import tensorflow as tf
-
 from tf_agents.keras_layers import rnn_wrapper
 from tf_agents.networks import network
 from tf_agents.typing import types
+from tf_agents.utils import common
 
 
 def _infer_state_specs(
-    layers: Sequence[tf.keras.layers.Layer]
+    layers: Sequence[tf.keras.layers.Layer],
 ) -> Tuple[types.NestedTensorSpec, List[bool]]:
   """Infer the state spec of a sequence of keras Layers and Networks.
 
@@ -81,18 +81,20 @@ class Sequential(network.Network):
   ```
   """
 
-  def __init__(self,
-               layers: Sequence[tf.keras.layers.Layer],
-               input_spec: Optional[types.NestedTensorSpec] = None,
-               name: Optional[Text] = None):
+  def __init__(
+      self,
+      layers: Sequence[tf.keras.layers.Layer],
+      input_spec: Optional[types.NestedTensorSpec] = None,
+      name: Optional[Text] = None,
+  ):
     """Create a Sequential Network.
 
     Args:
-      layers: A list or tuple of layers to compose.  Any layers that
-        are subclasses of `tf.keras.layers.{RNN,LSTM,GRU,...}` are
-        wrapped in `tf_agents.keras_layers.RNNWrapper`.
-      input_spec: (Optional.) A nest of `tf.TypeSpec` representing the
-        input observations to the first layer.
+      layers: A list or tuple of layers to compose.  Any layers that are
+        subclasses of `tf.keras.layers.{RNN,LSTM,GRU,...}` are wrapped in
+        `tf_agents.keras_layers.RNNWrapper`.
+      input_spec: (Optional.) A nest of `tf.TypeSpec` representing the input
+        observations to the first layer.
       name: (Optional.) Network name.
 
     Raises:
@@ -102,16 +104,17 @@ class Sequential(network.Network):
       TypeError: If any of the layers are not instances of keras `Layer`.
     """
     if not layers:
-      raise ValueError(
-          '`layers` must not be empty; saw: {}'.format(layers))
+      raise ValueError('`layers` must not be empty; saw: {}'.format(layers))
     for layer in layers:
       if not isinstance(layer, tf.keras.layers.Layer):
         raise TypeError(
             'Expected all layers to be instances of keras Layer, but saw'
-            ': \'{}\''.format(layer))
+            ": '{}'".format(layer)
+        )
 
     layers = [
-        rnn_wrapper.RNNWrapper(layer) if isinstance(layer, tf.keras.layers.RNN)
+        rnn_wrapper.RNNWrapper(layer)
+        if isinstance(layer, tf.keras.layers.RNN)
         else layer
         for layer in layers
     ]
@@ -124,10 +127,11 @@ class Sequential(network.Network):
     flattened_specs = [tf.nest.flatten(s) for s in state_spec]
     layer_has_state = [bool(fs) for fs in flattened_specs]
     state_spec = tuple(
-        s for s, has_state in zip(state_spec, layer_has_state) if has_state)
-    super(Sequential, self).__init__(input_tensor_spec=input_spec,
-                                     state_spec=state_spec,
-                                     name=name)
+        s for s, has_state in zip(state_spec, layer_has_state) if has_state
+    )
+    super(Sequential, self).__init__(
+        input_tensor_spec=input_spec, state_spec=state_spec, name=name
+    )
     self._sequential_layers = layers
     self._layer_has_state = layer_has_state
 
@@ -156,7 +160,8 @@ class Sequential(network.Network):
     """
     if not tf.executing_eagerly():
       raise RuntimeError(
-          'Not executing eagerly - cannot make deep copies of `layers`.')
+          'Not executing eagerly - cannot make deep copies of `layers`.'
+      )
     new_kwargs = dict(self._saved_kwargs, **kwargs)
     if 'layers' not in kwargs:
       new_layers = [copy.deepcopy(l) for l in self.layers]
@@ -182,9 +187,8 @@ class Sequential(network.Network):
             input_state = list(input_state)
 
           inputs, next_state = layer(
-              inputs,
-              network_state=network_state[stateful_layer_idx],
-              **kwargs)
+              inputs, network_state=network_state[stateful_layer_idx], **kwargs
+          )
 
           if self._layer_state_is_list[i]:
             next_network_state[stateful_layer_idx] = tuple(next_state)
@@ -203,12 +207,13 @@ class Sequential(network.Network):
 
           input_state = maybe_network_state
 
-          # pylint: disable=literal-comparison
           if maybe_network_state is None:
             input_state = layer.get_initial_state(inputs)
-          elif input_state is not () and self._layer_state_is_list[i]:
+          elif (
+              common.safe_has_state(input_state)
+              and self._layer_state_is_list[i]
+          ):
             input_state = list(input_state)
-          # pylint: enable=literal-comparison
 
           outputs = layer(inputs, input_state, **layer_kwargs)
           inputs, next_state = outputs
@@ -226,16 +231,16 @@ class Sequential(network.Network):
     return inputs, tuple(next_network_state)
 
   def compute_output_shape(
-      self,
-      input_shape: Union[List[int], Tuple[int], tf.TensorShape]) -> (
-          tf.TensorShape):
+      self, input_shape: Union[List[int], Tuple[int], tf.TensorShape]
+  ) -> tf.TensorShape:
     output_shape = tf.TensorShape(input_shape)
     for l in self._sequential_layers:
       output_shape = l.compute_output_shape(output_shape)
     return tf.TensorShape(output_shape)
 
   def compute_output_signature(
-      self, input_signature: types.NestedSpec) -> types.NestedSpec:
+      self, input_signature: types.NestedSpec
+  ) -> types.NestedSpec:
     output_signature = input_signature
     for l in self._sequential_layers:
       output_signature = l.compute_output_signature(output_signature)
@@ -273,7 +278,7 @@ class Sequential(network.Network):
     for i, layer in enumerate(self._sequential_layers):
       config[i] = {
           'class_name': layer.__class__.__name__,
-          'config': copy.deepcopy(layer.get_config())
+          'config': copy.deepcopy(layer.get_config()),
       }
     return config
 

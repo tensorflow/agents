@@ -23,7 +23,6 @@ import sys
 import gin
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 import tensorflow_probability as tfp
-
 from tf_agents.distributions import utils as distribution_utils
 from tf_agents.keras_layers import bias_layer
 from tf_agents.networks import network
@@ -51,18 +50,20 @@ class NormalProjectionNetwork(network.DistributionNetwork):
   Note: The standard deviations are independent of the input.
   """
 
-  def __init__(self,
-               sample_spec,
-               activation_fn=None,
-               init_means_output_factor=0.1,
-               std_bias_initializer_value=0.0,
-               mean_transform=tanh_squash_to_spec,
-               std_transform=tf.nn.softplus,
-               state_dependent_std=False,
-               scale_distribution=False,
-               seed=None,
-               seed_stream_class=tfp.util.SeedStream,
-               name='NormalProjectionNetwork'):
+  def __init__(
+      self,
+      sample_spec,
+      activation_fn=None,
+      init_means_output_factor=0.1,
+      std_bias_initializer_value=0.0,
+      mean_transform=tanh_squash_to_spec,
+      std_transform=tf.nn.softplus,
+      state_dependent_std=False,
+      scale_distribution=False,
+      seed=None,
+      seed_stream_class=tfp.util.SeedStream,
+      name='NormalProjectionNetwork',
+  ):
     """Creates an instance of NormalProjectionNetwork.
 
     Args:
@@ -90,8 +91,9 @@ class NormalProjectionNetwork(network.DistributionNetwork):
       name: A string representing name of the network.
     """
     if len(tf.nest.flatten(sample_spec)) != 1:
-      raise ValueError('Normal Projection network only supports single spec '
-                       'samples.')
+      raise ValueError(
+          'Normal Projection network only supports single spec samples.'
+      )
     self._scale_distribution = scale_distribution
     output_spec = self._output_distribution_spec(sample_spec, name)
     super(NormalProjectionNetwork, self).__init__(
@@ -99,7 +101,8 @@ class NormalProjectionNetwork(network.DistributionNetwork):
         input_tensor_spec=None,
         state_spec=(),
         output_spec=output_spec,
-        name=name)
+        name=name,
+    )
 
     self._sample_spec = sample_spec
     self._is_multivariate = sample_spec.shape.ndims > 0
@@ -107,7 +110,8 @@ class NormalProjectionNetwork(network.DistributionNetwork):
     self._std_transform = std_transform
     self._state_dependent_std = state_dependent_std
     seed_stream = seed_stream_class(
-        seed=seed, salt='tf_agents_normal_projection_network')
+        seed=seed, salt='tf_agents_normal_projection_network'
+    )
     mean_seed = seed_stream()
     if mean_seed is not None:
       mean_seed = mean_seed % sys.maxsize
@@ -115,10 +119,11 @@ class NormalProjectionNetwork(network.DistributionNetwork):
         sample_spec.shape.num_elements(),
         activation=activation_fn,
         kernel_initializer=tf.keras.initializers.VarianceScaling(
-            scale=init_means_output_factor,
-            seed=mean_seed),
+            scale=init_means_output_factor, seed=mean_seed
+        ),
         bias_initializer=tf.keras.initializers.Zeros(),
-        name='means_projection_layer')
+        name='means_projection_layer',
+    )
 
     self._stddev_projection_layer = None
     if self._state_dependent_std:
@@ -129,15 +134,19 @@ class NormalProjectionNetwork(network.DistributionNetwork):
           sample_spec.shape.num_elements(),
           activation=activation_fn,
           kernel_initializer=tf.compat.v1.keras.initializers.VarianceScaling(
-              scale=init_means_output_factor,
-              seed=std_seed),
+              scale=init_means_output_factor, seed=std_seed
+          ),
           bias_initializer=tf.constant_initializer(
-              value=std_bias_initializer_value),
-          name='stddev_projection_layer')
+              value=std_bias_initializer_value
+          ),
+          name='stddev_projection_layer',
+      )
     else:
       self._bias = bias_layer.BiasLayer(
           bias_initializer=tf.constant_initializer(
-              value=std_bias_initializer_value))
+              value=std_bias_initializer_value
+          )
+      )
 
   def _output_distribution_spec(self, sample_spec, network_name):
     is_multivariate = sample_spec.shape.ndims > 0
@@ -146,7 +155,8 @@ class NormalProjectionNetwork(network.DistributionNetwork):
         name: tensor_spec.TensorSpec(
             shape=properties.shape_fn(sample_spec.shape),
             dtype=sample_spec.dtype,
-            name=network_name + '_' + name)
+            name=network_name + '_' + name,
+        )
         for name, properties in param_properties.items()
     }
 
@@ -165,21 +175,25 @@ class NormalProjectionNetwork(network.DistributionNetwork):
         distribution = tfp.distributions.Normal(*args, **kwargs)
       if self._scale_distribution:
         return distribution_utils.scale_distribution_to_spec(
-            distribution, sample_spec)
+            distribution, sample_spec
+        )
       return distribution
 
     return distribution_spec.DistributionSpec(
-        distribution_builder, input_param_spec, sample_spec=sample_spec)
+        distribution_builder, input_param_spec, sample_spec=sample_spec
+    )
 
   def call(self, inputs, outer_rank, training=False, mask=None):
     if inputs.dtype != self._sample_spec.dtype:
       raise ValueError(
-          'Inputs to NormalProjectionNetwork must match the sample_spec.dtype.')
+          'Inputs to NormalProjectionNetwork must match the sample_spec.dtype.'
+      )
 
     if mask is not None:
       raise NotImplementedError(
           'NormalProjectionNetwork does not yet implement action masking; got '
-          'mask={}'.format(mask))
+          'mask={}'.format(mask)
+      )
 
     # outer_rank is needed because the projection is not done on the raw
     # observations so getting the outer rank is hard as there is no spec to

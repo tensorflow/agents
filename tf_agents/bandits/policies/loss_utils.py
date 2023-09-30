@@ -22,7 +22,6 @@ from __future__ import print_function
 from typing import Optional, Text
 
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
-
 from tf_agents.typing import types
 
 
@@ -32,9 +31,9 @@ def pinball_loss(
     weights: types.Float = 1.0,
     scope: Optional[Text] = None,
     loss_collection: tf.compat.v1.GraphKeys = tf.compat.v1.GraphKeys.LOSSES,
-    reduction: tf.compat.v1.losses.Reduction = tf.compat.v1.losses.Reduction
-    .SUM_BY_NONZERO_WEIGHTS,
-    quantile: float = 0.5) -> types.Float:
+    reduction: tf.compat.v1.losses.Reduction = tf.compat.v1.losses.Reduction.SUM_BY_NONZERO_WEIGHTS,
+    quantile: float = 0.5,
+) -> types.Float:
   """Adds a Pinball loss for quantile regression.
 
     ```
@@ -82,12 +81,14 @@ def pinball_loss(
     raise ValueError('y_true must not be None.')
   if y_pred is None:
     raise ValueError('y_pred must not be None.')
-  with tf.compat.v1.name_scope(scope, 'pinball_loss',
-                               (y_pred, y_true, weights)) as scope:
+  with tf.compat.v1.name_scope(
+      scope, 'pinball_loss', (y_pred, y_true, weights)
+  ) as scope:
     y_pred = tf.cast(y_pred, dtype=tf.float32)
     y_true = tf.cast(y_true, dtype=tf.float32)
     y_pred.get_shape().assert_is_compatible_with(y_true.get_shape())
     error = tf.subtract(y_true, y_pred)
     loss_tensor = tf.maximum(quantile * error, (quantile - 1) * error)
     return tf.compat.v1.losses.compute_weighted_loss(
-        loss_tensor, weights, scope, loss_collection, reduction=reduction)
+        loss_tensor, weights, scope, loss_collection, reduction=reduction
+    )

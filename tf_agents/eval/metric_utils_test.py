@@ -21,7 +21,6 @@ from __future__ import print_function
 
 import numpy as np
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
-
 from tf_agents.environments import random_py_environment
 from tf_agents.eval import metric_utils
 from tf_agents.metrics import py_metrics
@@ -32,7 +31,6 @@ from tf_agents.specs import array_spec
 class MetricUtilsTest(tf.test.TestCase):
 
   def testMetricIsComputedCorrectly(self):
-
     def reward_fn(*unused_args):
       reward = np.random.uniform()
       reward_fn.total_reward += reward
@@ -43,16 +41,22 @@ class MetricUtilsTest(tf.test.TestCase):
     action_spec = array_spec.BoundedArraySpec((1,), np.int32, -10, 10)
     observation_spec = array_spec.BoundedArraySpec((1,), np.int32, -10, 10)
     env = random_py_environment.RandomPyEnvironment(
-        observation_spec, action_spec, reward_fn=reward_fn)
+        observation_spec, action_spec, reward_fn=reward_fn
+    )
     policy = random_py_policy.RandomPyPolicy(
-        time_step_spec=None, action_spec=action_spec)
+        time_step_spec=None, action_spec=action_spec
+    )
 
     average_return = py_metrics.AverageReturnMetric()
 
     num_episodes = 10
     results = metric_utils.compute([average_return], env, policy, num_episodes)
-    self.assertAlmostEqual(reward_fn.total_reward / num_episodes,
-                           results[average_return.name], places=5)
+    self.assertAlmostEqual(
+        reward_fn.total_reward / num_episodes,
+        results[average_return.name],
+        places=5,
+    )
+
 
 if __name__ == '__main__':
   tf.test.main()

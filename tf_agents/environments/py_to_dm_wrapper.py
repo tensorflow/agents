@@ -49,7 +49,8 @@ def _convert_spec(spec: tfa_spec.ArraySpec) -> dm_spec.Array:
         dtype=spec.dtype,
         minimum=spec.minimum,
         maximum=spec.maximum,
-        name=spec.name)
+        name=spec.name,
+    )
   else:
     return dm_spec.Array(shape=spec.shape, dtype=spec.dtype, name=spec.name)
 
@@ -62,9 +63,11 @@ class PyToDMWrapper(dm_env.Environment):
     self._environment = env
     if env.batched:
       raise NotImplementedError(
-          'Batched environments cannot be converted to dm environments.')
-    self._observation_spec = tree.map_structure(_convert_spec,
-                                                env.observation_spec())
+          'Batched environments cannot be converted to dm environments.'
+      )
+    self._observation_spec = tree.map_structure(
+        _convert_spec, env.observation_spec()
+    )
     self._action_spec = tree.map_structure(_convert_spec, env.action_spec())
     self._discount_spec = tree.map_structure(_convert_spec, env.discount_spec())
 

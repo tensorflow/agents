@@ -19,13 +19,11 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-from typing import Text, Union, Sequence
+from typing import Sequence, Text, Union
 
 from absl import logging
 import tensorflow as tf
-
 from tf_agents.trajectories import trajectory as trajectory_lib
-
 from tf_agents.typing import types
 from tf_agents.utils import lazy_loader
 
@@ -51,12 +49,14 @@ class ReverbAddEpisodeObserver(object):
   consumer, if your episodes have variable lengths.
   """
 
-  def __init__(self,
-               py_client: types.ReverbClient,
-               table_name: Union[Text, Sequence[Text]],
-               max_sequence_length: int,
-               priority: Union[float, int] = 1,
-               bypass_partial_episodes: bool = False):
+  def __init__(
+      self,
+      py_client: types.ReverbClient,
+      table_name: Union[Text, Sequence[Text]],
+      max_sequence_length: int,
+      priority: Union[float, int] = 1,
+      bypass_partial_episodes: bool = False,
+  ):
     """Creates an instance of the ReverbAddEpisodeObserver.
 
     **Note**: This observer is designed to work with py_drivers only, and does
@@ -67,15 +67,15 @@ class ReverbAddEpisodeObserver(object):
     Args:
       py_client: Python client for the reverb replay server.
       table_name: The table name(s) where samples will be written to.
-      max_sequence_length: An integer. `max_sequence_length` used
-        to write to the replay buffer tables. This defines the size of the
-        internal buffer controlling the `upper` limit of the number of timesteps
-        which can be referenced in a single prioritized item. Note that this is
-        the maximum number of trajectories across all the cached episodes that
-        you are writing into the replay buffer (e.g. `number_of_episodes`).
-        `max_sequence_length` is not a limit of how many timesteps or
-        items that can be inserted into the replay buffer. Note that,
-        since `max_sequence_length` controls the size of internal buffer, it is
+      max_sequence_length: An integer. `max_sequence_length` used to write to
+        the replay buffer tables. This defines the size of the internal buffer
+        controlling the `upper` limit of the number of timesteps which can be
+        referenced in a single prioritized item. Note that this is the maximum
+        number of trajectories across all the cached episodes that you are
+        writing into the replay buffer (e.g. `number_of_episodes`).
+        `max_sequence_length` is not a limit of how many timesteps or items that
+        can be inserted into the replay buffer. Note that, since
+        `max_sequence_length` controls the size of internal buffer, it is
         suggested not to set this value to a very large number. If the number of
         steps in an episode is more than `max_sequence_length`, only items up to
         `max_sequence_length` is written into the table.
@@ -84,8 +84,8 @@ class ReverbAddEpisodeObserver(object):
         greater than `max_sequence_length`, a `ValueError` is raised. If set to
         `True`, the episodes with length more than `max_sequence_length` do not
         cause a `ValueError`. These episodes are bypassed (will NOT be written
-        into the replay buffer) and an error message is shown to the user.
-        Note that in this case (`bypass_partial_episodes=True`), the steps for
+        into the replay buffer) and an error message is shown to the user. Note
+        that in this case (`bypass_partial_episodes=True`), the steps for
         episodes with length more than `max_sequence_length` are wasted and
         thrown away. This decision is made to guarantee that the replay buffer
         always has FULL episodes. Note that, `max_sequence_length` is just an
@@ -97,7 +97,8 @@ class ReverbAddEpisodeObserver(object):
     """
     if max_sequence_length <= 0:
       raise ValueError(
-          "`max_sequence_length` must be an integer greater equal one.")
+          "`max_sequence_length` must be an integer greater equal one."
+      )
 
     if isinstance(table_name, Text):
       self._table_names = [table_name]
@@ -109,8 +110,8 @@ class ReverbAddEpisodeObserver(object):
 
     self._py_client = py_client
     self._writer = self._py_client.trajectory_writer(
-        num_keep_alive_refs=self._max_sequence_length + 1,
-        validate_items=False)
+        num_keep_alive_refs=self._max_sequence_length + 1, validate_items=False
+    )
     self._cached_steps = 0
     self._bypass_partial_episodes = bypass_partial_episodes
     self._overflow_episode = False
@@ -152,22 +153,26 @@ class ReverbAddEpisodeObserver(object):
     # TODO(b/176494855): Raise an error if an invalid trajectory is passed in.
     # Currently, invalid `traj` value (mid->first, last->last) is not specially
     # handled and is treated as a normal mid->mid step.
-    if (self._cached_steps >= self._max_sequence_length and
-        not self._overflow_episode):
+    if (
+        self._cached_steps >= self._max_sequence_length
+        and not self._overflow_episode
+    ):
       self._overflow_episode = True
       if self._bypass_partial_episodes:
         logging.error(
             "The number of trajectories within the same episode exceeds "
             "`max_sequence_length`. This episode is bypassed and will NOT "
             "be written into the replay buffer. Consider increasing the "
-            "`max_sequence_length`.")
+            "`max_sequence_length`."
+        )
       else:
         raise ValueError(
             "The number of trajectories within the same episode "
             "exceeds `max_sequence_length`. Consider increasing the "
             "`max_sequence_length` or set `bypass_partial_episodes` to true "
             "to bypass the episodes with length more than "
-            "`max_sequence_length`.")
+            "`max_sequence_length`."
+        )
 
     # At the end of the overflowing episode, drop the cached incomplete episode
     # and reset the writer.
@@ -195,9 +200,8 @@ class ReverbAddEpisodeObserver(object):
       trajectory = tf.nest.map_structure(lambda h: h[:], self._writer.history)
       for table_name in self._table_names:
         self._writer.create_item(
-            table=table_name,
-            trajectory=trajectory,
-            priority=self._priority)
+            table=table_name, trajectory=trajectory, priority=self._priority
+        )
       self._writer_has_data = False
     else:
       logging.info("Skipped writing to Reverb because the writer is empty.")
@@ -212,8 +216,7 @@ class ReverbAddEpisodeObserver(object):
     """
     self._writer.flush()
 
-  def reset(self,
-            write_cached_steps: bool = True) -> None:
+  def reset(self, write_cached_steps: bool = True) -> None:
     """Resets the state of the observer.
 
     **Note**: Reset should be called only after all collection has finished
@@ -240,7 +243,8 @@ class ReverbAddEpisodeObserver(object):
     if self._writer is None:
       self._writer = self._py_client.trajectory_writer(
           num_keep_alive_refs=self._max_sequence_length + 1,
-          validate_items=False)
+          validate_items=False,
+      )
 
   def close(self) -> None:
     """Closes the writer of the observer.
@@ -270,14 +274,16 @@ class ReverbAddTrajectoryObserver(object):
   unless `pad_end_of_episodes` is set.
   """
 
-  def __init__(self,
-               py_client: types.ReverbClient,
-               table_name: Union[Text, Sequence[Text]],
-               sequence_length: int,
-               stride_length: int = 1,
-               priority: Union[float, int] = 1,
-               pad_end_of_episodes: bool = False,
-               tile_end_of_episodes: bool = False):
+  def __init__(
+      self,
+      py_client: types.ReverbClient,
+      table_name: Union[Text, Sequence[Text]],
+      sequence_length: int,
+      stride_length: int = 1,
+      priority: Union[float, int] = 1,
+      pad_end_of_episodes: bool = False,
+      tile_end_of_episodes: bool = False,
+  ):
     """Creates an instance of the ReverbAddTrajectoryObserver.
 
     If multiple table_names and sequence lengths are provided data will only be
@@ -303,22 +309,14 @@ class ReverbAddTrajectoryObserver(object):
         boundary steps (last->first) with `0` values everywhere and padded items
         of `sequence_length` are written to Reverb.
       tile_end_of_episodes: If `pad_end_of_episodes` is True then, the last
-        padded item starts with a boundary step from the episode.
+        padded item starts with a boundary step from the episode.  When this
+        option is True the following items will be generated:  F, M, L, P M, L,
+        P, P L, P, P, P  If False, only a single one will be generated:  F, M,
+        L, P  For training recurrent models on environments where required
+        information is only available at the start of the episode it is useful
+        to set `tile_end_of_episodes=False` and the `sequence_length` to be the
+        length of the longest episode.
 
-        When this option is True the following items will be generated:
-
-        F, M, L, P
-        M, L, P, P
-        L, P, P, P
-
-        If False, only a single one will be generated:
-
-        F, M, L, P
-
-        For training recurrent models on environments where required information
-        is only available at the start of the episode it is useful to set
-        `tile_end_of_episodes=False` and the `sequence_length` to be the length
-        of the longest episode.
     Raises:
       ValueError: If `tile_end_of_episodes` is set without
         `pad_end_of_episodes`.
@@ -334,15 +332,18 @@ class ReverbAddTrajectoryObserver(object):
     self._tile_end_of_episodes = tile_end_of_episodes
 
     if tile_end_of_episodes and not pad_end_of_episodes:
-      raise ValueError("Must set `pad_end_of_episodes=True` when using "
-                       "`tile_end_of_episodes`")
+      raise ValueError(
+          "Must set `pad_end_of_episodes=True` when using "
+          "`tile_end_of_episodes`"
+      )
 
     self._py_client = py_client
     # TODO(b/153700282): Use a single writer with max_sequence_length=max(...)
     # once Reverb Dataset with emit_timesteps=True returns properly shaped
     # sequences.
     self._writer = py_client.trajectory_writer(
-        num_keep_alive_refs=sequence_length + 1, validate_items=False)
+        num_keep_alive_refs=sequence_length + 1, validate_items=False
+    )
     self._cached_steps = 0
     self._last_trajectory = None
 
@@ -383,7 +384,8 @@ class ReverbAddTrajectoryObserver(object):
   def _sequence_lengths_reached(self) -> bool:
     """Whether the cache has sufficient steps to write a new item into Reverb."""
     return (self._cached_steps >= self._sequence_length) and (
-        self._cached_steps - self._sequence_length) % self._stride_length == 0
+        self._cached_steps - self._sequence_length
+    ) % self._stride_length == 0
 
   def _write_cached_steps(self) -> None:
     """Writes the cached steps iff there is enough data in the cache.
@@ -393,12 +395,12 @@ class ReverbAddTrajectoryObserver(object):
 
     if self._sequence_lengths_reached():
       trajectory = tf.nest.map_structure(
-          lambda d: d[-self._sequence_length:], self._writer.history)
+          lambda d: d[-self._sequence_length :], self._writer.history
+      )
       for table_name in self._table_names:
         self._writer.create_item(
-            table=table_name,
-            trajectory=trajectory,
-            priority=self._priority)
+            table=table_name, trajectory=trajectory, priority=self._priority
+        )
 
     return None
 
@@ -425,8 +427,7 @@ class ReverbAddTrajectoryObserver(object):
     )
     return zero_step
 
-  def reset(self,
-            write_cached_steps: bool = True) -> None:
+  def reset(self, write_cached_steps: bool = True) -> None:
     """Resets the state of the observer.
 
     **Note**: Reset should be called only after all collection has finished
@@ -462,7 +463,8 @@ class ReverbAddTrajectoryObserver(object):
         raise ValueError(
             "write_cached_steps is True, but not enough steps remain in the "
             "cache to write an item with sequence_length={}, consider enabling "
-            "pad_end_of_episodes.".format(self._sequence_length))
+            "pad_end_of_episodes.".format(self._sequence_length)
+        )
 
     self._cached_steps = 0
     self._last_trajectory = None
@@ -476,8 +478,8 @@ class ReverbAddTrajectoryObserver(object):
     """Open the writer of the observer."""
     if self._writer is None:
       self._writer = self._py_client.trajectory_writer(
-          num_keep_alive_refs=self._sequence_length + 1,
-          validate_items=False)
+          num_keep_alive_refs=self._sequence_length + 1, validate_items=False
+      )
       self._cached_steps = 0
 
   def close(self) -> None:

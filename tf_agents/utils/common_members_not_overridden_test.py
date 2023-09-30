@@ -27,10 +27,8 @@ class Base(object):
 
   def __init__(self, allowlist=(), denylist=()):
     common.assert_members_are_not_overridden(
-        base_cls=Base,
-        instance=self,
-        allowlist=allowlist,
-        denylist=denylist)
+        base_cls=Base, instance=self, allowlist=allowlist, denylist=denylist
+    )
 
   def method1(self):
     pass
@@ -40,7 +38,6 @@ class Base(object):
 
 
 def child_class(cls, allowlist=(), denylist=()):
-
   class ChildNoOverrides(Base):
 
     def __init__(self):
@@ -103,9 +100,9 @@ class AssertMembersAreNotOverriddenTest(tf.test.TestCase):
       child_cls()
 
   def testAllowListAndDenyListRaisesError(self):
-    child_cls = child_class('ChildNoOverrides',
-                            allowlist=('method1',),
-                            denylist=('method2',))
+    child_cls = child_class(
+        'ChildNoOverrides', allowlist=('method1',), denylist=('method2',)
+    )
     with self.assertRaises(ValueError):
       child_cls()
 

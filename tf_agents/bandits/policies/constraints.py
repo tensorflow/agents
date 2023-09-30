@@ -22,11 +22,10 @@ from __future__ import print_function
 import abc
 import functools
 from typing import Callable, Iterable, Optional, Text
-import six
 
+import six
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 import tensorflow_probability as tfp
-
 from tf_agents.bandits.policies import loss_utils
 from tf_agents.bandits.specs import utils as bandit_spec_utils
 from tf_agents.policies import utils as policy_utilities
@@ -48,7 +47,8 @@ class BaseConstraint(tf.Module):
       self,
       time_step_spec: types.TimeStep,
       action_spec: types.BoundedTensorSpec,
-      name: Optional[Text] = None):
+      name: Optional[Text] = None,
+  ):
     """Initialization of the BaseConstraint class.
 
     Args:
@@ -60,16 +60,19 @@ class BaseConstraint(tf.Module):
     if not isinstance(time_step_spec, ts.TimeStep):
       raise ValueError(
           'The `time_step_spec` must be an instance of `TimeStep`, but is `{}`.'
-          .format(type(time_step_spec)))
+          .format(type(time_step_spec))
+      )
 
     self._time_step_spec = time_step_spec
     self._action_spec = action_spec
 
   # Subclasses must implement these methods.
   @abc.abstractmethod
-  def __call__(self,
-               observation: types.NestedTensor,
-               actions: Optional[types.Tensor] = None) -> types.Tensor:
+  def __call__(
+      self,
+      observation: types.NestedTensor,
+      actions: Optional[types.Tensor] = None,
+  ) -> types.Tensor:
     """Returns the probability of input actions being feasible."""
 
 
@@ -87,7 +90,8 @@ class NeuralConstraint(BaseConstraint):
       action_spec: types.BoundedTensorSpec,
       constraint_network: Optional[types.Network],
       error_loss_fn: types.LossFn = tf.compat.v1.losses.mean_squared_error,
-      name: Optional[Text] = 'NeuralConstraint'):
+      name: Optional[Text] = 'NeuralConstraint',
+  ):
     """Creates a trainable constraint using a neural network.
 
     Args:
@@ -95,21 +99,19 @@ class NeuralConstraint(BaseConstraint):
       action_spec: A nest of `BoundedTensorSpec` representing the actions.
       constraint_network: An instance of `tf_agents.network.Network` used to
         provide estimates of action feasibility. The input structure should be
-        consistent with the `observation_spec`. If the constraint network is
-        not available at construction time, it can be set later on using the
+        consistent with the `observation_spec`. If the constraint network is not
+        available at construction time, it can be set later on using the
         constraint_network setter.
       error_loss_fn: A function for computing the loss used to train the
         constraint network. The default is `tf.losses.mean_squared_error`.
       name: Python str name of this agent. All variables in this module will
         fall under that name. Defaults to the class name.
     """
-    super(NeuralConstraint, self).__init__(
-        time_step_spec,
-        action_spec,
-        name)
+    super(NeuralConstraint, self).__init__(time_step_spec, action_spec, name)
 
     self._num_actions = policy_utilities.get_num_actions_from_tensor_spec(
-        action_spec)
+        action_spec
+    )
     if constraint_network is not None:
       with self.name_scope:
         constraint_network.create_variables()
@@ -137,18 +139,21 @@ class NeuralConstraint(BaseConstraint):
         step_type=self._time_step_spec.step_type,
         reward=self._time_step_spec.reward,
         discount=self._time_step_spec.discount,
-        observation=observation_spec)
+        observation=observation_spec,
+    )
 
   def initialize(self):
     """Returns an op to initialize the constraint."""
     tf.compat.v1.variables_initializer(self.variables)
 
-  def compute_loss(self,
-                   observations: types.NestedTensor,
-                   actions: types.NestedTensor,
-                   rewards: types.Tensor,
-                   weights: Optional[types.Float] = None,
-                   training: bool = False) -> types.Tensor:
+  def compute_loss(
+      self,
+      observations: types.NestedTensor,
+      actions: types.NestedTensor,
+      rewards: types.Tensor,
+      weights: Optional[types.Float] = None,
+      training: bool = False,
+  ) -> types.Tensor:
     """Computes loss for training the constraint network.
 
     Args:
@@ -156,8 +161,8 @@ class NeuralConstraint(BaseConstraint):
       actions: A batch of actions.
       rewards: A batch of rewards.
       weights: Optional scalar or elementwise (per-batch-entry) importance
-        weights.  The output batch loss will be scaled by these weights, and
-        the final scalar loss is the mean of these values.
+        weights.  The output batch loss will be scaled by these weights, and the
+        final scalar loss is the mean of these values.
       training: Whether the loss is being used for training.
 
     Returns:
@@ -166,10 +171,11 @@ class NeuralConstraint(BaseConstraint):
     with tf.name_scope('constraint_loss'):
       sample_weights = weights if weights is not None else 1
       predicted_values, _ = self._constraint_network(
-          observations, training=training)
+          observations, training=training
+      )
       action_predicted_values = common.index_with_actions(
-          predicted_values,
-          tf.cast(actions, dtype=tf.int32))
+          predicted_values, tf.cast(actions, dtype=tf.int32)
+      )
       # Reduction is done outside of the loss function because non-scalar
       # weights with unknown shapes may trigger shape validation that fails
       # XLA compilation.
@@ -178,11 +184,15 @@ class NeuralConstraint(BaseConstraint):
               self._error_loss_fn(
                   rewards,
                   action_predicted_values,
-                  reduction=tf.compat.v1.losses.Reduction.NONE),
-              sample_weights))
+                  reduction=tf.compat.v1.losses.Reduction.NONE,
+              ),
+              sample_weights,
+          )
+      )
 
-  def _reshape_and_broadcast(self, input_tensor: types.Tensor,
-                             to_shape: types.Tensor) -> types.Tensor:
+  def _reshape_and_broadcast(
+      self, input_tensor: types.Tensor, to_shape: types.Tensor
+  ) -> types.Tensor:
     input_tensor = tf.reshape(input_tensor, [-1, 1])
     return tf.broadcast_to(input_tensor, to_shape)
 
@@ -190,9 +200,15 @@ class NeuralConstraint(BaseConstraint):
   def __call__(self, observation, actions=None):
     """Returns the probability of input actions being feasible."""
     batch_dims = nest_utils.get_outer_shape(
-        observation, self._time_step_spec.observation)
-    shape = tf.concat([batch_dims, tf.constant(
-        self._num_actions, shape=[1], dtype=batch_dims.dtype)], axis=-1)
+        observation, self._time_step_spec.observation
+    )
+    shape = tf.concat(
+        [
+            batch_dims,
+            tf.constant(self._num_actions, shape=[1], dtype=batch_dims.dtype),
+        ],
+        axis=-1,
+    )
     return tf.ones(shape)
 
 
@@ -217,9 +233,11 @@ class RelativeConstraint(NeuralConstraint):
       error_loss_fn: types.LossFn = tf.compat.v1.losses.mean_squared_error,
       comparator_fn: types.ComparatorFn = tf.greater,
       margin: float = 0.0,
-      baseline_action_fn: Optional[Callable[[types.NestedTensor],
-                                            types.Tensor]] = None,
-      name: Text = 'RelativeConstraint'):
+      baseline_action_fn: Optional[
+          Callable[[types.NestedTensor], types.Tensor]
+      ] = None,
+      name: Text = 'RelativeConstraint',
+  ):
     """Creates a trainable relative constraint using a neural network.
 
     Args:
@@ -234,7 +252,7 @@ class RelativeConstraint(NeuralConstraint):
       margin: A float in (0,1] that determines how strongly we want to enforce
         the constraint.
       baseline_action_fn: a callable that given the observation returns the
-         baseline action. If None, the baseline action is set to 0.
+        baseline action. If None, the baseline action is set to 0.
       name: Python str name of this agent. All variables in this module will
         fall under that name. Defaults to the class name.
     """
@@ -248,15 +266,16 @@ class RelativeConstraint(NeuralConstraint):
         action_spec,
         constraint_network,
         error_loss_fn=self._error_loss_fn,
-        name=name)
+        name=name,
+    )
 
   def __call__(self, observation, actions=None):
     """Returns the probability of input actions being feasible."""
-    predicted_values, _ = self._constraint_network(
-        observation, training=False)
+    predicted_values, _ = self._constraint_network(observation, training=False)
 
     batch_dims = nest_utils.get_outer_shape(
-        observation, self._time_step_spec.observation)
+        observation, self._time_step_spec.observation
+    )
     if self._baseline_action_fn is not None:
       baseline_action = self._baseline_action_fn(observation)
       baseline_action.shape.assert_is_compatible_with(batch_dims)
@@ -264,13 +283,15 @@ class RelativeConstraint(NeuralConstraint):
       baseline_action = tf.zeros(batch_dims, dtype=tf.int32)
 
     predicted_values_for_baseline_actions = common.index_with_actions(
-        predicted_values,
-        tf.cast(baseline_action, dtype=tf.int32))
+        predicted_values, tf.cast(baseline_action, dtype=tf.int32)
+    )
     predicted_values_for_baseline_actions = self._reshape_and_broadcast(
-        predicted_values_for_baseline_actions, tf.shape(predicted_values))
+        predicted_values_for_baseline_actions, tf.shape(predicted_values)
+    )
     is_satisfied = self._comparator_fn(
         predicted_values,
-        (1 - self._margin) * predicted_values_for_baseline_actions)
+        (1 - self._margin) * predicted_values_for_baseline_actions,
+    )
     return tf.cast(is_satisfied, tf.float32)
 
 
@@ -295,7 +316,8 @@ class AbsoluteConstraint(NeuralConstraint):
       error_loss_fn: types.LossFn = tf.compat.v1.losses.mean_squared_error,
       comparator_fn: types.ComparatorFn = tf.greater,
       absolute_value: float = 0.0,
-      name: Text = 'AbsoluteConstraint'):
+      name: Text = 'AbsoluteConstraint',
+  ):
     """Creates a trainable absolute constraint using a neural network.
 
     Args:
@@ -320,14 +342,13 @@ class AbsoluteConstraint(NeuralConstraint):
         action_spec,
         constraint_network,
         error_loss_fn=self._error_loss_fn,
-        name=name)
+        name=name,
+    )
 
   def __call__(self, observation, actions=None):
     """Returns the probability of input actions being feasible."""
-    predicted_values, _ = self._constraint_network(
-        observation, training=False)
-    is_satisfied = self._comparator_fn(
-        predicted_values, self._absolute_value)
+    predicted_values, _ = self._constraint_network(observation, training=False)
+    is_satisfied = self._comparator_fn(predicted_values, self._absolute_value)
     return tf.cast(is_satisfied, tf.float32)
 
 
@@ -352,7 +373,8 @@ class QuantileConstraint(NeuralConstraint):
       quantile: float = 0.5,
       comparator_fn: types.ComparatorFn = tf.greater,
       quantile_value: float = 0.0,
-      name: Text = 'QuantileConstraint'):
+      name: Text = 'QuantileConstraint',
+  ):
     """Creates a trainable quantile constraint using a neural network.
 
     Args:
@@ -371,22 +393,25 @@ class QuantileConstraint(NeuralConstraint):
     self._quantile_value = quantile_value
     self._comparator_fn = comparator_fn
     self._error_loss_fn = functools.partial(
-        loss_utils.pinball_loss,
-        quantile=quantile)
+        loss_utils.pinball_loss, quantile=quantile
+    )
 
     super(QuantileConstraint, self).__init__(
         time_step_spec,
         action_spec,
         constraint_network,
         error_loss_fn=self._error_loss_fn,
-        name=name)
+        name=name,
+    )
 
   def __call__(self, observation, actions=None):
     """Returns the probability of input actions being feasible."""
     predicted_quantiles, _ = self._constraint_network(
-        observation, training=False)
+        observation, training=False
+    )
     is_satisfied = self._comparator_fn(
-        predicted_quantiles, self._quantile_value)
+        predicted_quantiles, self._quantile_value
+    )
     return tf.cast(is_satisfied, tf.float32)
 
 
@@ -403,15 +428,18 @@ class RelativeQuantileConstraint(NeuralConstraint):
   ```
   """
 
-  def __init__(self,
-               time_step_spec: types.TimeStep,
-               action_spec: types.BoundedTensorSpec,
-               constraint_network: types.Network,
-               quantile: float = 0.5,
-               comparator_fn: types.ComparatorFn = tf.greater,
-               baseline_action_fn: Optional[Callable[[types.Tensor],
-                                                     types.Tensor]] = None,
-               name: Text = 'RelativeQuantileConstraint'):
+  def __init__(
+      self,
+      time_step_spec: types.TimeStep,
+      action_spec: types.BoundedTensorSpec,
+      constraint_network: types.Network,
+      quantile: float = 0.5,
+      comparator_fn: types.ComparatorFn = tf.greater,
+      baseline_action_fn: Optional[
+          Callable[[types.Tensor], types.Tensor]
+      ] = None,
+      name: Text = 'RelativeQuantileConstraint',
+  ):
     """Creates a trainable relative quantile constraint using a neural network.
 
     Args:
@@ -423,29 +451,32 @@ class RelativeQuantileConstraint(NeuralConstraint):
       quantile: A float between 0. and 1., the quantile we want to regress.
       comparator_fn: a comparator function, such as tf.greater or tf.less.
       baseline_action_fn: a callable that given the observation returns the
-         baseline action. If None, the baseline action is set to 0.
+        baseline action. If None, the baseline action is set to 0.
       name: Python str name of this agent. All variables in this module will
         fall under that name. Defaults to the class name.
     """
     self._baseline_action_fn = baseline_action_fn
     self._comparator_fn = comparator_fn
     self._error_loss_fn = functools.partial(
-        loss_utils.pinball_loss,
-        quantile=quantile)
+        loss_utils.pinball_loss, quantile=quantile
+    )
 
     super(RelativeQuantileConstraint, self).__init__(
         time_step_spec,
         action_spec,
         constraint_network,
         error_loss_fn=self._error_loss_fn,
-        name=name)
+        name=name,
+    )
 
   def __call__(self, observation, actions=None):
     """Returns the probability of input actions being feasible."""
     predicted_quantiles, _ = self._constraint_network(
-        observation, training=False)
+        observation, training=False
+    )
     batch_dims = nest_utils.get_outer_shape(
-        observation, self._time_step_spec.observation)
+        observation, self._time_step_spec.observation
+    )
 
     if self._baseline_action_fn is not None:
       baseline_action = self._baseline_action_fn(observation)
@@ -454,12 +485,14 @@ class RelativeQuantileConstraint(NeuralConstraint):
       baseline_action = tf.zeros(batch_dims, dtype=tf.int32)
 
     predicted_quantiles_for_baseline_actions = common.index_with_actions(
-        predicted_quantiles,
-        tf.cast(baseline_action, dtype=tf.int32))
+        predicted_quantiles, tf.cast(baseline_action, dtype=tf.int32)
+    )
     predicted_quantiles_for_baseline_actions = self._reshape_and_broadcast(
-        predicted_quantiles_for_baseline_actions, tf.shape(predicted_quantiles))
+        predicted_quantiles_for_baseline_actions, tf.shape(predicted_quantiles)
+    )
     is_satisfied = self._comparator_fn(
-        predicted_quantiles, predicted_quantiles_for_baseline_actions)
+        predicted_quantiles, predicted_quantiles_for_baseline_actions
+    )
     return tf.cast(is_satisfied, tf.float32)
 
 
@@ -476,23 +509,24 @@ class InputNetworkConstraint(BaseConstraint):
       time_step_spec: types.TimeStep,
       action_spec: types.BoundedTensorSpec,
       input_network: Optional[types.Network] = None,
-      name: Optional[Text] = 'InputNetworkConstraint'):
+      name: Optional[Text] = 'InputNetworkConstraint',
+  ):
     """Creates a constraint using an input network.
 
     Args:
       time_step_spec: A `TimeStep` spec of the expected time_steps.
       action_spec: A nest of `BoundedTensorSpec` representing the actions.
-      input_network: An instance of `tf_agents.network.Network` used to
-        provide estimates of action feasibility.
+      input_network: An instance of `tf_agents.network.Network` used to provide
+        estimates of action feasibility.
       name: Python str name of this agent. All variables in this module will
         fall under that name. Defaults to the class name.
     """
     super(InputNetworkConstraint, self).__init__(
-        time_step_spec,
-        action_spec,
-        name)
+        time_step_spec, action_spec, name
+    )
     self._num_actions = policy_utilities.get_num_actions_from_tensor_spec(
-        action_spec)
+        action_spec
+    )
     self._network = input_network
 
   @property
@@ -503,12 +537,14 @@ class InputNetworkConstraint(BaseConstraint):
   def network(self, input_network):
     self._network = input_network
 
-  def compute_loss(self,
-                   observations: types.NestedTensor,
-                   actions: types.NestedTensor,
-                   rewards: types.Tensor,
-                   weights: Optional[types.TensorOrArray] = None,
-                   training: bool = False) -> types.Tensor:
+  def compute_loss(
+      self,
+      observations: types.NestedTensor,
+      actions: types.NestedTensor,
+      rewards: types.Tensor,
+      weights: Optional[types.TensorOrArray] = None,
+      training: bool = False,
+  ) -> types.Tensor:
     with tf.name_scope('constraint_loss'):
       return tf.constant(0.0)
 
@@ -523,7 +559,8 @@ def compute_feasibility_probability(
     constraints: Iterable[BaseConstraint],
     batch_size: types.Int,
     num_actions: int,
-    action_mask: Optional[types.Tensor] = None) -> types.Float:
+    action_mask: Optional[types.Tensor] = None,
+) -> types.Float:
   """Helper function to compute the action feasibility probability."""
   feasibility_prob = tf.ones([batch_size, num_actions])
   if action_mask is not None:
@@ -539,7 +576,8 @@ def construct_mask_from_multiple_sources(
     observation: types.NestedTensor,
     observation_and_action_constraint_splitter: types.Splitter,
     constraints: Iterable[BaseConstraint],
-    max_num_actions: int) -> Optional[types.Tensor]:
+    max_num_actions: int,
+) -> Optional[types.Tensor]:
   """Constructs an action mask from multiple sources.
 
   The sources include:
@@ -555,7 +593,7 @@ def construct_mask_from_multiple_sources(
     observation_and_action_constraint_splitter: The observation action mask
       splitter function if the observation has action mask.
     constraints: Iterable of constraints objects that are instances of
-        `tf_agents.bandits.agents.NeuralConstraint`.
+      `tf_agents.bandits.agents.NeuralConstraint`.
     max_num_actions: The maximum number of actions per sample.
 
   Returns:
@@ -564,18 +602,21 @@ def construct_mask_from_multiple_sources(
   mask = None
   if observation_and_action_constraint_splitter is not None:
     observation, mask = observation_and_action_constraint_splitter(observation)
-  elif (isinstance(observation, dict) and
-        bandit_spec_utils.NUM_ACTIONS_FEATURE_KEY in observation):
+  elif (
+      isinstance(observation, dict)
+      and bandit_spec_utils.NUM_ACTIONS_FEATURE_KEY in observation
+  ):
     number_of_actions = observation[bandit_spec_utils.NUM_ACTIONS_FEATURE_KEY]
     mask = tf.sequence_mask(
-        lengths=number_of_actions, maxlen=max_num_actions, dtype=tf.int32)
+        lengths=number_of_actions, maxlen=max_num_actions, dtype=tf.int32
+    )
 
   first_observation = tf.nest.flatten(observation)[0]
   batch_size = tf.shape(first_observation)[0]
   if constraints:
     feasibility_prob = compute_feasibility_probability(
-        observation, constraints, batch_size,
-        max_num_actions, mask)
+        observation, constraints, batch_size, max_num_actions, mask
+    )
     # Probabilistic masking.
     mask = tfp.distributions.Bernoulli(probs=feasibility_prob).sample()
   return mask

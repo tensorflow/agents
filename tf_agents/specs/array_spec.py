@@ -74,10 +74,14 @@ def sample_bounded_spec(spec, rng):
       )
     else:
       return np.reshape(
-          np.array([
-              rng.randint(low, high, size=1, dtype=spec.dtype)
-              for low, high in zip(low.flatten(), high.flatten())
-          ]), spec.shape)
+          np.array(
+              [
+                  rng.randint(low, high, size=1, dtype=spec.dtype)
+                  for low, high in zip(low.flatten(), high.flatten())
+              ]
+          ),
+          spec.shape,
+      )
 
 
 def sample_spec_nest(structure, rng, outer_dims=()):
@@ -96,8 +100,12 @@ def sample_spec_nest(structure, rng, outer_dims=()):
   def sample_fn(spec):
     spec = BoundedArraySpec.from_spec(spec)
     spec = BoundedArraySpec(
-        tuple(outer_dims) + tuple(spec.shape), spec.dtype, spec.minimum,
-        spec.maximum, spec.name)
+        tuple(outer_dims) + tuple(spec.shape),
+        spec.dtype,
+        spec.minimum,
+        spec.maximum,
+        spec.name,
+    )
     return sample_bounded_spec(spec, rng)
 
   return tf.nest.map_structure(sample_fn, structure)
@@ -135,8 +143,9 @@ def assert_arrays_spec_nest(arrays, spec):
 
   def assert_array_spec(array, spec):
     if not isinstance(spec, ArraySpec):
-      raise TypeError(f'The spec "{spec}" is not an ArraySpec, instead '
-                      f'"{type(spec)}"')
+      raise TypeError(
+          f'The spec "{spec}" is not an ArraySpec, instead "{type(spec)}"'
+      )
     if not spec.check_array(array):
       raise ValueError(f'The value "{array}" does not match spec: {spec}')
 
@@ -149,8 +158,9 @@ def add_outer_dims_nest(structure, outer_dims):
     name = spec.name
     shape = outer_dims + spec.shape
     if hasattr(spec, 'minimum') and hasattr(spec, 'maximum'):
-      return BoundedArraySpec(shape, spec.dtype, spec.minimum,
-                              spec.maximum, name)
+      return BoundedArraySpec(
+          shape, spec.dtype, spec.minimum, spec.maximum, name
+      )
     return ArraySpec(shape, spec.dtype, name=name)
 
   return tf.nest.map_structure(add_outer_dims, structure)
@@ -202,7 +212,8 @@ class ArraySpec(object):
 
   def __repr__(self):
     return 'ArraySpec(shape={}, dtype={}, name={})'.format(
-        self.shape, repr(self.dtype), repr(self.name))
+        self.shape, repr(self.dtype), repr(self.name)
+    )
 
   def __eq__(self, other):
     """Checks if the shape and dtype of two specs are equal."""
@@ -309,14 +320,20 @@ class BoundedArraySpec(ArraySpec):
     try:
       np.broadcast_to(minimum, shape=shape)
     except ValueError as numpy_exception:
-      raise ValueError('minimum is not compatible with shape. '
-                       'Message: {!r}.'.format(numpy_exception))
+      raise ValueError(
+          'minimum is not compatible with shape. Message: {!r}.'.format(
+              numpy_exception
+          )
+      )
 
     try:
       np.broadcast_to(maximum, shape=shape)
     except ValueError as numpy_exception:
-      raise ValueError('maximum is not compatible with shape. '
-                       'Message: {!r}.'.format(numpy_exception))
+      raise ValueError(
+          'maximum is not compatible with shape. Message: {!r}.'.format(
+              numpy_exception
+          )
+      )
 
     tf_dtype = tf.as_dtype(self._dtype)
     low = tf_dtype.min
@@ -341,13 +358,21 @@ class BoundedArraySpec(ArraySpec):
     if np.any(self._minimum > self._maximum):
       raise ValueError(
           'Spec bounds min has values greater than max: [{},{}]'.format(
-              self._minimum, self._maximum))
-    if (np.any(self._minimum < low) or np.any(self._minimum > high) or
-        np.any(self._maximum < low) or np.any(self._maximum > high)):
+              self._minimum, self._maximum
+          )
+      )
+    if (
+        np.any(self._minimum < low)
+        or np.any(self._minimum > high)
+        or np.any(self._maximum < low)
+        or np.any(self._maximum > high)
+    ):
       raise ValueError(
           'Spec bounds [{},{}] not within the range [{}, {}] of the given '
-          'dtype ({})'.format(self._minimum, self._maximum, low, high,
-                              self._dtype))
+          'dtype ({})'.format(
+              self._minimum, self._maximum, low, high, self._dtype
+          )
+      )
 
     self._minimum = self._minimum.astype(self._dtype)
     self._minimum.setflags(write=False)
@@ -361,8 +386,9 @@ class BoundedArraySpec(ArraySpec):
       name = spec.name
 
     if hasattr(spec, 'minimum') and hasattr(spec, 'maximum'):
-      return BoundedArraySpec(spec.shape, spec.dtype, spec.minimum,
-                              spec.maximum, name)
+      return BoundedArraySpec(
+          spec.shape, spec.dtype, spec.minimum, spec.maximum, name
+      )
 
     return BoundedArraySpec(spec.shape, spec.dtype, name=name)
 
@@ -380,30 +406,44 @@ class BoundedArraySpec(ArraySpec):
   def num_values(self):
     """Returns the number of values for discrete BoundedArraySpec."""
     if is_discrete(self):
-      return (np.broadcast_to(self.maximum, shape=self.shape) -
-              np.broadcast_to(self.minimum, shape=self.shape) + 1)
+      return (
+          np.broadcast_to(self.maximum, shape=self.shape)
+          - np.broadcast_to(self.minimum, shape=self.shape)
+          + 1
+      )
 
   def __repr__(self):
-    template = ('BoundedArraySpec(shape={}, dtype={}, name={}, '
-                'minimum={}, maximum={})')
-    return template.format(self.shape, repr(self.dtype), repr(self.name),
-                           self._minimum, self._maximum)
+    template = (
+        'BoundedArraySpec(shape={}, dtype={}, name={}, minimum={}, maximum={})'
+    )
+    return template.format(
+        self.shape,
+        repr(self.dtype),
+        repr(self.name),
+        self._minimum,
+        self._maximum,
+    )
 
   def __eq__(self, other):
     if not isinstance(other, BoundedArraySpec):
       return False
-    return (super(BoundedArraySpec, self).__eq__(other) and
-            (self.minimum == other.minimum).all() and
-            (self.maximum == other.maximum).all())
+    return (
+        super(BoundedArraySpec, self).__eq__(other)
+        and (self.minimum == other.minimum).all()
+        and (self.maximum == other.maximum).all()
+    )
 
   def check_array(self, array):
     """Return true if the given array conforms to the spec."""
-    return (super(BoundedArraySpec, self).check_array(array) and
-            np.all(array >= self.minimum) and np.all(array <= self.maximum))
+    return (
+        super(BoundedArraySpec, self).check_array(array)
+        and np.all(array >= self.minimum)
+        and np.all(array <= self.maximum)
+    )
 
-  def replace(self, shape=None, dtype=None,
-              minimum=None, maximum=None,
-              name=None):
+  def replace(
+      self, shape=None, dtype=None, minimum=None, maximum=None, name=None
+  ):
     shape = self.shape if shape is None else shape
     dtype = self.dtype if dtype is None else dtype
     minimum = self.minimum if minimum is None else minimum
@@ -412,8 +452,10 @@ class BoundedArraySpec(ArraySpec):
     return BoundedArraySpec(shape, dtype, minimum, maximum, name)
 
   def __reduce__(self):
-    return (BoundedArraySpec, (self.shape, self.dtype, self.minimum,
-                               self.maximum, self.name))
+    return (
+        BoundedArraySpec,
+        (self.shape, self.dtype, self.minimum, self.maximum, self.name),
+    )
 
 
 def is_bounded(spec):

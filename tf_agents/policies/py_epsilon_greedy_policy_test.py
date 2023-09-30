@@ -43,39 +43,49 @@ class EpsilonGreedyPolicyTest(test_utils.TestCase):
 
   def testCtorAutoRandomPolicy(self):
     policy = py_epsilon_greedy_policy.EpsilonGreedyPolicy(
-        self.greedy_policy, 0.5)
-    self.assertEqual(self.greedy_policy.action_spec,
-                     policy._random_policy.action_spec)
+        self.greedy_policy, 0.5
+    )
+    self.assertEqual(
+        self.greedy_policy.action_spec, policy._random_policy.action_spec
+    )
 
   def testCtorValueErrorNegativeEpsilon(self):
     with self.assertRaises(ValueError):
       py_epsilon_greedy_policy.EpsilonGreedyPolicy(
-          self.greedy_policy, -0.00001, random_policy=self.random_policy)
+          self.greedy_policy, -0.00001, random_policy=self.random_policy
+      )
 
   def testCtorValueErrorEpsilonMorThanOne(self):
     with self.assertRaises(ValueError):
       py_epsilon_greedy_policy.EpsilonGreedyPolicy(
-          self.greedy_policy, 1.00001, random_policy=self.random_policy)
+          self.greedy_policy, 1.00001, random_policy=self.random_policy
+      )
 
   def testCtorValueErrorMissingEpsilonEndValue(self):
     with self.assertRaises(ValueError):
       py_epsilon_greedy_policy.EpsilonGreedyPolicy(
-          self.greedy_policy, 0.99,
+          self.greedy_policy,
+          0.99,
           random_policy=self.random_policy,
-          epsilon_decay_end_count=100)
+          epsilon_decay_end_count=100,
+      )
 
   def testZeroState(self):
     policy = py_epsilon_greedy_policy.EpsilonGreedyPolicy(
-        self.greedy_policy, 0.5, random_policy=self.random_policy)
+        self.greedy_policy, 0.5, random_policy=self.random_policy
+    )
     policy.get_initial_state()
     self.greedy_policy.get_initial_state.assert_called_once_with(
-        batch_size=None)
+        batch_size=None
+    )
     self.random_policy.get_initial_state.assert_called_once_with(
-        batch_size=None)
+        batch_size=None
+    )
 
   def testActionAlwaysRandom(self):
     policy = py_epsilon_greedy_policy.EpsilonGreedyPolicy(
-        self.greedy_policy, 1, random_policy=self.random_policy)
+        self.greedy_policy, 1, random_policy=self.random_policy
+    )
     time_step = mock.MagicMock()
     for _ in range(5):
       policy.action(time_step)
@@ -85,7 +95,8 @@ class EpsilonGreedyPolicyTest(test_utils.TestCase):
 
   def testActionAlwaysGreedy(self):
     policy = py_epsilon_greedy_policy.EpsilonGreedyPolicy(
-        self.greedy_policy, 0, random_policy=self.random_policy)
+        self.greedy_policy, 0, random_policy=self.random_policy
+    )
     time_step = mock.MagicMock()
     for _ in range(5):
       policy.action(time_step)
@@ -95,7 +106,8 @@ class EpsilonGreedyPolicyTest(test_utils.TestCase):
 
   def testActionSelection(self):
     policy = py_epsilon_greedy_policy.EpsilonGreedyPolicy(
-        self.greedy_policy, 0.9, random_policy=self.random_policy)
+        self.greedy_policy, 0.9, random_policy=self.random_policy
+    )
     time_step = mock.MagicMock()
     # Replace the random generator with fixed behaviour
     random = mock.MagicMock()
@@ -117,9 +129,12 @@ class EpsilonGreedyPolicyTest(test_utils.TestCase):
 
   def testActionSelectionWithEpsilonDecay(self):
     policy = py_epsilon_greedy_policy.EpsilonGreedyPolicy(
-        self.greedy_policy, 0.9, random_policy=self.random_policy,
+        self.greedy_policy,
+        0.9,
+        random_policy=self.random_policy,
         epsilon_decay_end_count=10,
-        epsilon_decay_end_value=0.4)
+        epsilon_decay_end_value=0.4,
+    )
     time_step = mock.MagicMock()
     # Replace the random generator with fixed behaviour
     random = mock.MagicMock()

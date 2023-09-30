@@ -84,6 +84,7 @@ def compile_method_in_graph_mode(method):
     is not available, then `method` is called directly.
   ```
   """
+
   @functools.wraps(method)
   def _call_compiled(*args, **kwargs):
     self = args[0]
@@ -122,11 +123,12 @@ def compile_in_graph_mode(fn):
     is not available, then `fn` is called directly.
   ```
   """
+
   @functools.wraps(fn)
   def _call_compiled(*args, **kwargs):
     return _compiled(*args, _fn=fn, _self=None, **kwargs)
 
-  return  _call_compiled
+  return _call_compiled
 
 
 def _compiled(*args, _fn=None, _self=None, **kwargs):
@@ -139,6 +141,7 @@ def _compiled(*args, _fn=None, _self=None, **kwargs):
     else:
       return _fn(*args, **kwargs)
   else:
+
     @tf.function(jit_compile=True)  # allow-tf-function
     def _call_fn(*args, **kwargs):
       if _self is not None:

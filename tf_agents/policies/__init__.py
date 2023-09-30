@@ -33,7 +33,6 @@ from tf_agents.policies import scripted_py_policy
 from tf_agents.policies import tf_policy
 from tf_agents.policies import tf_py_policy
 from tf_agents.policies import utils
-
 from tf_agents.policies.actor_policy import ActorPolicy
 from tf_agents.policies.epsilon_greedy_policy import EpsilonGreedyPolicy
 from tf_agents.policies.greedy_policy import GreedyPolicy

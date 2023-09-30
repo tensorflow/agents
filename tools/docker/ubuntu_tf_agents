@@ -46,7 +46,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
       freeglut3-dev \
       ffmpeg \
       python3-opencv \
-      python3-scipy \
       gfortran \
       libopenblas-dev \
       liblapack-dev
@@ -67,13 +66,13 @@ RUN $python_version get-pip.py
 RUN $python_version -m pip uninstall -y tensorflow tensorflow-gpu tf-nightly tf-nightly-gpu
 
 # Only installs the packages if one is passed.
-RUN if [[ -n "$tensorflow_pip_spec" ]] ; then $python_version -m pip install ${tensorflow_pip_spec}; fi
-RUN if [[ -n "$tf_agents_pip_spec" ]] ; then $python_version -m pip install ${tf_agents_pip_spec}; fi
+RUN if [ -n "${tensorflow_pip_spec}" ] ; then $python_version -m pip install ${tensorflow_pip_spec}; fi
+RUN if [ -n "${tf_agents_pip_spec}" ] ; then $python_version -m pip install ${tf_agents_pip_spec}; fi
 RUN $python_version -m pip install wheel \
       opencv-python \
       gym \
       # b/248257418
-      ale-py==0.7.5 \
+      ale-py==0.8.0 \
       atari-py \
       pybullet \
       gin-config \
@@ -81,10 +80,12 @@ RUN $python_version -m pip install wheel \
       matplot \
       absl-py \
       mock \
+      scipy \
 # Only used for nightly testing.
-# `protobuf` and `google-api-core` need pinned to avoid going over probuf 3.19.x until TF does.
-      protobuf==3.19.5 \
-      google-api-core==2.8.2 \
+# `protobuf` pinned because TensorFlow is picky.
+      cloud-tpu-client \
+      protobuf==4.21.12 \
+      google-api-core \
       google-cloud-bigquery \
       psutil
 

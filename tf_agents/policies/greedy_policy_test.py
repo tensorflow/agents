@@ -37,9 +37,10 @@ class DistributionPolicy(tf_policy.TFPolicy):
   def __init__(self, distribution, time_step_spec, action_spec, name=None):
     self._distribution_value = distribution
     super(DistributionPolicy, self).__init__(
-        time_step_spec, action_spec, name=name)
+        time_step_spec, action_spec, name=name
+    )
 
-  def _action(self, time_step, policy_state, seed):
+  def _action(self, time_step, policy_state, seed):  # pytype: disable=signature-mismatch  # overriding-parameter-count-checks
     raise NotImplementedError('Not implemented.')
 
   def _distribution(self, time_step, policy_state):
@@ -57,17 +58,21 @@ class GreedyPolicyTest(test_utils.TestCase, parameterized.TestCase):
     self._time_step_spec = ts.time_step_spec(self._obs_spec)
 
   @parameterized.parameters(
-      {'action_probs': [0.5, 0.2, 0.3]},
-      {'action_probs': [0.1, 0.1, 0.6, 0.2]}
+      {'action_probs': [0.5, 0.2, 0.3]}, {'action_probs': [0.1, 0.1, 0.6, 0.2]}
   )
   def testCategoricalActions(self, action_probs):
     action_spec = [
-        tensor_spec.BoundedTensorSpec((1,), tf.int32, 0, len(action_probs)-1),
-        tensor_spec.BoundedTensorSpec((), tf.int32, 0, len(action_probs)-1)]
-    wrapped_policy = DistributionPolicy([
-        tfp.distributions.Categorical(probs=[action_probs]),
-        tfp.distributions.Categorical(probs=action_probs)
-    ], self._time_step_spec, action_spec)
+        tensor_spec.BoundedTensorSpec((1,), tf.int32, 0, len(action_probs) - 1),
+        tensor_spec.BoundedTensorSpec((), tf.int32, 0, len(action_probs) - 1),
+    ]
+    wrapped_policy = DistributionPolicy(
+        [
+            tfp.distributions.Categorical(probs=[action_probs]),
+            tfp.distributions.Categorical(probs=action_probs),
+        ],
+        self._time_step_spec,
+        action_spec,
+    )
     policy = greedy_policy.GreedyPolicy(wrapped_policy)
 
     self.assertEqual(policy.time_step_spec, self._time_step_spec)
@@ -85,14 +90,17 @@ class GreedyPolicyTest(test_utils.TestCase, parameterized.TestCase):
   @parameterized.parameters(
       {'loc': 1.0, 'scale': 0.2},
       {'loc': -2.0, 'scale': 1.0},
-      {'loc': 0.0, 'scale': 0.5}
+      {'loc': 0.0, 'scale': 0.5},
   )
   def testNormalActions(self, loc, scale):
     action_spec = tensor_spec.BoundedTensorSpec(
-        [1], tf.float32, tf.float32.min, tf.float32.max)
+        [1], tf.float32, tf.float32.min, tf.float32.max
+    )
     wrapped_policy = DistributionPolicy(
-        tfp.distributions.Normal([loc], [scale]), self._time_step_spec,
-        action_spec)
+        tfp.distributions.Normal([loc], [scale]),
+        self._time_step_spec,
+        action_spec,
+    )
     policy = greedy_policy.GreedyPolicy(wrapped_policy)
 
     self.assertEqual(policy.time_step_spec, self._time_step_spec)

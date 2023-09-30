@@ -21,6 +21,7 @@ from __future__ import print_function
 
 import collections
 import math
+
 from absl.testing import parameterized
 import numpy as np
 import tensorflow as tf
@@ -41,15 +42,18 @@ class EpsilonGreedyPolicyTest(test_utils.TestCase, parameterized.TestCase):
     self._time_step_spec = ts.time_step_spec(self._obs_spec)
     self._num_actions = 3
     self._greedy_action = 1
-    self._action_spec = tensor_spec.BoundedTensorSpec((), tf.int32, 0,
-                                                      self._num_actions-1)
+    self._action_spec = tensor_spec.BoundedTensorSpec(
+        (), tf.int32, 0, self._num_actions - 1
+    )
     self._policy = fixed_policy.FixedPolicy(
         np.asarray(self._greedy_action, dtype=np.int32),
         self._time_step_spec,
-        self._action_spec)
+        self._action_spec,
+    )
     self._bandit_policy_type = tf.constant([1, 1])
     self._bandit_policy_type_spec = (
-        policy_util.create_bandit_policy_type_tensor_spec(shape=()))
+        policy_util.create_bandit_policy_type_tensor_spec(shape=())
+    )
     observations = tf.constant([[1, 2], [3, 4]], dtype=tf.float32)
     self._time_step = ts.restart(observations, batch_size=2)
 
@@ -58,8 +62,10 @@ class EpsilonGreedyPolicyTest(test_utils.TestCase, parameterized.TestCase):
     # values.
     action_counts = np.bincount(np.hstack(actions), minlength=self._num_actions)
     greedy_prob = 1.0 - epsilon
-    expected_counts = [(epsilon * num_steps) / self._num_actions
-                       for _ in range(self._num_actions)]
+    expected_counts = [
+        (epsilon * num_steps) / self._num_actions
+        for _ in range(self._num_actions)
+    ]
     expected_counts[self._greedy_action] += greedy_prob * num_steps
     delta = num_steps * 0.1
     # Check that action_counts[i] \in [expected-delta, expected+delta]
@@ -76,14 +82,20 @@ class EpsilonGreedyPolicyTest(test_utils.TestCase, parameterized.TestCase):
         self.assertAlmostEqual(math.exp(log_prob), greedy_prob)
 
   @parameterized.named_parameters(
-      ('Tensor0.0', 0.0, True), ('Tensor0.2', 0.2, True),
-      ('Tensor0.7', 0.7, True), ('Tensor1.0', 1.0, True),
-      ('Fixed0.0', 0.0, False), ('Fixed0.2', 0.2, False),
-      ('Fixed0.7', 0.7, False), ('Fixed1.0', 1.0, False))
+      ('Tensor0.0', 0.0, True),
+      ('Tensor0.2', 0.2, True),
+      ('Tensor0.7', 0.7, True),
+      ('Tensor1.0', 1.0, True),
+      ('Fixed0.0', 0.0, False),
+      ('Fixed0.2', 0.2, False),
+      ('Fixed0.7', 0.7, False),
+      ('Fixed1.0', 1.0, False),
+  )
   def testEpsilon(self, float_epsilon, is_tensor):
     epsilon = tf.constant(float_epsilon) if is_tensor else float_epsilon
     policy = epsilon_greedy_policy.EpsilonGreedyPolicy(
-        self._policy, epsilon=epsilon)
+        self._policy, epsilon=epsilon
+    )
     self.assertEqual(policy.time_step_spec, self._time_step_spec)
     self.assertEqual(policy.action_spec, self._action_spec)
 
@@ -95,8 +107,8 @@ class EpsilonGreedyPolicyTest(test_utils.TestCase, parameterized.TestCase):
       return policy.action(time_step, policy_state, seed=54)
 
     tf.nest.assert_same_structure(
-        self._action_spec,
-        self.evaluate(action_step_fn(time_step)).action)
+        self._action_spec, self.evaluate(action_step_fn(time_step)).action
+    )
 
     if tf.executing_eagerly():
       action_step = action_step_fn
@@ -124,7 +136,8 @@ class EpsilonGreedyPolicyTest(test_utils.TestCase, parameterized.TestCase):
   def testInfoSpec(self):
     PolicyInfo = collections.namedtuple(  # pylint: disable=invalid-name
         'PolicyInfo',
-        ('log_probability', 'predicted_rewards', 'bandit_policy_type'))
+        ('log_probability', 'predicted_rewards', 'bandit_policy_type'),
+    )
     # Set default empty tuple for all fields.
     PolicyInfo.__new__.__defaults__ = ((),) * len(PolicyInfo._fields)
 
@@ -135,18 +148,22 @@ class EpsilonGreedyPolicyTest(test_utils.TestCase, parameterized.TestCase):
             dtype=tf.float32,
             maximum=0,
             minimum=-float('inf'),
-            name='log_probability'))
+            name='log_probability',
+        ),
+    )
 
     policy_with_info_spec = fixed_policy.FixedPolicy(
         np.asarray(self._greedy_action, dtype=np.int32),
         self._time_step_spec,
         self._action_spec,
         policy_info=PolicyInfo(bandit_policy_type=self._bandit_policy_type),
-        info_spec=info_spec)
+        info_spec=info_spec,
+    )
 
     epsilon = 0.2
     policy = epsilon_greedy_policy.EpsilonGreedyPolicy(
-        policy_with_info_spec, epsilon=epsilon)
+        policy_with_info_spec, epsilon=epsilon
+    )
     self.assertEqual(policy.time_step_spec, self._time_step_spec)
     self.assertEqual(policy.action_spec, self._action_spec)
 
@@ -157,8 +174,8 @@ class EpsilonGreedyPolicyTest(test_utils.TestCase, parameterized.TestCase):
       return policy.action(time_step, policy_state=(), seed=54)
 
     tf.nest.assert_same_structure(
-        self._action_spec,
-        self.evaluate(action_step_fn(time_step)).action)
+        self._action_spec, self.evaluate(action_step_fn(time_step)).action
+    )
 
     if tf.executing_eagerly():
       action_step = action_step_fn
@@ -166,16 +183,15 @@ class EpsilonGreedyPolicyTest(test_utils.TestCase, parameterized.TestCase):
       action_step = action_step_fn()
 
     step = self.evaluate(action_step)
-    tf.nest.assert_same_structure(
-        info_spec,
-        step.info)
+    tf.nest.assert_same_structure(info_spec, step.info)
 
     self.checkBanditPolicyTypeShape(step.info.bandit_policy_type, batch_size=2)
 
   def testInfoFromGreedy(self):
     PolicyInfo = collections.namedtuple(  # pylint: disable=invalid-name
         'PolicyInfo',
-        ('log_probability', 'predicted_rewards', 'bandit_policy_type'))
+        ('log_probability', 'predicted_rewards', 'bandit_policy_type'),
+    )
     # Set default empty tuple for all fields.
     PolicyInfo.__new__.__defaults__ = ((),) * len(PolicyInfo._fields)
 
@@ -186,20 +202,24 @@ class EpsilonGreedyPolicyTest(test_utils.TestCase, parameterized.TestCase):
             dtype=tf.float32,
             maximum=0,
             minimum=-float('inf'),
-            name='log_probability'))
+            name='log_probability',
+        ),
+    )
 
     policy_with_info_spec = fixed_policy.FixedPolicy(
         np.asarray(self._greedy_action, dtype=np.int32),
         self._time_step_spec,
         self._action_spec,
         policy_info=PolicyInfo(bandit_policy_type=self._bandit_policy_type),
-        info_spec=info_spec)
+        info_spec=info_spec,
+    )
 
     epsilon = 0.2
     policy = epsilon_greedy_policy.EpsilonGreedyPolicy(
         policy_with_info_spec,
         epsilon=epsilon,
-        info_fields_to_inherit_from_greedy=['log_probability'])
+        info_fields_to_inherit_from_greedy=['log_probability'],
+    )
     self.assertEqual(policy.time_step_spec, self._time_step_spec)
     self.assertEqual(policy.action_spec, self._action_spec)
 
@@ -210,8 +230,8 @@ class EpsilonGreedyPolicyTest(test_utils.TestCase, parameterized.TestCase):
       return policy.action(time_step, policy_state=(), seed=54)
 
     tf.nest.assert_same_structure(
-        self._action_spec,
-        self.evaluate(action_step_fn(time_step)).action)
+        self._action_spec, self.evaluate(action_step_fn(time_step)).action
+    )
 
     if tf.executing_eagerly():
       action_step = action_step_fn
@@ -219,13 +239,12 @@ class EpsilonGreedyPolicyTest(test_utils.TestCase, parameterized.TestCase):
       action_step = action_step_fn()
 
     step = self.evaluate(action_step)
-    tf.nest.assert_same_structure(
-        info_spec,
-        step.info)
+    tf.nest.assert_same_structure(info_spec, step.info)
 
     self.checkBanditPolicyTypeShape(step.info.bandit_policy_type, batch_size=2)
-    self.assertAllEqual(step.info.log_probability,
-                        tf.zeros_like(step.info.log_probability))
+    self.assertAllEqual(
+        step.info.log_probability, tf.zeros_like(step.info.log_probability)
+    )
 
 
 if __name__ == '__main__':

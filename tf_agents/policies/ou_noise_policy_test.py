@@ -22,7 +22,6 @@ from __future__ import print_function
 import numpy as np
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 from tf_agents.networks import network
-
 from tf_agents.policies import actor_policy
 from tf_agents.policies import ou_noise_policy
 from tf_agents.specs import tensor_spec
@@ -36,7 +35,8 @@ class DummyActionNet(network.Network):
     super(DummyActionNet, self).__init__(
         input_tensor_spec=input_tensor_spec,
         state_spec=(),
-        name='DummyActionNet')
+        name='DummyActionNet',
+    )
     self._output_tensor_spec = output_tensor_spec
     single_action_spec = tf.nest.flatten(output_tensor_spec)[0]
     self._sub_layers = [
@@ -59,11 +59,14 @@ class DummyActionNet(network.Network):
     means = tf.reshape(states, [-1] + single_action_spec.shape.as_list())
     spec_means = (single_action_spec.maximum + single_action_spec.minimum) / 2.0
     spec_ranges = (
-        single_action_spec.maximum - single_action_spec.minimum) / 2.0
+        single_action_spec.maximum - single_action_spec.minimum
+    ) / 2.0
     action_means = spec_means + spec_ranges * means
 
-    return (tf.nest.pack_sequence_as(self._output_tensor_spec, [action_means]),
-            network_state)
+    return (
+        tf.nest.pack_sequence_as(self._output_tensor_spec, [action_means]),
+        network_state,
+    )
 
 
 class OuNoisePolicyTest(test_utils.TestCase):
@@ -78,7 +81,8 @@ class OuNoisePolicyTest(test_utils.TestCase):
         time_step_spec=self._time_step_spec,
         action_spec=self._action_spec,
         actor_network=actor_network,
-        clip=False)
+        clip=False,
+    )
 
   @property
   def _time_step(self):
@@ -88,10 +92,12 @@ class OuNoisePolicyTest(test_utils.TestCase):
   def _time_step_batch(self):
     return ts.TimeStep(
         tf.constant(
-            ts.StepType.FIRST, dtype=tf.int32, shape=[2], name='step_type'),
+            ts.StepType.FIRST, dtype=tf.int32, shape=[2], name='step_type'
+        ),
         tf.constant(0.0, dtype=tf.float32, shape=[2], name='reward'),
         tf.constant(1.0, dtype=tf.float32, shape=[2], name='discount'),
-        tf.constant([[1, 2], [3, 4]], dtype=tf.float32, name='observation'))
+        tf.constant([[1, 2], [3, 4]], dtype=tf.float32, name='observation'),
+    )
 
   def testBuild(self):
     policy = ou_noise_policy.OUNoisePolicy(self._wrapped_policy)
@@ -129,7 +135,8 @@ class OuNoisePolicyTest(test_utils.TestCase):
         time_step_spec=self._time_step_spec,
         action_spec=action_spec,
         actor_network=actor_network,
-        clip=False)
+        clip=False,
+    )
 
     policy = ou_noise_policy.OUNoisePolicy(self._wrapped_policy)
     action_step = policy.action(self._time_step_batch)

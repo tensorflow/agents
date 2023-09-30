@@ -13,8 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""epsilon-greedy policy in python.
-"""
+"""epsilon-greedy policy in python."""
 
 from __future__ import absolute_import
 from __future__ import division
@@ -32,31 +31,32 @@ from tf_agents.typing import types
 class EpsilonGreedyPolicy(py_policy.PyPolicy):
   """Implementation of the epsilon-greedy policy."""
 
-  def __init__(self,
-               greedy_policy: py_policy.PyPolicy,
-               epsilon: types.Float,
-               random_policy: Optional[random_py_policy.RandomPyPolicy] = None,
-               epsilon_decay_end_count: Optional[types.Float] = None,
-               epsilon_decay_end_value: Optional[types.Float] = None,
-               random_seed: Optional[types.Seed] = None):
+  def __init__(
+      self,
+      greedy_policy: py_policy.PyPolicy,
+      epsilon: types.Float,
+      random_policy: Optional[random_py_policy.RandomPyPolicy] = None,
+      epsilon_decay_end_count: Optional[types.Float] = None,
+      epsilon_decay_end_value: Optional[types.Float] = None,
+      random_seed: Optional[types.Seed] = None,
+  ):
     """Initializes the epsilon-greedy policy.
 
     Args:
       greedy_policy: An instance of py_policy.PyPolicy to use as the greedy
         policy.
-      epsilon: The probability 0.0 <= epsilon <= 1.0 with which an
-        action will be selected at random.
-      random_policy: An instance of random_py_policy.RandomPyPolicy to
-        use as the random policy, if None is provided, a
-        RandomPyPolicy will be automatically created with the
-        greedy_policy's action_spec and observation_spec and
-        random_seed.
-      epsilon_decay_end_count: if set, anneal the epislon every time
-        this policy is used, until it hits the epsilon_decay_end_value.
-      epsilon_decay_end_value: the value of epislon to use when the
-        policy usage count hits epsilon_decay_end_count.
-      random_seed: seed used to create numpy.random.RandomState.
-        /dev/urandom will be used if it's None.
+      epsilon: The probability 0.0 <= epsilon <= 1.0 with which an action will
+        be selected at random.
+      random_policy: An instance of random_py_policy.RandomPyPolicy to use as
+        the random policy, if None is provided, a RandomPyPolicy will be
+        automatically created with the greedy_policy's action_spec and
+        observation_spec and random_seed.
+      epsilon_decay_end_count: if set, anneal the epislon every time this policy
+        is used, until it hits the epsilon_decay_end_value.
+      epsilon_decay_end_value: the value of epislon to use when the policy usage
+        count hits epsilon_decay_end_count.
+      random_seed: seed used to create numpy.random.RandomState. /dev/urandom
+        will be used if it's None.
 
     Raises:
       ValueError: If epsilon is not between 0.0 and 1.0. Or if
@@ -71,7 +71,8 @@ class EpsilonGreedyPolicy(py_policy.PyPolicy):
       self._random_policy = random_py_policy.RandomPyPolicy(
           time_step_spec=greedy_policy.time_step_spec,
           action_spec=greedy_policy.action_spec,
-          seed=random_seed)
+          seed=random_seed,
+      )
     else:
       self._random_policy = random_policy
     # TODO(b/110841809) consider making epsilon be provided by a function.
@@ -79,10 +80,14 @@ class EpsilonGreedyPolicy(py_policy.PyPolicy):
     self._epsilon_decay_end_count = epsilon_decay_end_count
     if epsilon_decay_end_count is not None:
       if epsilon_decay_end_value is None or epsilon_decay_end_value >= epsilon:
-        raise ValueError('Invalid value for epsilon_decay_end_value {}'.format(
-            epsilon_decay_end_value))
-      self._epsilon_decay_step_factor = float(
-          epsilon - epsilon_decay_end_value) / epsilon_decay_end_count
+        raise ValueError(
+            'Invalid value for epsilon_decay_end_value {}'.format(
+                epsilon_decay_end_value
+            )
+        )
+      self._epsilon_decay_step_factor = (
+          float(epsilon - epsilon_decay_end_value) / epsilon_decay_end_count
+      )
     self._epsilon_decay_end_value = epsilon_decay_end_value
 
     self._random_seed = random_seed  # Keep it for copy method.
@@ -91,10 +96,12 @@ class EpsilonGreedyPolicy(py_policy.PyPolicy):
     # Total times action method has been called.
     self._count = 0
 
-    super(EpsilonGreedyPolicy, self).__init__(greedy_policy.time_step_spec,
-                                              greedy_policy.action_spec,
-                                              greedy_policy.policy_state_spec,
-                                              greedy_policy.info_spec)
+    super(EpsilonGreedyPolicy, self).__init__(
+        greedy_policy.time_step_spec,
+        greedy_policy.action_spec,
+        greedy_policy.policy_state_spec,
+        greedy_policy.info_spec,
+    )
 
   def _get_initial_state(self, batch_size):
     self._random_policy.get_initial_state(batch_size=batch_size)
@@ -105,21 +112,22 @@ class EpsilonGreedyPolicy(py_policy.PyPolicy):
       if self._count >= self._epsilon_decay_end_count:
         return self._epsilon_decay_end_value
       else:
-        return (self._epsilon - (self._count - 1) *
-                self._epsilon_decay_step_factor)
+        return (
+            self._epsilon - (self._count - 1) * self._epsilon_decay_step_factor
+        )
     else:
       return self._epsilon
 
   def _random_function(self):
     return self._rng.rand()
 
-  def _action(self,
-              time_step,
-              policy_state=(),
-              seed: Optional[types.Seed] = None):
+  def _action(
+      self, time_step, policy_state=(), seed: Optional[types.Seed] = None
+  ):
     if seed is not None:
       raise NotImplementedError(
-          'seed is not supported; but saw seed: {}'.format(seed))
+          'seed is not supported; but saw seed: {}'.format(seed)
+      )
     self._count += 1
     # _random_function()'s range should be [0, 1), so if epsilon is 1,
     # we should always use random policy, and if epislon is 0, it

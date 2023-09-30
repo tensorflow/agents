@@ -31,14 +31,16 @@ class DummyNet(network.Network):
 
   def __init__(self, name=None, num_actions=2):
     super(DummyNet, self).__init__(
-        tensor_spec.TensorSpec([2], tf.float32), (), 'DummyNet')
+        tensor_spec.TensorSpec([2], tf.float32), (), 'DummyNet'
+    )
 
     # Store custom layers that can be serialized through the Checkpointable API.
     self._dummy_layers = [
         tf.keras.layers.Dense(
             num_actions,
             kernel_initializer=tf.constant_initializer([[1, 1.5], [1, 1.5]]),
-            bias_initializer=tf.constant_initializer([[1], [1]]))
+            bias_initializer=tf.constant_initializer([[1], [1]]),
+        )
     ]
 
   def call(self, inputs, step_type=None, network_state=()):
@@ -59,7 +61,8 @@ class BoltzmannPolicyTest(test_utils.TestCase):
 
   def testBuild(self):
     wrapped = q_policy.QPolicy(
-        self._time_step_spec, self._action_spec, q_network=DummyNet())
+        self._time_step_spec, self._action_spec, q_network=DummyNet()
+    )
     policy = boltzmann_policy.BoltzmannPolicy(wrapped, temperature=0.9)
 
     self.assertEqual(policy.time_step_spec, self._time_step_spec)
@@ -68,7 +71,8 @@ class BoltzmannPolicyTest(test_utils.TestCase):
   def testAction(self):
     tf.compat.v1.set_random_seed(1)
     wrapped = q_policy.QPolicy(
-        self._time_step_spec, self._action_spec, q_network=DummyNet())
+        self._time_step_spec, self._action_spec, q_network=DummyNet()
+    )
     policy = boltzmann_policy.BoltzmannPolicy(wrapped, temperature=0.9)
 
     observations = tf.constant([[1, 2], [3, 4]], dtype=tf.float32)
@@ -83,7 +87,8 @@ class BoltzmannPolicyTest(test_utils.TestCase):
   def testDistribution(self):
     tf.compat.v1.set_random_seed(1)
     wrapped = q_policy.QPolicy(
-        self._time_step_spec, self._action_spec, q_network=DummyNet())
+        self._time_step_spec, self._action_spec, q_network=DummyNet()
+    )
     policy = boltzmann_policy.BoltzmannPolicy(wrapped, temperature=0.9)
 
     observations = tf.constant([[1, 2]], dtype=tf.float32)
@@ -98,7 +103,8 @@ class BoltzmannPolicyTest(test_utils.TestCase):
   def testLogits(self):
     tf.compat.v1.set_random_seed(1)
     wrapped = q_policy.QPolicy(
-        self._time_step_spec, self._action_spec, q_network=DummyNet())
+        self._time_step_spec, self._action_spec, q_network=DummyNet()
+    )
     policy = boltzmann_policy.BoltzmannPolicy(wrapped, temperature=0.5)
 
     observations = tf.constant([[1, 2]], dtype=tf.float32)
@@ -110,8 +116,8 @@ class BoltzmannPolicyTest(test_utils.TestCase):
     # The un-temperature'd logits would be 4 and 5.5, because it is (1 2) . (1
     # 1) + 1 and (1 2) . (1.5 1.5) + 1. The temperature'd logits will be double
     # that.
-    self.assertAllEqual([[4., 5.5]], self.evaluate(original_logits))
-    self.assertAllEqual([[8., 11.]], self.evaluate(logits))
+    self.assertAllEqual([[4.0, 5.5]], self.evaluate(original_logits))
+    self.assertAllEqual([[8.0, 11.0]], self.evaluate(logits))
 
 
 if __name__ == '__main__':

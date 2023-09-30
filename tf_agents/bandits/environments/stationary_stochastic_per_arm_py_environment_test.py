@@ -36,7 +36,8 @@ def check_unbatched_time_step_spec(time_step, time_step_spec, batch_size):
     return array_spec.check_arrays_nest(time_step, time_step_spec)
 
   return array_spec.check_arrays_nest(
-      time_step, array_spec.add_outer_dims_nest(time_step_spec, (batch_size,)))
+      time_step, array_spec.add_outer_dims_nest(time_step_spec, (batch_size,))
+  )
 
 
 class LinearNormalReward(object):
@@ -52,7 +53,6 @@ class LinearNormalReward(object):
 class StationaryStochasticPerArmBanditPyEnvironmentTest(tf.test.TestCase):
 
   def test_with_uniform_context_and_normal_mu_reward(self):
-
     def _global_context_sampling_fn():
       return np.random.randint(-10, 10, [4])
 
@@ -66,13 +66,16 @@ class StationaryStochasticPerArmBanditPyEnvironmentTest(tf.test.TestCase):
         _arm_context_sampling_fn,
         6,
         reward_fn,
-        batch_size=2)
+        batch_size=2,
+    )
     time_step_spec = env.time_step_spec()
     action_spec = array_spec.BoundedArraySpec(
-        shape=(), minimum=0, maximum=5, dtype=np.int32)
+        shape=(), minimum=0, maximum=5, dtype=np.int32
+    )
 
     random_policy = random_py_policy.RandomPyPolicy(
-        time_step_spec=time_step_spec, action_spec=action_spec)
+        time_step_spec=time_step_spec, action_spec=action_spec
+    )
 
     for _ in range(5):
       time_step = env.reset()
@@ -82,7 +85,9 @@ class StationaryStochasticPerArmBanditPyEnvironmentTest(tf.test.TestCase):
           check_unbatched_time_step_spec(
               time_step=time_step,
               time_step_spec=time_step_spec,
-              batch_size=env.batch_size))
+              batch_size=env.batch_size,
+          )
+      )
 
       action = random_policy.action(time_step).action
       self.assertAllEqual(action.shape, [2])
@@ -91,7 +96,6 @@ class StationaryStochasticPerArmBanditPyEnvironmentTest(tf.test.TestCase):
       time_step = env.step(action)
 
   def test_with_variable_num_actions_featurized(self):
-
     def _global_context_sampling_fn():
       return np.random.randint(-10, 10, [4])
 
@@ -109,13 +113,16 @@ class StationaryStochasticPerArmBanditPyEnvironmentTest(tf.test.TestCase):
         6,
         reward_fn,
         _num_actions_fn,
-        batch_size=2)
+        batch_size=2,
+    )
     time_step_spec = env.time_step_spec()
     action_spec = array_spec.BoundedArraySpec(
-        shape=(), minimum=0, maximum=5, dtype=np.int32)
+        shape=(), minimum=0, maximum=5, dtype=np.int32
+    )
 
     random_policy = random_py_policy.RandomPyPolicy(
-        time_step_spec=time_step_spec, action_spec=action_spec)
+        time_step_spec=time_step_spec, action_spec=action_spec
+    )
 
     for _ in range(5):
       time_step = env.reset()
@@ -123,7 +130,9 @@ class StationaryStochasticPerArmBanditPyEnvironmentTest(tf.test.TestCase):
           check_unbatched_time_step_spec(
               time_step=time_step,
               time_step_spec=time_step_spec,
-              batch_size=env.batch_size))
+              batch_size=env.batch_size,
+          )
+      )
 
       action = random_policy.action(time_step).action
       self.assertAllEqual(action.shape, [2])

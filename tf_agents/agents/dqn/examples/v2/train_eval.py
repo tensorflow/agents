@@ -66,10 +66,14 @@ from tf_agents.policies import random_tf_policy
 from tf_agents.replay_buffers import tf_uniform_replay_buffer
 from tf_agents.utils import common
 
-flags.DEFINE_string('root_dir', os.getenv('TEST_UNDECLARED_OUTPUTS_DIR'),
-                    'Root directory for writing logs/summaries/checkpoints.')
-flags.DEFINE_integer('num_iterations', 100000,
-                     'Total number train/eval iterations to perform.')
+flags.DEFINE_string(
+    'root_dir',
+    os.getenv('TEST_UNDECLARED_OUTPUTS_DIR'),
+    'Root directory for writing logs/summaries/checkpoints.',
+)
+flags.DEFINE_integer(
+    'num_iterations', 100000, 'Total number train/eval iterations to perform.'
+)
 flags.DEFINE_multi_string('gin_file', None, 'Paths to the gin-config files.')
 flags.DEFINE_multi_string('gin_param', None, 'Gin binding parameters.')
 
@@ -90,7 +94,6 @@ def train_eval(
     input_fc_layer_params=(50,),
     lstm_size=(20,),
     output_fc_layer_params=(20,),
-
     # Params for collect
     initial_collect_steps=1000,
     collect_steps_per_iteration=1,
@@ -121,43 +124,46 @@ def train_eval(
     summaries_flush_secs=10,
     debug_summaries=False,
     summarize_grads_and_vars=False,
-    eval_metrics_callback=None):
+    eval_metrics_callback=None,
+):
   """A simple train and eval for DQN."""
   root_dir = os.path.expanduser(root_dir)
   train_dir = os.path.join(root_dir, 'train')
   eval_dir = os.path.join(root_dir, 'eval')
 
   train_summary_writer = tf.compat.v2.summary.create_file_writer(
-      train_dir, flush_millis=summaries_flush_secs * 1000)
+      train_dir, flush_millis=summaries_flush_secs * 1000
+  )
   train_summary_writer.set_as_default()
 
   eval_summary_writer = tf.compat.v2.summary.create_file_writer(
-      eval_dir, flush_millis=summaries_flush_secs * 1000)
+      eval_dir, flush_millis=summaries_flush_secs * 1000
+  )
   eval_metrics = [
       tf_metrics.AverageReturnMetric(buffer_size=num_eval_episodes),
-      tf_metrics.AverageEpisodeLengthMetric(buffer_size=num_eval_episodes)
+      tf_metrics.AverageEpisodeLengthMetric(buffer_size=num_eval_episodes),
   ]
 
   global_step = tf.compat.v1.train.get_or_create_global_step()
   with tf.compat.v2.summary.record_if(
-      lambda: tf.math.equal(global_step % summary_interval, 0)):
+      lambda: tf.math.equal(global_step % summary_interval, 0)
+  ):
     tf_env = tf_py_environment.TFPyEnvironment(suite_gym.load(env_name))
     eval_tf_env = tf_py_environment.TFPyEnvironment(suite_gym.load(env_name))
 
     if train_sequence_length != 1 and n_step_update != 1:
       raise NotImplementedError(
           'train_eval does not currently support n-step updates with stateful '
-          'networks (i.e., RNNs)')
+          'networks (i.e., RNNs)'
+      )
 
     action_spec = tf_env.action_spec()
     num_actions = action_spec.maximum - action_spec.minimum + 1
 
     if train_sequence_length > 1:
       q_net = create_recurrent_network(
-          input_fc_layer_params,
-          lstm_size,
-          output_fc_layer_params,
-          num_actions)
+          input_fc_layer_params, lstm_size, output_fc_layer_params, num_actions
+      )
     else:
       q_net = create_feedforward_network(fc_layer_params, num_actions)
       train_sequence_length = n_step_update
@@ -178,7 +184,8 @@ def train_eval(
         gradient_clipping=gradient_clipping,
         debug_summaries=debug_summaries,
         summarize_grads_and_vars=summarize_grads_and_vars,
-        train_step_counter=global_step)
+        train_step_counter=global_step,
+    )
     tf_agent.initialize()
 
     train_metrics = [
@@ -194,27 +201,32 @@ def train_eval(
     replay_buffer = tf_uniform_replay_buffer.TFUniformReplayBuffer(
         data_spec=tf_agent.collect_data_spec,
         batch_size=tf_env.batch_size,
-        max_length=replay_buffer_capacity)
+        max_length=replay_buffer_capacity,
+    )
 
     collect_driver = dynamic_step_driver.DynamicStepDriver(
         tf_env,
         collect_policy,
         observers=[replay_buffer.add_batch] + train_metrics,
-        num_steps=collect_steps_per_iteration)
+        num_steps=collect_steps_per_iteration,
+    )
 
     train_checkpointer = common.Checkpointer(
         ckpt_dir=train_dir,
         agent=tf_agent,
         global_step=global_step,
-        metrics=metric_utils.MetricsGroup(train_metrics, 'train_metrics'))
+        metrics=metric_utils.MetricsGroup(train_metrics, 'train_metrics'),
+    )
     policy_checkpointer = common.Checkpointer(
         ckpt_dir=os.path.join(train_dir, 'policy'),
         policy=eval_policy,
-        global_step=global_step)
+        global_step=global_step,
+    )
     rb_checkpointer = common.Checkpointer(
         ckpt_dir=os.path.join(train_dir, 'replay_buffer'),
         max_to_keep=1,
-        replay_buffer=replay_buffer)
+        replay_buffer=replay_buffer,
+    )
 
     train_checkpointer.initialize_or_restore()
     rb_checkpointer.initialize_or_restore()
@@ -225,17 +237,21 @@ def train_eval(
       tf_agent.train = common.function(tf_agent.train)
 
     initial_collect_policy = random_tf_policy.RandomTFPolicy(
-        tf_env.time_step_spec(), tf_env.action_spec())
+        tf_env.time_step_spec(), tf_env.action_spec()
+    )
 
     # Collect initial replay data.
     logging.info(
         'Initializing replay buffer by collecting experience for %d steps with '
-        'a random policy.', initial_collect_steps)
+        'a random policy.',
+        initial_collect_steps,
+    )
     dynamic_step_driver.DynamicStepDriver(
         tf_env,
         initial_collect_policy,
         observers=[replay_buffer.add_batch] + train_metrics,
-        num_steps=initial_collect_steps).run()
+        num_steps=initial_collect_steps,
+    ).run()
 
     results = metric_utils.eager_compute(
         eval_metrics,
@@ -260,7 +276,8 @@ def train_eval(
     dataset = replay_buffer.as_dataset(
         num_parallel_calls=3,
         sample_batch_size=batch_size,
-        num_steps=train_sequence_length + 1).prefetch(3)
+        num_steps=train_sequence_length + 1,
+    ).prefetch(3)
     iterator = iter(dataset)
 
     def train_step():
@@ -281,18 +298,21 @@ def train_eval(
       time_acc += time.time() - start_time
 
       if global_step.numpy() % log_interval == 0:
-        logging.info('step = %d, loss = %f', global_step.numpy(),
-                     train_loss.loss)
+        logging.info(
+            'step = %d, loss = %f', global_step.numpy(), train_loss.loss
+        )
         steps_per_sec = (global_step.numpy() - timed_at_step) / time_acc
         logging.info('%.3f steps/sec', steps_per_sec)
         tf.compat.v2.summary.scalar(
-            name='global_steps_per_sec', data=steps_per_sec, step=global_step)
+            name='global_steps_per_sec', data=steps_per_sec, step=global_step
+        )
         timed_at_step = global_step.numpy()
         time_acc = 0
 
       for train_metric in train_metrics:
         train_metric.tf_summaries(
-            train_step=global_step, step_metrics=train_metrics[:2])
+            train_step=global_step, step_metrics=train_metrics[:2]
+        )
 
       if global_step.numpy() % train_checkpoint_interval == 0:
         train_checkpointer.save(global_step=global_step.numpy())
@@ -323,38 +343,42 @@ logits = functools.partial(
     tf.keras.layers.Dense,
     activation=None,
     kernel_initializer=tf.random_uniform_initializer(minval=-0.03, maxval=0.03),
-    bias_initializer=tf.constant_initializer(-0.2))
+    bias_initializer=tf.constant_initializer(-0.2),
+)
 
 
 dense = functools.partial(
     tf.keras.layers.Dense,
     activation=tf.keras.activations.relu,
     kernel_initializer=tf.compat.v1.variance_scaling_initializer(
-        scale=2.0, mode='fan_in', distribution='truncated_normal'))
+        scale=2.0, mode='fan_in', distribution='truncated_normal'
+    ),
+)
 
 
 fused_lstm_cell = functools.partial(
-    tf.keras.layers.LSTMCell, implementation=KERAS_LSTM_FUSED)
+    tf.keras.layers.LSTMCell, implementation=KERAS_LSTM_FUSED
+)
 
 
 def create_feedforward_network(fc_layer_units, num_actions):
   return sequential.Sequential(
-      [dense(num_units) for num_units in fc_layer_units]
-      + [logits(num_actions)])
+      [dense(num_units) for num_units in fc_layer_units] + [logits(num_actions)]
+  )
 
 
 def create_recurrent_network(
-    input_fc_layer_units,
-    lstm_size,
-    output_fc_layer_units,
-    num_actions):
+    input_fc_layer_units, lstm_size, output_fc_layer_units, num_actions
+):
   rnn_cell = tf.keras.layers.StackedRNNCells(
-      [fused_lstm_cell(s) for s in lstm_size])
+      [fused_lstm_cell(s) for s in lstm_size]
+  )
   return sequential.Sequential(
       [dense(num_units) for num_units in input_fc_layer_units]
       + [dynamic_unroll_layer.DynamicUnroll(rnn_cell)]
       + [dense(num_units) for num_units in output_fc_layer_units]
-      + [logits(num_actions)])
+      + [logits(num_actions)]
+  )
 
 
 def main(_):

@@ -33,11 +33,15 @@ class PyMetricsTest(tf.test.TestCase, parameterized.TestCase):
 
   @parameterized.named_parameters(
       ('AverageReturnMetric', py_metrics.AverageReturnMetric, 'AverageReturn'),
-      ('AverageEpisodeLengthMetric', py_metrics.AverageEpisodeLengthMetric,
-       'AverageEpisodeLength'),
+      (
+          'AverageEpisodeLengthMetric',
+          py_metrics.AverageEpisodeLengthMetric,
+          'AverageEpisodeLength',
+      ),
       ('EnvironmentSteps', py_metrics.EnvironmentSteps, 'EnvironmentSteps'),
       ('NumberOfEpisodes', py_metrics.NumberOfEpisodes, 'NumberOfEpisodes'),
-      ('CounterMetric', py_metrics.CounterMetric, 'Counter'))
+      ('CounterMetric', py_metrics.CounterMetric, 'Counter'),
+  )
   def testName(self, metric_class, expected_name):
     metric = metric_class()
     self.assertEqual(expected_name, metric.name)
@@ -47,7 +51,8 @@ class PyMetricsTest(tf.test.TestCase, parameterized.TestCase):
       ('AverageEpisodeLengthMetric', py_metrics.AverageEpisodeLengthMetric),
       ('EnvironmentSteps', py_metrics.EnvironmentSteps),
       ('NumberOfEpisodes', py_metrics.NumberOfEpisodes),
-      ('CounterMetric', py_metrics.NumberOfEpisodes))
+      ('CounterMetric', py_metrics.NumberOfEpisodes),
+  )
   def testChangeName(self, metric_class):
     name = 'SomeMetric'
     metric = metric_class(name)
@@ -55,41 +60,50 @@ class PyMetricsTest(tf.test.TestCase, parameterized.TestCase):
 
   @parameterized.named_parameters(
       ('AverageReturnMetric', py_metrics.AverageReturnMetric, 0.0),
-      ('AverageEpisodeLengthMetric', py_metrics.AverageEpisodeLengthMetric,
-       0.0),
+      (
+          'AverageEpisodeLengthMetric',
+          py_metrics.AverageEpisodeLengthMetric,
+          0.0,
+      ),
       ('EnvironmentSteps', py_metrics.EnvironmentSteps, 1.0),
-      ('NumberOfEpisodes', py_metrics.NumberOfEpisodes, 0.0))
+      ('NumberOfEpisodes', py_metrics.NumberOfEpisodes, 0.0),
+  )
   def testZeroEpisodes(self, metric_class, expected_result):
     metric = metric_class()
     # Order of args for trajectory methods:
     # observation, action, policy_info, reward, discount
-    metric(trajectory.boundary((), (), (), 0., 1.))
-    metric(trajectory.first((), (), (), 1., 1.))
+    metric(trajectory.boundary((), (), (), 0.0, 1.0))
+    metric(trajectory.first((), (), (), 1.0, 1.0))
     self.assertEqual(expected_result, metric.result())
 
   @parameterized.named_parameters(
       ('AverageReturnMetric', py_metrics.AverageReturnMetric, 6.0),
-      ('AverageEpisodeLengthMetric', py_metrics.AverageEpisodeLengthMetric,
-       3.0),
+      (
+          'AverageEpisodeLengthMetric',
+          py_metrics.AverageEpisodeLengthMetric,
+          3.0,
+      ),
       ('EnvironmentSteps', py_metrics.EnvironmentSteps, 3.0),
-      ('NumberOfEpisodes', py_metrics.NumberOfEpisodes, 1.0))
+      ('NumberOfEpisodes', py_metrics.NumberOfEpisodes, 1.0),
+  )
   def testAverageOneEpisode(self, metric_class, expected_result):
     metric = metric_class()
 
-    metric(trajectory.boundary((), (), (), 0., 1.))
-    metric(trajectory.mid((), (), (), 1., 1.))
-    metric(trajectory.mid((), (), (), 2., 1.))
-    metric(trajectory.last((), (), (), 3., 0.))
+    metric(trajectory.boundary((), (), (), 0.0, 1.0))
+    metric(trajectory.mid((), (), (), 1.0, 1.0))
+    metric(trajectory.mid((), (), (), 2.0, 1.0))
+    metric(trajectory.last((), (), (), 3.0, 0.0))
     self.assertEqual(expected_result, metric.result())
 
-  @parameterized.named_parameters(('AverageReturnMetric',
-                                   py_metrics.AverageReturnMetric, 7.0))
+  @parameterized.named_parameters(
+      ('AverageReturnMetric', py_metrics.AverageReturnMetric, 7.0)
+  )
   def testAverageOneEpisodeWithReset(self, metric_class, expected_result):
     metric = metric_class()
 
-    metric(trajectory.first((), (), (), 0., 1.))
-    metric(trajectory.mid((), (), (), 1., 1.))
-    metric(trajectory.mid((), (), (), 2., 1.))
+    metric(trajectory.first((), (), (), 0.0, 1.0))
+    metric(trajectory.mid((), (), (), 1.0, 1.0))
+    metric(trajectory.mid((), (), (), 2.0, 1.0))
     # The episode is reset.
     #
     # This could happen when using the dynamic_episode_driver with
@@ -98,79 +112,123 @@ class PyMetricsTest(tf.test.TestCase, parameterized.TestCase):
     # When the driver runs again, all environments are reset at the beginning
     # of the tf.while_loop and the unfinished episodes would get "FIRST" without
     # seeing "LAST".
-    metric(trajectory.first((), (), (), 3., 1.))
-    metric(trajectory.last((), (), (), 4., 1.))
+    metric(trajectory.first((), (), (), 3.0, 1.0))
+    metric(trajectory.last((), (), (), 4.0, 1.0))
     self.assertEqual(expected_result, metric.result())
 
   @parameterized.named_parameters(
       ('AverageReturnMetric', py_metrics.AverageReturnMetric, 0.0),
-      ('AverageEpisodeLengthMetric', py_metrics.AverageEpisodeLengthMetric,
-       2.0),
+      (
+          'AverageEpisodeLengthMetric',
+          py_metrics.AverageEpisodeLengthMetric,
+          2.0,
+      ),
       ('EnvironmentSteps', py_metrics.EnvironmentSteps, 4.0),
-      ('NumberOfEpisodes', py_metrics.NumberOfEpisodes, 2.0))
+      ('NumberOfEpisodes', py_metrics.NumberOfEpisodes, 2.0),
+  )
   def testAverageTwoEpisode(self, metric_class, expected_result):
     metric = metric_class()
 
-    metric(trajectory.boundary((), (), (), 0., 1.))
-    metric(trajectory.first((), (), (), 1., 1.))
-    metric(trajectory.mid((), (), (), 2., 1.))
-    metric(trajectory.last((), (), (), 3., 0.))
-    metric(trajectory.boundary((), (), (), 0., 1.))
+    metric(trajectory.boundary((), (), (), 0.0, 1.0))
+    metric(trajectory.first((), (), (), 1.0, 1.0))
+    metric(trajectory.mid((), (), (), 2.0, 1.0))
+    metric(trajectory.last((), (), (), 3.0, 0.0))
+    metric(trajectory.boundary((), (), (), 0.0, 1.0))
 
     # TODO(kbanoop): Add optional next_step_type arg to trajectory.first. Or
     # implement trajectory.first_last().
     metric(
-        trajectory.Trajectory(ts.StepType.FIRST, (), (), (), ts.StepType.LAST,
-                              -6., 1.))
+        trajectory.Trajectory(
+            ts.StepType.FIRST, (), (), (), ts.StepType.LAST, -6.0, 1.0
+        )
+    )
 
     self.assertEqual(expected_result, metric.result())
 
   @parameterized.named_parameters(
       ('AverageReturnMetric', py_metrics.AverageReturnMetric, 5.0),
-      ('AverageEpisodeLengthMetric', py_metrics.AverageEpisodeLengthMetric,
-       2.5))
+      (
+          'AverageEpisodeLengthMetric',
+          py_metrics.AverageEpisodeLengthMetric,
+          2.5,
+      ),
+  )
   def testBatch(self, metric_class, expected_result):
     metric = metric_class()
 
-    metric(nest_utils.stack_nested_arrays([
-        trajectory.boundary((), (), (), 0., 1.),
-        trajectory.boundary((), (), (), 0., 1.)]))
-    metric(nest_utils.stack_nested_arrays([
-        trajectory.first((), (), (), 1., 1.),
-        trajectory.first((), (), (), 1., 1.)]))
-    metric(nest_utils.stack_nested_arrays([
-        trajectory.mid((), (), (), 2., 1.),
-        trajectory.last((), (), (), 3., 0.)]))
-    metric(nest_utils.stack_nested_arrays([
-        trajectory.last((), (), (), 3., 0.),
-        trajectory.boundary((), (), (), 0., 1.)]))
-    metric(nest_utils.stack_nested_arrays([
-        trajectory.boundary((), (), (), 0., 1.),
-        trajectory.first((), (), (), 1., 1.)]))
+    metric(
+        nest_utils.stack_nested_arrays([
+            trajectory.boundary((), (), (), 0.0, 1.0),
+            trajectory.boundary((), (), (), 0.0, 1.0),
+        ])
+    )
+    metric(
+        nest_utils.stack_nested_arrays([
+            trajectory.first((), (), (), 1.0, 1.0),
+            trajectory.first((), (), (), 1.0, 1.0),
+        ])
+    )
+    metric(
+        nest_utils.stack_nested_arrays([
+            trajectory.mid((), (), (), 2.0, 1.0),
+            trajectory.last((), (), (), 3.0, 0.0),
+        ])
+    )
+    metric(
+        nest_utils.stack_nested_arrays([
+            trajectory.last((), (), (), 3.0, 0.0),
+            trajectory.boundary((), (), (), 0.0, 1.0),
+        ])
+    )
+    metric(
+        nest_utils.stack_nested_arrays([
+            trajectory.boundary((), (), (), 0.0, 1.0),
+            trajectory.first((), (), (), 1.0, 1.0),
+        ])
+    )
     self.assertEqual(expected_result, metric.result(), 5.0)
 
   @parameterized.named_parameters(
       ('AverageReturnMetric', py_metrics.AverageReturnMetric, 5.0),
-      ('AverageEpisodeLengthMetric', py_metrics.AverageEpisodeLengthMetric,
-       2.5))
+      (
+          'AverageEpisodeLengthMetric',
+          py_metrics.AverageEpisodeLengthMetric,
+          2.5,
+      ),
+  )
   def testBatchSizeProvided(self, metric_class, expected_result):
     metric = metric_class(batch_size=2)
 
-    metric(nest_utils.stack_nested_arrays([
-        trajectory.boundary((), (), (), 0., 1.),
-        trajectory.boundary((), (), (), 0., 1.)]))
-    metric(nest_utils.stack_nested_arrays([
-        trajectory.first((), (), (), 1., 1.),
-        trajectory.first((), (), (), 1., 1.)]))
-    metric(nest_utils.stack_nested_arrays([
-        trajectory.mid((), (), (), 2., 1.),
-        trajectory.last((), (), (), 3., 0.)]))
-    metric(nest_utils.stack_nested_arrays([
-        trajectory.last((), (), (), 3., 0.),
-        trajectory.boundary((), (), (), 0., 1.)]))
-    metric(nest_utils.stack_nested_arrays([
-        trajectory.boundary((), (), (), 0., 1.),
-        trajectory.first((), (), (), 1., 1.)]))
+    metric(
+        nest_utils.stack_nested_arrays([
+            trajectory.boundary((), (), (), 0.0, 1.0),
+            trajectory.boundary((), (), (), 0.0, 1.0),
+        ])
+    )
+    metric(
+        nest_utils.stack_nested_arrays([
+            trajectory.first((), (), (), 1.0, 1.0),
+            trajectory.first((), (), (), 1.0, 1.0),
+        ])
+    )
+    metric(
+        nest_utils.stack_nested_arrays([
+            trajectory.mid((), (), (), 2.0, 1.0),
+            trajectory.last((), (), (), 3.0, 0.0),
+        ])
+    )
+    metric(
+        nest_utils.stack_nested_arrays([
+            trajectory.last((), (), (), 3.0, 0.0),
+            trajectory.boundary((), (), (), 0.0, 1.0),
+        ])
+    )
+    metric(
+        nest_utils.stack_nested_arrays([
+            trajectory.boundary((), (), (), 0.0, 1.0),
+            trajectory.first((), (), (), 1.0, 1.0),
+        ])
+    )
     self.assertEqual(metric.result(), expected_result)
 
   def testCounterMetricIncrements(self):
@@ -191,14 +249,14 @@ class PyMetricsTest(tf.test.TestCase, parameterized.TestCase):
         py_metrics.AverageReturnMetric(),
         py_metrics.AverageEpisodeLengthMetric(),
         py_metrics.EnvironmentSteps(),
-        py_metrics.NumberOfEpisodes()
+        py_metrics.NumberOfEpisodes(),
     ]
 
     for metric in metrics:
-      metric(trajectory.boundary((), (), (), 0., 1.))
-      metric(trajectory.mid((), (), (), 1., 1.))
-      metric(trajectory.mid((), (), (), 2., 1.))
-      metric(trajectory.last((), (), (), 3., 0.))
+      metric(trajectory.boundary((), (), (), 0.0, 1.0))
+      metric(trajectory.mid((), (), (), 1.0, 1.0))
+      metric(trajectory.mid((), (), (), 2.0, 1.0))
+      metric(trajectory.last((), (), (), 3.0, 0.0))
 
     checkpoint = tf.train.Checkpoint(**{m.name: m for m in metrics})
     prefix = self.get_temp_dir() + '/ckpt'
@@ -214,7 +272,7 @@ class PyMetricsTest(tf.test.TestCase, parameterized.TestCase):
 class NumpyDequeTest(tf.test.TestCase):
 
   def testSimple(self):
-    buf = py_metrics.NumpyDeque(maxlen=10, dtype=np.float64)
+    buf = py_metrics.NumpyDeque(maxlen=10, dtype=np.float64)  # pytype: disable=wrong-arg-types  # numpy-scalars
     buf.add(2)
     buf.add(3)
     buf.add(5)
@@ -222,7 +280,7 @@ class NumpyDequeTest(tf.test.TestCase):
     self.assertEqual(4, buf.mean())
 
   def testFullLength(self):
-    buf = py_metrics.NumpyDeque(maxlen=4, dtype=np.float64)
+    buf = py_metrics.NumpyDeque(maxlen=4, dtype=np.float64)  # pytype: disable=wrong-arg-types  # numpy-scalars
     buf.add(2)
     buf.add(3)
     buf.add(5)
@@ -230,7 +288,7 @@ class NumpyDequeTest(tf.test.TestCase):
     self.assertEqual(4, buf.mean())
 
   def testPastMaxLen(self):
-    buf = py_metrics.NumpyDeque(maxlen=4, dtype=np.float64)
+    buf = py_metrics.NumpyDeque(maxlen=4, dtype=np.float64)  # pytype: disable=wrong-arg-types  # numpy-scalars
     buf.add(2)
     buf.add(3)
     buf.add(5)
@@ -240,7 +298,7 @@ class NumpyDequeTest(tf.test.TestCase):
     self.assertEqual(7, buf.mean())
 
   def testClear(self):
-    buf = py_metrics.NumpyDeque(maxlen=4, dtype=np.float64)
+    buf = py_metrics.NumpyDeque(maxlen=4, dtype=np.float64)  # pytype: disable=wrong-arg-types  # numpy-scalars
     buf.add(2)
     buf.add(3)
     buf.clear()
@@ -248,13 +306,13 @@ class NumpyDequeTest(tf.test.TestCase):
     self.assertEqual(5, buf.mean())
 
   def testUnbounded(self):
-    buf = py_metrics.NumpyDeque(maxlen=np.inf, dtype=np.float64)
+    buf = py_metrics.NumpyDeque(maxlen=np.inf, dtype=np.float64)  # pytype: disable=wrong-arg-types  # numpy-scalars
     for i in range(101):
       buf.add(i)
     self.assertEqual(50, buf.mean())
 
   def testUnboundedClear(self):
-    buf = py_metrics.NumpyDeque(maxlen=np.inf, dtype=np.float64)
+    buf = py_metrics.NumpyDeque(maxlen=np.inf, dtype=np.float64)  # pytype: disable=wrong-arg-types  # numpy-scalars
     for i in range(101):
       buf.add(i)
     buf.clear()
@@ -263,7 +321,7 @@ class NumpyDequeTest(tf.test.TestCase):
     self.assertEqual(5, buf.mean())
 
   def testLast(self):
-    buf = py_metrics.NumpyDeque(maxlen=4, dtype=np.float64)
+    buf = py_metrics.NumpyDeque(maxlen=4, dtype=np.float64)  # pytype: disable=wrong-arg-types  # numpy-scalars
 
     buf.add(2)
     self.assertEqual(2, buf.last)

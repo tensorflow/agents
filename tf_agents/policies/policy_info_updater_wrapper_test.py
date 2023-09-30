@@ -13,8 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-r"""Tests for tf_agents.policies.policy_info_updater_wrapper.
-"""
+r"""Tests for tf_agents.policies.policy_info_updater_wrapper."""
 
 from __future__ import absolute_import
 from __future__ import division
@@ -34,26 +33,30 @@ from tf_agents.utils import test_utils
 class DistributionPolicy(tf_policy.TFPolicy):
   """A policy which always returns the configured distribution."""
 
-  def __init__(self,
-               distribution,
-               time_step_spec,
-               action_spec,
-               info_spec,
-               name=None):
+  def __init__(
+      self, distribution, time_step_spec, action_spec, info_spec, name=None
+  ):
     self._distribution_value = distribution
     super(DistributionPolicy, self).__init__(
         time_step_spec=time_step_spec,
         action_spec=action_spec,
         info_spec=info_spec,
-        name=name)
+        name=name,
+    )
 
-  def _action(self, time_step, policy_state, seed):
-    return policy_step.PolicyStep(tf.constant(1., shape=(1,)), policy_state,
-                                  {'test_info': tf.constant(2, shape=(1,))})
+  def _action(self, time_step, policy_state, seed):  # pytype: disable=signature-mismatch  # overriding-parameter-count-checks
+    return policy_step.PolicyStep(
+        tf.constant(1.0, shape=(1,)),
+        policy_state,
+        {'test_info': tf.constant(2, shape=(1,))},
+    )
 
   def _distribution(self, time_step, policy_state):
-    return policy_step.PolicyStep(self._distribution_value, policy_state,
-                                  {'test_info': tf.constant(2, shape=(1,))})
+    return policy_step.PolicyStep(
+        self._distribution_value,
+        policy_state,
+        {'test_info': tf.constant(2, shape=(1,))},
+    )
 
   def _variables(self):
     return []
@@ -76,16 +79,19 @@ class PolicyInfoUpdaterWrapperTest(test_utils.TestCase, parameterized.TestCase):
   def test_model_id_updater(self):
     loc = 0.0
     scale = 0.5
-    action_spec = tensor_spec.BoundedTensorSpec([1], tf.float32, tf.float32.min,
-                                                tf.float32.max)
+    action_spec = tensor_spec.BoundedTensorSpec(
+        [1], tf.float32, tf.float32.min, tf.float32.max
+    )
     wrapped_policy = DistributionPolicy(
         distribution=tfp.distributions.Normal([loc], [scale]),
         time_step_spec=self._time_step_spec,
         action_spec=action_spec,
         info_spec={
-            'test_info':
-                tf.TensorSpec(shape=(1,), dtype=tf.int32, name='test_info')
-        })
+            'test_info': tf.TensorSpec(
+                shape=(1,), dtype=tf.int32, name='test_info'
+            )
+        },
+    )
     updater_info_spec = {
         'model_id': tf.TensorSpec(shape=(1,), dtype=tf.int32, name='model_id')
     }
@@ -94,7 +100,8 @@ class PolicyInfoUpdaterWrapperTest(test_utils.TestCase, parameterized.TestCase):
         policy=wrapped_policy,
         info_spec=updater_info_spec,
         updater_fn=ModelIdUpdater(),
-        name='model_id_updater')
+        name='model_id_updater',
+    )
 
     self.assertEqual(policy.time_step_spec, self._time_step_spec)
     self.assertEqual(policy.action_spec, action_spec)
@@ -109,7 +116,8 @@ class PolicyInfoUpdaterWrapperTest(test_utils.TestCase, parameterized.TestCase):
 
     self.assertListEqual(list(self.evaluate(action_step.info['model_id'])), [2])
     self.assertListEqual(
-        list(self.evaluate(distribution_step.info['model_id'])), [2])
+        list(self.evaluate(distribution_step.info['model_id'])), [2]
+    )
 
 
 if __name__ == '__main__':

@@ -20,10 +20,9 @@ from __future__ import division
 from __future__ import print_function
 
 import abc
+
 import gin
-
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
-
 from tf_agents.bandits.environments import bandit_tf_environment as bte
 from tf_agents.trajectories import time_step
 from tf_agents.typing import types
@@ -42,7 +41,6 @@ class EnvironmentDynamics(tf.Module, metaclass=abc.ABCMeta):
   defined in the constructor of this class. When used within a
   `BanditTFEnvironment` autodeps in reset and step functions will handle
   automatically the operation order.
-
   """
 
   @abc.abstractproperty
@@ -74,9 +72,9 @@ class EnvironmentDynamics(tf.Module, metaclass=abc.ABCMeta):
     pass
 
   @abc.abstractmethod
-  def reward(self,
-             observation: types.NestedTensor,
-             env_time: types.Int) -> types.NestedTensor:
+  def reward(
+      self, observation: types.NestedTensor, env_time: types.Int
+  ) -> types.NestedTensor:
     """Reward for the given observation and time step.
 
     Args:
@@ -97,19 +95,22 @@ def _create_variable_from_spec_nest(specs, batch_size):
     return common.create_variable(
         name=spec.name,
         dtype=spec.dtype,
-        shape=[batch_size] + spec.shape.as_list())
+        shape=[batch_size] + spec.shape.as_list(),
+    )
+
   return tf.nest.map_structure(create_variable, specs)
 
 
 def _assign_variable_nest(variables, values):
-  return tf.nest.map_structure(lambda variable, value: variable.assign(value),
-                               variables,
-                               values)
+  return tf.nest.map_structure(
+      lambda variable, value: variable.assign(value), variables, values
+  )
 
 
 def _read_value_nest(variables):
-  return tf.nest.map_structure(lambda variable: variable.read_value(),
-                               variables)
+  return tf.nest.map_structure(
+      lambda variable: variable.read_value(), variables
+  )
 
 
 @gin.configurable
@@ -130,31 +131,38 @@ class NonStationaryStochasticEnvironment(bte.BanditTFEnvironment):
         the environment evolves over time.
     """
     self._env_time = tf.compat.v2.Variable(
-        0, trainable=False, name='env_time', dtype=tf.int64)
+        0, trainable=False, name='env_time', dtype=tf.int64
+    )
     self._environment_dynamics = environment_dynamics
     observation_spec = environment_dynamics.observation_spec
     self._observation = _create_variable_from_spec_nest(
-        observation_spec, environment_dynamics.batch_size)
+        observation_spec, environment_dynamics.batch_size
+    )
     time_step_spec = time_step.time_step_spec(observation_spec)
     super(NonStationaryStochasticEnvironment, self).__init__(
         time_step_spec=time_step_spec,
         action_spec=environment_dynamics.action_spec,
-        batch_size=environment_dynamics.batch_size)
+        batch_size=environment_dynamics.batch_size,
+    )
 
   @property
   def environment_dynamics(self) -> EnvironmentDynamics:
     return self._environment_dynamics
 
   def _apply_action(self, action: types.NestedTensor) -> types.NestedTensor:
-    self._reward = self._environment_dynamics.reward(self._observation,
-                                                     self._env_time)
-    tf.compat.v1.assign_add(self._env_time,
-                            self._environment_dynamics.batch_size)
+    self._reward = self._environment_dynamics.reward(
+        self._observation, self._env_time
+    )
+    tf.compat.v1.assign_add(
+        self._env_time, self._environment_dynamics.batch_size
+    )
     return common.index_with_actions(
-        self._reward, tf.cast(action, dtype=tf.int32))
+        self._reward, tf.cast(action, dtype=tf.int32)
+    )
 
   def _observe(self) -> types.NestedTensor:
     _assign_variable_nest(
         self._observation,
-        self._environment_dynamics.observation(self._env_time))
+        self._environment_dynamics.observation(self._env_time),
+    )
     return _read_value_nest(self._observation)

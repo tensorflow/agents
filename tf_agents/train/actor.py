@@ -22,7 +22,6 @@ import os
 from absl import logging
 import gin
 import tensorflow.compat.v2 as tf
-
 from tf_agents.drivers import py_driver
 from tf_agents.environments import py_environment
 from tf_agents.environments import tf_environment
@@ -43,22 +42,24 @@ class Actor(object):
   `steps_per_run` or `episodes_per_run` must be provided.
   """
 
-  def __init__(self,
-               env,
-               policy,
-               train_step,
-               steps_per_run=None,
-               episodes_per_run=None,
-               observers=None,
-               transition_observers=None,
-               info_observers=None,
-               metrics=None,
-               reference_metrics=None,
-               image_metrics=None,
-               summary_dir=None,
-               summary_interval=1000,
-               end_episode_on_boundary=True,
-               name=""):
+  def __init__(
+      self,
+      env,
+      policy,
+      train_step,
+      steps_per_run=None,
+      episodes_per_run=None,
+      observers=None,
+      transition_observers=None,
+      info_observers=None,
+      metrics=None,
+      reference_metrics=None,
+      image_metrics=None,
+      summary_dir=None,
+      summary_interval=1000,
+      end_episode_on_boundary=True,
+      name="",
+  ):
     """Initializes an Actor.
 
     Args:
@@ -90,8 +91,8 @@ class Actor(object):
         are written.
       summary_interval: How often summaries are written.
       end_episode_on_boundary: This parameter should be False when using
-        transition observers and be True when using trajectory observers. It
-        is used in py_driver.
+        transition observers and be True when using trajectory observers. It is
+        used in py_driver.
       name: Name for the actor used as a prefix to generated summaries.
     """
     self._env = env
@@ -113,7 +114,8 @@ class Actor(object):
 
     if self._write_summaries:
       self._summary_writer = tf.summary.create_file_writer(
-          summary_dir, flush_millis=10000)
+          summary_dir, flush_millis=10000
+      )
     else:
       self._summary_writer = tf.summary.create_noop_writer()
 
@@ -132,7 +134,8 @@ class Actor(object):
           info_observers=self._info_observers,
           max_steps=steps_per_run,
           max_episodes=episodes_per_run,
-          end_episode_on_boundary=end_episode_on_boundary)
+          end_episode_on_boundary=end_episode_on_boundary,
+      )
     elif isinstance(env, tf_environment.TFEnvironment):
       raise ValueError("Actor doesn't support TFEnvironments yet.")
     else:
@@ -162,10 +165,14 @@ class Actor(object):
 
   def run(self):
     self._time_step, self._policy_state = self._driver.run(
-        self._time_step, self._policy_state)
+        self._time_step, self._policy_state
+    )
 
-    if (self._write_summaries and self._summary_interval > 0 and
-        self._train_step - self._last_summary >= self._summary_interval):
+    if (
+        self._write_summaries
+        and self._summary_interval > 0
+        and self._train_step - self._last_summary >= self._summary_interval
+    ):
       self.write_metric_summaries()
       self._last_summary = self._train_step.numpy()
 
@@ -177,9 +184,9 @@ class Actor(object):
     """Generates scalar summaries for the actor metrics."""
     if self._metrics is None:
       return
-    with self._summary_writer.as_default(), \
-         common.soft_device_placement(), \
-         tf.summary.record_if(lambda: True):
+    with self._summary_writer.as_default(), common.soft_device_placement(), tf.summary.record_if(
+        lambda: True
+    ):
       # Generate summaries against the train_step
       for m in self._metrics:
         tag = m.name
@@ -187,10 +194,10 @@ class Actor(object):
           tf.summary.scalar(
               name=os.path.join("Metrics/", self._name, tag),
               data=m.result(),
-              step=self._train_step)
+              step=self._train_step,
+          )
         except ValueError:
-          logging.error("Scalar summary could not be written for metric %s",
-                        m)
+          logging.error("Scalar summary could not be written for metric %s", m)
         # Generate summaries against the reference_metrics
         for reference_metric in self._reference_metrics:
           tag = "Metrics/{}/{}".format(m.name, reference_metric.name)
@@ -198,18 +205,20 @@ class Actor(object):
             tf.summary.scalar(
                 name=os.path.join(self._name, tag),
                 data=m.result(),
-                step=reference_metric.result())
+                step=reference_metric.result(),
+            )
           except ValueError:
             logging.error(
-                "Scalar summary could not be written for reference_metric %s",
-                m)
+                "Scalar summary could not be written for reference_metric %s", m
+            )
       for m in self._image_metrics:
         tag = m.name
         try:
           tf.summary.image(
               name=os.path.join("Metrics/", self._name, tag),
               data=m.result(),
-              step=self._train_step)
+              step=self._train_step,
+          )
         except ValueError:
           logging.error("Image summary could not be written for metric %s", m)
 
@@ -224,7 +233,8 @@ class Actor(object):
     """Reset the environment to the start and the policy state."""
     self._time_step = self._env.reset()
     self._policy_state = self._policy.get_initial_state(
-        self._env.batch_size or 1)
+        self._env.batch_size or 1
+    )
 
 
 def collect_metrics(buffer_size):

@@ -39,18 +39,22 @@ ArraySpec = ForwardRef('tf_agents.specs.array_spec.ArraySpec')
 Network = ForwardRef('tf_agents.networks.network.Network')  # pylint: disable=invalid-name
 BoundedTensorSpec = ForwardRef('tf_agents.specs.tensor_spec.BoundedTensorSpec')  # pylint: disable=invalid-name
 DistributionSpecV2 = ForwardRef(
-    'tf_agents.distributions.utils.DistributionSpecV2')  # pylint: disable=invalid-name
+    'tf_agents.distributions.utils.DistributionSpecV2'
+)  # pylint: disable=invalid-name
 
 Tensor = Union[tf.Tensor, tf.SparseTensor, tf.RaggedTensor, EagerTensor]
 # Note: EagerTensor is array-like because it supports __array__.  We
 # can replace this with np.typing.ArrayLike once we/tf require numpy v1.21+.
-Array = Union[np.ndarray, int, float, str, bool, EagerTensor]   # pylint: disable=invalid-name
+Array = Union[np.ndarray, int, float, str, bool, EagerTensor]  # pylint: disable=invalid-name
 TensorOrArray = Union[Tensor, Array]
 Distribution = tfp.distributions.Distribution
 
 TensorSpec = Union[
-    tf.TypeSpec, tf.TensorSpec, tf.RaggedTensorSpec, tf.SparseTensorSpec,
-    DistributionSpecV2
+    tf.TypeSpec,
+    tf.TensorSpec,
+    tf.RaggedTensorSpec,
+    tf.SparseTensorSpec,
+    DistributionSpecV2,
 ]
 
 Spec = Union[TensorSpec, ArraySpec]
@@ -65,7 +69,8 @@ NestedTensor = Nested[Tensor, 'NestedTensor']
 NestedVariable = Nested[tf.Variable, 'NestedVariable']
 NestedArray = Nested[Array, 'NestedArray']
 NestedDistribution = Nested[
-    tfp.distributions.Distribution, 'NestedDistribution']
+    tfp.distributions.Distribution, 'NestedDistribution'
+]
 NestedPlaceHolder = Nested[tf.compat.v1.placeholder, 'NestedPlaceholder']
 NestedTensorSpec = Nested[TensorSpec, 'NestedTensorSpec']
 NestedBoundedTensorSpec = Nested[BoundedTensorSpec, 'NestedBoundedTensorSpec']
@@ -86,8 +91,9 @@ FloatOrReturningFloat = Union[Float, Callable[[], Float]]
 Shape = Union[TensorOrArray, Sequence[Optional[int]], tf.TensorShape]
 ShapeSequence = Sequence[Optional[int]]
 
-Splitter = Optional[Callable[
-    [NestedSpecTensorOrArray], Iterable[NestedSpecTensorOrArray]]]
+Splitter = Optional[
+    Callable[[NestedSpecTensorOrArray], Iterable[NestedSpecTensorOrArray]]
+]
 Seed = Union[int, Sequence[int], Tensor, Array]
 
 TimeStep = ForwardRef('tf_agents.trajectories.time_step.TimeStep')  # pylint: disable=invalid-name
@@ -117,4 +123,5 @@ ReverbReplaySample = ForwardRef('reverb.replay_sample.ReplaySample')
 
 LookupLayer = Union[
     tf.compat.v2.keras.layers.experimental.preprocessing.IntegerLookup,
-    tf.compat.v2.keras.layers.experimental.preprocessing.StringLookup]
+    tf.compat.v2.keras.layers.experimental.preprocessing.StringLookup,
+]

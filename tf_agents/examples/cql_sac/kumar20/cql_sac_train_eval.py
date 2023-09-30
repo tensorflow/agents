@@ -20,19 +20,16 @@ https://arxiv.org/abs/2006.04779
 """
 
 import os
-
 from typing import Callable, Dict, Optional, Tuple, Union
 
 from absl import app
 from absl import flags
 from absl import logging
-
 import gin
 import numpy as np
 import reverb
 import rlds
 import tensorflow as tf
-
 from tf_agents.agents.cql import cql_sac_agent
 from tf_agents.agents.ddpg import critic_network
 from tf_agents.agents.sac import tanh_normal_projection_network
@@ -56,30 +53,44 @@ from tf_agents.typing import types
 
 FLAGS = flags.FLAGS
 
-flags.DEFINE_string('root_dir', os.getenv('TEST_UNDECLARED_OUTPUTS_DIR'),
-                    'Root directory for writing logs/summaries/checkpoints.')
+flags.DEFINE_string(
+    'root_dir',
+    os.getenv('TEST_UNDECLARED_OUTPUTS_DIR'),
+    'Root directory for writing logs/summaries/checkpoints.',
+)
 _REVERB_PORT = flags.DEFINE_integer(
-    'reverb_port', None,
-    'Port for reverb server, if None, use a randomly chosen unused port.')
-flags.DEFINE_string('env_name', 'antmaze-medium-play-v0',
-                    'Name of the environment.')
+    'reverb_port',
+    None,
+    'Port for reverb server, if None, use a randomly chosen unused port.',
+)
+flags.DEFINE_string(
+    'env_name', 'antmaze-medium-play-v0', 'Name of the environment.'
+)
 _DATASET_NAME = flags.DEFINE_string(
-    'dataset_name', 'd4rl_antmaze/medium-play-v0',
+    'dataset_name', 'd4rl_antmaze/medium-play-v0:1.1.0',
     'RLDS dataset name. Please select the RLDS dataset'
-    'corresponding to D4RL environment chosen for training.')
-flags.DEFINE_integer('learner_iterations_per_call', 500,
-                     'Iterations per learner run call.')
+    'corresponding to D4RL environment chosen for training.',
+)
+flags.DEFINE_integer(
+    'learner_iterations_per_call', 500, 'Iterations per learner run call.'
+)
 flags.DEFINE_integer('policy_save_interval', 10000, 'Policy save interval.')
 flags.DEFINE_integer('eval_interval', 10000, 'Evaluation interval.')
 flags.DEFINE_integer('summary_interval', 1000, 'Summary interval.')
-flags.DEFINE_integer('num_gradient_updates', 1000000,
-                     'Total number of train iterations to perform.')
+flags.DEFINE_integer(
+    'num_gradient_updates',
+    1000000,
+    'Total number of train iterations to perform.',
+)
 flags.DEFINE_multi_string('gin_file', None, 'Paths to the gin-config files.')
 flags.DEFINE_multi_string('gin_param', None, 'Gin binding parameters.')
 _DATA_TAKE = flags.DEFINE_integer(
-    'data_take', None, 'Number of steps to take for training '
+    'data_take',
+    None,
+    'Number of steps to take for training '
     'from RLDS dataset. If not specified, all steps are used '
-    'for training.')
+    'for training.',
+)
 
 _SEQUENCE_LENGTH = 2
 _STRIDE_LENGTH = 1
@@ -130,7 +141,8 @@ def train_eval(
     eval_episodes: int = 10,
     debug_summaries: bool = False,
     summarize_grads_and_vars: bool = False,
-    seed: Optional[int] = None) -> None:
+    seed: Optional[int] = None,
+) -> None:
   """Trains and evaluates CQL-SAC.
 
   Args:
@@ -210,19 +222,22 @@ def train_eval(
       sampler=reverb.selectors.Uniform(),
       remover=reverb.selectors.Fifo(),
       rate_limiter=reverb.rate_limiters.MinSize(min_rate_limiter),
-      signature=tensor_spec.add_outer_dim(trajectory_data_spec))
+      signature=tensor_spec.add_outer_dim(trajectory_data_spec),
+  )
   reverb_server = reverb.Server([table], port=reverb_port)
   reverb_replay = reverb_replay_buffer.ReverbReplayBuffer(
       trajectory_data_spec,
       sequence_length=_SEQUENCE_LENGTH,
       table_name=table_name,
-      local_server=reverb_server)
+      local_server=reverb_server,
+  )
   rb_observer = reverb_utils.ReverbAddTrajectoryObserver(
       reverb_replay.py_client,
       table_name,
       sequence_length=_SEQUENCE_LENGTH,
       stride_length=_STRIDE_LENGTH,
-      pad_end_of_episodes=pad_end_of_episodes)
+      pad_end_of_episodes=pad_end_of_episodes,
+  )
 
   def _transform_episode(episode: tf.data.Dataset) -> tf.data.Dataset:
     """Apply reward_shift and action_clipping to RLDS episode.
@@ -235,7 +250,8 @@ def train_eval(
     """
 
     def _transform_step(
-        rlds_step: Dict[str, tf.Tensor]) -> Dict[str, tf.Tensor]:
+        rlds_step: Dict[str, tf.Tensor]
+    ) -> Dict[str, tf.Tensor]:
       """Apply reward_shift and action_clipping to RLDS step.
 
       Args:
@@ -250,7 +266,8 @@ def train_eval(
         rlds_step[rlds.ACTION] = tf.clip_by_value(
             rlds_step[rlds.ACTION],
             clip_value_min=action_clipping[0],
-            clip_value_max=action_clipping[1])
+            clip_value_max=action_clipping[1],
+        )
       return rlds_step
 
     episode[rlds.STEPS] = episode[rlds.STEPS].map(_transform_step)
@@ -267,8 +284,8 @@ def train_eval(
   def _experience_dataset() -> tf.data.Dataset:
     """Reads and returns the experiences dataset from Reverb Replay Buffer."""
     return reverb_replay.as_dataset(
-        sample_batch_size=batch_size,
-        num_steps=_SEQUENCE_LENGTH).prefetch(data_prefetch)
+        sample_batch_size=batch_size, num_steps=_SEQUENCE_LENGTH
+    ).prefetch(data_prefetch)
 
   # Create agent.
   time_step_spec = tf_env.time_step_spec()
@@ -281,14 +298,15 @@ def train_eval(
         observation_spec,
         action_spec,
         fc_layer_params=actor_fc_layers,
-        continuous_projection_net=tanh_normal_projection_network
-        .TanhNormalProjectionNetwork)
+        continuous_projection_net=tanh_normal_projection_network.TanhNormalProjectionNetwork,
+    )
 
     critic_net = critic_network.CriticNetwork(
         (observation_spec, action_spec),
         joint_fc_layer_params=critic_joint_fc_layers,
         kernel_initializer='glorot_uniform',
-        last_kernel_initializer='glorot_uniform')
+        last_kernel_initializer='glorot_uniform',
+    )
 
     agent = cql_sac_agent.CqlSacAgent(
         time_step_spec,
@@ -296,11 +314,14 @@ def train_eval(
         actor_network=actor_net,
         critic_network=critic_net,
         actor_optimizer=tf.keras.optimizers.Adam(
-            learning_rate=actor_learning_rate),
+            learning_rate=actor_learning_rate
+        ),
         critic_optimizer=tf.keras.optimizers.Adam(
-            learning_rate=critic_learning_rate),
+            learning_rate=critic_learning_rate
+        ),
         alpha_optimizer=tf.keras.optimizers.Adam(
-            learning_rate=alpha_learning_rate),
+            learning_rate=alpha_learning_rate
+        ),
         cql_alpha=cql_alpha,
         num_cql_samples=num_cql_samples,
         include_critic_entropy_term=include_critic_entropy_term,
@@ -320,7 +341,8 @@ def train_eval(
         softmax_temperature=softmax_temperature,
         debug_summaries=debug_summaries,
         summarize_grads_and_vars=summarize_grads_and_vars,
-        train_step_counter=train_step)
+        train_step_counter=train_step,
+    )
     agent.initialize()
 
   # Create learner.
@@ -334,8 +356,9 @@ def train_eval(
           interval=policy_save_interval,
           metadata_metrics={
               triggers.ENV_STEP_METADATA_KEY: collect_env_step_metric
-          }),
-      triggers.StepPerSecondLogTrigger(train_step, interval=100)
+          },
+      ),
+      triggers.StepPerSecondLogTrigger(train_step, interval=100),
   ]
   cql_learner = learner.Learner(
       root_dir,
@@ -344,24 +367,28 @@ def train_eval(
       experience_dataset_fn=_experience_dataset,
       triggers=learning_triggers,
       summary_interval=summary_interval,
-      strategy=strategy)
+      strategy=strategy,
+  )
 
   # Create actor for evaluation.
   tf_greedy_policy = greedy_policy.GreedyPolicy(agent.policy)
   eval_greedy_policy = py_tf_eager_policy.PyTFEagerPolicy(
-      tf_greedy_policy, use_tf_function=True)
+      tf_greedy_policy, use_tf_function=True
+  )
   eval_actor = actor.Actor(
       env,
       eval_greedy_policy,
       train_step,
       metrics=actor.eval_metrics(eval_episodes),
       summary_dir=os.path.join(root_dir, 'eval'),
-      episodes_per_run=eval_episodes)
+      episodes_per_run=eval_episodes,
+  )
 
   # Run.
-  dummy_trajectory = trajectory.mid((), (), (), 0., 1.)
-  num_learner_iterations = int(num_gradient_updates /
-                               learner_iterations_per_call)
+  dummy_trajectory = trajectory.mid((), (), (), 0.0, 1.0)
+  num_learner_iterations = int(
+      num_gradient_updates / learner_iterations_per_call
+  )
   for _ in range(num_learner_iterations):
     # Mimic collecting environment steps since we loaded a static dataset.
     for _ in range(learner_iterations_per_call):
@@ -389,7 +416,8 @@ def main(_):
       summary_interval=FLAGS.summary_interval,
       learner_iterations_per_call=FLAGS.learner_iterations_per_call,
       reverb_port=_REVERB_PORT.value,
-      data_take=_DATA_TAKE.value)
+      data_take=_DATA_TAKE.value,
+  )
 
 
 if __name__ == '__main__':

@@ -21,12 +21,12 @@ from __future__ import print_function
 
 from absl.testing import parameterized
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
-
 from tf_agents.bandits.environments import piecewise_bernoulli_py_environment as pbe
 
 
-class PiecewiseBernoulliBanditPyEnvironmentTest(tf.test.TestCase,
-                                                parameterized.TestCase):
+class PiecewiseBernoulliBanditPyEnvironmentTest(
+    tf.test.TestCase, parameterized.TestCase
+):
 
   def deterministic_duration_generator(self):
     while True:
@@ -34,20 +34,22 @@ class PiecewiseBernoulliBanditPyEnvironmentTest(tf.test.TestCase,
 
   def test_out_of_bound_parameter(self):
     with self.assertRaisesRegexp(
-        ValueError, r'All parameters should be floats in \[0, 1\]\.'):
+        ValueError, r'All parameters should be floats in \[0, 1\]\.'
+    ):
       pbe.PiecewiseBernoulliPyEnvironment(
-          [[0.1, 1.2, 0.3]], self.deterministic_duration_generator())
+          [[0.1, 1.2, 0.3]], self.deterministic_duration_generator()
+      )
 
   @parameterized.named_parameters(
-      dict(testcase_name='_batch_1',
-           batch_size=1),
-      dict(testcase_name='_batch_4',
-           batch_size=4),
+      dict(testcase_name='_batch_1', batch_size=1),
+      dict(testcase_name='_batch_4', batch_size=4),
   )
   def test_correct_piece(self, batch_size):
     env = pbe.PiecewiseBernoulliPyEnvironment(
         [[0.1, 0.2, 0.3], [0.3, 0.2, 0.1], [0.1, 0.12, 0.14]],
-        self.deterministic_duration_generator(), batch_size)
+        self.deterministic_duration_generator(),
+        batch_size,
+    )
     for t in range(100):
       env.reset()
       self.assertEqual(int(t / 10) % 3, env._current_piece)

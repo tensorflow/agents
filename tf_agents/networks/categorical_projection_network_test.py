@@ -20,7 +20,6 @@ from __future__ import print_function
 
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 import tensorflow_probability as tfp
-
 from tf_agents.networks import categorical_projection_network
 from tf_agents.specs import tensor_spec
 
@@ -34,7 +33,8 @@ class CategoricalProjectionNetworkTest(tf.test.TestCase):
   def testBuild(self):
     output_spec = tensor_spec.BoundedTensorSpec([2, 3], tf.int32, 0, 1)
     network = categorical_projection_network.CategoricalProjectionNetwork(
-        output_spec)
+        output_spec
+    )
 
     inputs = _get_inputs(batch_size=3, num_input_dims=5)
 
@@ -50,7 +50,8 @@ class CategoricalProjectionNetworkTest(tf.test.TestCase):
   def testTrainableVariables(self):
     output_spec = tensor_spec.BoundedTensorSpec([2], tf.int32, 0, 1)
     network = categorical_projection_network.CategoricalProjectionNetwork(
-        output_spec)
+        output_spec
+    )
 
     inputs = _get_inputs(batch_size=3, num_input_dims=5)
 

@@ -30,7 +30,6 @@ from typing import Optional, Text
 
 import gin
 import tensorflow as tf
-
 from tf_agents.agents import data_converter
 from tf_agents.agents import tf_agent
 from tf_agents.bandits.policies import categorical_policy
@@ -40,8 +39,9 @@ from tf_agents.typing import types
 from tf_agents.utils import common
 
 
-def selective_sum(values: types.Tensor, partitions: types.Int,
-                  num_partitions: int) -> types.Tensor:
+def selective_sum(
+    values: types.Tensor, partitions: types.Int, num_partitions: int
+) -> types.Tensor:
   """Sums entries in `values`, partitioned using `partitions`.
 
   For example,
@@ -59,18 +59,21 @@ def selective_sum(values: types.Tensor, partitions: types.Int,
       `partitions[i]` indicates the partition to which `values[i]` belongs.
     num_partitions: the number of partitions. All values in `partitions` must
       lie in `[0, num_partitions)`.
+
   Returns:
     A vector of size `num_partitions` with the same dtype as `values`. Entry `i`
     is the sum of all entries in `values` belonging to partition `i`.
   """
   partitioned_values = tf.dynamic_partition(values, partitions, num_partitions)
-  return tf.stack([tf.reduce_sum(partition)
-                   for partition in partitioned_values])
+  return tf.stack(
+      [tf.reduce_sum(partition) for partition in partitioned_values]
+  )
 
 
-def exp3_update_value(reward: types.Float,
-                      log_prob: types.Float) -> types.Float:
-  return 1. - (1. - reward) / tf.exp(log_prob)
+def exp3_update_value(
+    reward: types.Float, log_prob: types.Float
+) -> types.Float:
+  return 1.0 - (1.0 - reward) / tf.exp(log_prob)
 
 
 @gin.configurable
@@ -84,11 +87,13 @@ class Exp3Agent(tf_agent.TFAgent):
     https://tor-lattimore.com/downloads/book/book.pdf
   """
 
-  def __init__(self,
-               time_step_spec: types.TimeStep,
-               action_spec: types.BoundedTensorSpec,
-               learning_rate: float,
-               name: Optional[Text] = None):
+  def __init__(
+      self,
+      time_step_spec: types.TimeStep,
+      action_spec: types.BoundedTensorSpec,
+      learning_rate: float,
+      name: Optional[Text] = None,
+  ):
     """Initialize an instance of `Exp3Agent`.
 
     Args:
@@ -104,24 +109,31 @@ class Exp3Agent(tf_agent.TFAgent):
     tf.Module.__init__(self, name=name)
     common.tf_agents_gauge.get_cell('TFABandit').set(True)
     self._num_actions = policy_utilities.get_num_actions_from_tensor_spec(
-        action_spec)
+        action_spec
+    )
     self._weights = tf.compat.v2.Variable(
-        tf.zeros(self._num_actions), name='weights')
+        tf.zeros(self._num_actions), name='weights'
+    )
     self._learning_rate = tf.compat.v2.Variable(
-        learning_rate, name='learning_rate')
+        learning_rate, name='learning_rate'
+    )
     policy = categorical_policy.CategoricalPolicy(
         weights=self._weights,
         time_step_spec=time_step_spec,
         action_spec=action_spec,
-        inverse_temperature=self._learning_rate)
+        inverse_temperature=self._learning_rate,
+    )
     # TODO(b/127462472): consider policy=GreedyPolicy(collect_policy).
-    super(Exp3Agent, self).__init__(time_step_spec=time_step_spec,
-                                    action_spec=policy.action_spec,
-                                    policy=policy,
-                                    collect_policy=policy,
-                                    train_sequence_length=None)
+    super(Exp3Agent, self).__init__(
+        time_step_spec=time_step_spec,
+        action_spec=policy.action_spec,
+        policy=policy,
+        collect_policy=policy,
+        train_sequence_length=None,
+    )
     self._as_trajectory = data_converter.AsTrajectory(
-        self.data_context, sequence_length=None)
+        self.data_context, sequence_length=None
+    )
 
   @property
   def num_actions(self):
@@ -168,9 +180,9 @@ class Exp3Agent(tf_agent.TFAgent):
     log_prob = policy_step.get_log_probability(experience.policy_info)
     action = experience.action
     update_value = exp3_update_value(reward, log_prob)
-    weight_update = selective_sum(values=update_value,
-                                  partitions=action,
-                                  num_partitions=self.num_actions)
+    weight_update = selective_sum(
+        values=update_value, partitions=action, num_partitions=self.num_actions
+    )
     tf.compat.v1.assign_add(self._weights, weight_update)
 
     batch_size = tf.cast(tf.size(reward), dtype=tf.int64)

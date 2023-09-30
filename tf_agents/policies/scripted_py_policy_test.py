@@ -19,7 +19,6 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 import numpy as np
-
 from tf_agents.policies import scripted_py_policy
 from tf_agents.specs import array_spec
 from tf_agents.trajectories import time_step as ts
@@ -37,28 +36,38 @@ class ScriptedPyPolicyTest(test_utils.TestCase):
   def testFollowsScript(self):
     action_spec = [
         array_spec.BoundedArraySpec((2, 2), np.int32, -10, 10),
-        array_spec.BoundedArraySpec((1, 2), np.int32, -10, 10)
+        array_spec.BoundedArraySpec((1, 2), np.int32, -10, 10),
     ]
 
     action_script = [
-        (1, [
-            np.array([[5, 2], [1, 3]], dtype=np.int32),
-            np.array([[4, 6]], dtype=np.int32)
-        ]),
-        (0, [
-            np.array([[0, 0], [0, 0]], dtype=np.int32),
-            np.array([[0, 0]], dtype=np.int32)
-        ]),
-        (2, [
-            np.array([[1, 2], [3, 4]], dtype=np.int32),
-            np.array([[5, 6]], dtype=np.int32)
-        ]),
+        (
+            1,
+            [
+                np.array([[5, 2], [1, 3]], dtype=np.int32),
+                np.array([[4, 6]], dtype=np.int32),
+            ],
+        ),
+        (
+            0,
+            [
+                np.array([[0, 0], [0, 0]], dtype=np.int32),
+                np.array([[0, 0]], dtype=np.int32),
+            ],
+        ),
+        (
+            2,
+            [
+                np.array([[1, 2], [3, 4]], dtype=np.int32),
+                np.array([[5, 6]], dtype=np.int32),
+            ],
+        ),
     ]
 
     policy = scripted_py_policy.ScriptedPyPolicy(
         time_step_spec=self._time_step_spec,
         action_spec=action_spec,
-        action_script=action_script)
+        action_script=action_script,
+    )
     policy_state = policy.get_initial_state()
 
     action_step = policy.action(self._time_step, policy_state)
@@ -71,32 +80,36 @@ class ScriptedPyPolicyTest(test_utils.TestCase):
   def testFollowsScriptWithListInsteadOfNpArrays(self):
     action_spec = [
         array_spec.BoundedArraySpec((2, 2), np.int32, -10, 10),
-        array_spec.BoundedArraySpec((1, 2), np.int32, -10, 10)
+        array_spec.BoundedArraySpec((1, 2), np.int32, -10, 10),
     ]
 
     action_script = [
-        (1, [
-            [[5, 2], [1, 3]],
-            [[4, 6]],
-        ]),
+        (
+            1,
+            [
+                [[5, 2], [1, 3]],
+                [[4, 6]],
+            ],
+        ),
         (2, [[[1, 2], [3, 4]], [[5, 6]]]),
     ]
 
     expected = [
         [
             np.array([[5, 2], [1, 3]], dtype=np.int32),
-            np.array([[4, 6]], dtype=np.int32)
+            np.array([[4, 6]], dtype=np.int32),
         ],
         [
             np.array([[1, 2], [3, 4]], dtype=np.int32),
-            np.array([[5, 6]], dtype=np.int32)
+            np.array([[5, 6]], dtype=np.int32),
         ],
     ]
 
     policy = scripted_py_policy.ScriptedPyPolicy(
         time_step_spec=self._time_step_spec,
         action_spec=action_spec,
-        action_script=action_script)  # pytype: disable=wrong-arg-types
+        action_script=action_script,
+    )  # pytype: disable=wrong-arg-types
     policy_state = policy.get_initial_state()
 
     action_step = policy.action(self._time_step, policy_state)
@@ -112,24 +125,31 @@ class ScriptedPyPolicyTest(test_utils.TestCase):
   def testChecksSpecBounds(self):
     action_spec = [
         array_spec.BoundedArraySpec((2, 2), np.int32, -10, 10),
-        array_spec.BoundedArraySpec((1, 2), np.int32, -10, 10)
+        array_spec.BoundedArraySpec((1, 2), np.int32, -10, 10),
     ]
 
     action_script = [
-        (1, [
-            np.array([[15, 2], [1, 3]], dtype=np.int32),
-            np.array([[4, 6]], dtype=np.int32)
-        ]),
-        (2, [
-            np.array([[1, 2], [3, 4]], dtype=np.int32),
-            np.array([[5, 6]], dtype=np.int32)
-        ]),
+        (
+            1,
+            [
+                np.array([[15, 2], [1, 3]], dtype=np.int32),
+                np.array([[4, 6]], dtype=np.int32),
+            ],
+        ),
+        (
+            2,
+            [
+                np.array([[1, 2], [3, 4]], dtype=np.int32),
+                np.array([[5, 6]], dtype=np.int32),
+            ],
+        ),
     ]
 
     policy = scripted_py_policy.ScriptedPyPolicy(
         time_step_spec=self._time_step_spec,
         action_spec=action_spec,
-        action_script=action_script)
+        action_script=action_script,
+    )
     policy_state = policy.get_initial_state()
 
     with self.assertRaises(ValueError):
@@ -138,21 +158,25 @@ class ScriptedPyPolicyTest(test_utils.TestCase):
   def testChecksSpecNest(self):
     action_spec = [
         array_spec.BoundedArraySpec((2, 2), np.int32, -10, 10),
-        array_spec.BoundedArraySpec((1, 2), np.int32, -10, 10)
+        array_spec.BoundedArraySpec((1, 2), np.int32, -10, 10),
     ]
 
     action_script = [
         (1, [np.array([[5, 2], [1, 3]], dtype=np.int32)]),
-        (2, [
-            np.array([[1, 2], [3, 4]], dtype=np.int32),
-            np.array([[5, 6]], dtype=np.int32)
-        ]),
+        (
+            2,
+            [
+                np.array([[1, 2], [3, 4]], dtype=np.int32),
+                np.array([[5, 6]], dtype=np.int32),
+            ],
+        ),
     ]
 
     policy = scripted_py_policy.ScriptedPyPolicy(
         time_step_spec=self._time_step_spec,
         action_spec=action_spec,
-        action_script=action_script)
+        action_script=action_script,
+    )
     policy_state = policy.get_initial_state()
 
     with self.assertRaises(ValueError):
@@ -161,24 +185,31 @@ class ScriptedPyPolicyTest(test_utils.TestCase):
   def testEpisodeLength(self):
     action_spec = [
         array_spec.BoundedArraySpec((2, 2), np.int32, -10, 10),
-        array_spec.BoundedArraySpec((1, 2), np.int32, -10, 10)
+        array_spec.BoundedArraySpec((1, 2), np.int32, -10, 10),
     ]
 
     action_script = [
-        (1, [
-            np.array([[5, 2], [1, 3]], dtype=np.int32),
-            np.array([[4, 6]], dtype=np.int32)
-        ]),
-        (2, [
-            np.array([[1, 2], [3, 4]], dtype=np.int32),
-            np.array([[5, 6]], dtype=np.int32)
-        ]),
+        (
+            1,
+            [
+                np.array([[5, 2], [1, 3]], dtype=np.int32),
+                np.array([[4, 6]], dtype=np.int32),
+            ],
+        ),
+        (
+            2,
+            [
+                np.array([[1, 2], [3, 4]], dtype=np.int32),
+                np.array([[5, 6]], dtype=np.int32),
+            ],
+        ),
     ]
 
     policy = scripted_py_policy.ScriptedPyPolicy(
         time_step_spec=self._time_step_spec,
         action_spec=action_spec,
-        action_script=action_script)
+        action_script=action_script,
+    )
     policy_state = policy.get_initial_state()
 
     action_step = policy.action(self._time_step, policy_state)
@@ -192,8 +223,10 @@ class ScriptedPyPolicyTest(test_utils.TestCase):
 
   def testPolicyStateSpecIsEmpty(self):
     policy = scripted_py_policy.ScriptedPyPolicy(
-        time_step_spec=self._time_step_spec, action_spec=[], action_script=[])
+        time_step_spec=self._time_step_spec, action_spec=[], action_script=[]
+    )
     self.assertEqual(policy.policy_state_spec, ())
+
 
 if __name__ == '__main__':
   test_utils.main()

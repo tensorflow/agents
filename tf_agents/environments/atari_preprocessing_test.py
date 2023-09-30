@@ -18,7 +18,6 @@
 Adapted from Dopamine.
 
 https://github.com/google/dopamine/blob/master/tests/dopamine/discrete_domains/atari_lib_test.py
-
 """
 
 from __future__ import absolute_import
@@ -65,7 +64,7 @@ class MockEnvironment(gym_core.Env):
     return self.ale.getScreenGrayscale(observation)
 
   def step(self, action):
-    reward = -1. if action > 0 else 1.
+    reward = -1.0 if action > 0 else 1.0
     self.num_steps += 1
     is_terminal = self.num_steps >= self.max_steps
 
@@ -73,7 +72,7 @@ class MockEnvironment(gym_core.Env):
     self.ale.screen_value -= 2
     return (self.get_observation(), reward, is_terminal, unused)
 
-  def render(self, mode):
+  def render(self, mode):  # pytype: disable=signature-mismatch  # overriding-parameter-count-checks
     pass
 
 

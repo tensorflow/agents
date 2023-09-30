@@ -19,7 +19,6 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-
 import functools
 import pprint
 from typing import NamedTuple, Optional
@@ -35,15 +34,19 @@ from tf_agents.utils import value_ops
 
 
 class Trajectory(
-    NamedTuple('Trajectory', [
-        ('step_type', types.SpecTensorOrArray),
-        ('observation', types.NestedSpecTensorOrArray),
-        ('action', types.NestedSpecTensorOrArray),
-        ('policy_info', types.NestedSpecTensorOrArray),
-        ('next_step_type', types.SpecTensorOrArray),
-        ('reward', types.NestedSpecTensorOrArray),
-        ('discount', types.SpecTensorOrArray),
-    ])):
+    NamedTuple(
+        'Trajectory',
+        [
+            ('step_type', types.SpecTensorOrArray),
+            ('observation', types.NestedSpecTensorOrArray),
+            ('action', types.NestedSpecTensorOrArray),
+            ('policy_info', types.NestedSpecTensorOrArray),
+            ('next_step_type', types.SpecTensorOrArray),
+            ('reward', types.NestedSpecTensorOrArray),
+            ('discount', types.SpecTensorOrArray),
+        ],
+    )
+):
   """A tuple that represents a trajectory.
 
   A `Trajectory` represents a sequence of aligned time steps. It captures the
@@ -61,12 +64,13 @@ class Trajectory(
       to the action. Note that this does not include the policy/RNN state which
       was used to generate the action.
     next_step_type: The `StepType` of the next time step.
-    reward: An array/a tensor, or a nested dict, list, or tuple of rewards.
-      This represents the rewards and/or constraint satisfiability after
-      performing the action in an environment.
+    reward: An array/a tensor, or a nested dict, list, or tuple of rewards. This
+      represents the rewards and/or constraint satisfiability after performing
+      the action in an environment.
     discount: A scalar that representing the discount factor to multiply with
       future rewards.
   """
+
   __slots__ = ()
 
   def is_first(self) -> types.Bool:
@@ -78,9 +82,11 @@ class Trajectory(
     if tf.is_tensor(self.step_type):
       return tf.logical_and(
           tf.equal(self.step_type, ts.StepType.MID),
-          tf.equal(self.next_step_type, ts.StepType.MID))
+          tf.equal(self.next_step_type, ts.StepType.MID),
+      )
     return (self.step_type == ts.StepType.MID) & (
-        self.next_step_type == ts.StepType.MID)
+        self.next_step_type == ts.StepType.MID
+    )
 
   def is_last(self) -> types.Bool:
     if tf.is_tensor(self.next_step_type):
@@ -116,11 +122,15 @@ class Trajectory(
 
 # TODO(b/162101981): Move to its own file.
 class Transition(
-    NamedTuple('Transition', [
-        ('time_step', ts.TimeStep),
-        ('action_step', policy_step.PolicyStep),
-        ('next_time_step', ts.TimeStep)
-    ])):
+    NamedTuple(
+        'Transition',
+        [
+            ('time_step', ts.TimeStep),
+            ('action_step', policy_step.PolicyStep),
+            ('next_time_step', ts.TimeStep),
+        ],
+    )
+):
   """A tuple that represents a transition.
 
   A `Transition` represents a `S, A, S'` sequence of operations.  Tensors
@@ -151,11 +161,12 @@ class Transition(
   Attributes:
     time_step: The initial state, reward, and discount.
     action_step: The action, policy info, and possibly policy state taken.
-      (Note, `action_step.state` should not typically be stored in e.g.
-      a replay buffer, except a copy inside `policy_step.info` as a special
-      case for algorithms that choose to do this).
+      (Note, `action_step.state` should not typically be stored in e.g. a replay
+      buffer, except a copy inside `policy_step.info` as a special case for
+      algorithms that choose to do this).
     next_time_step: The final state, reward, and discount.
   """
+
   __slots__ = ()
 
   def replace(self, **kwargs) -> 'Transition':
@@ -188,34 +199,34 @@ def _create_trajectory(
     discount,
     step_type,
     next_step_type,
-    name_scope):
+    name_scope,
+):
   """Create a Trajectory composed of either Tensors or numpy arrays.
 
   The input `discount` is used to infer the outer shape of the inputs,
   as it is always expected to be a singleton array with scalar inner shape.
 
   Args:
-    observation: (possibly nested tuple of) `Tensor` or `np.ndarray`;
-      all shaped `[B, ...]`, `[T, ...]`, or `[B, T, ...]`.
-    action: (possibly nested tuple of) `Tensor` or `np.ndarray`;
-      all shaped `[B, ...]`, `[T, ...]`, or `[B, T, ...]`.
-    policy_info: (possibly nested tuple of) `Tensor` or `np.ndarray`;
-      all shaped `[B, ...]`, `[T, ...]`, or `[B, T, ...]`.
-    reward: (possibly nested tuple of) `Tensor` or `np.ndarray`;
-      all shaped `[B, ...]`, `[T, ...]`, or `[B, T, ...]`.
-    discount: A floating point vector `Tensor` or `np.ndarray`;
-      shaped `[B]`, `[T]`, or `[B, T]` (optional).
-    step_type: `Tensor` or `np.ndarray` of `ts.StepType`,
-      shaped `[B]`, `[T]`, or `[B, T]`.
-    next_step_type: `Tensor` or `np.ndarray` of `ts.StepType`,
-      shaped `[B]`, `[T]`, or `[B, T]`.
+    observation: (possibly nested tuple of) `Tensor` or `np.ndarray`; all shaped
+      `[B, ...]`, `[T, ...]`, or `[B, T, ...]`.
+    action: (possibly nested tuple of) `Tensor` or `np.ndarray`; all shaped `[B,
+      ...]`, `[T, ...]`, or `[B, T, ...]`.
+    policy_info: (possibly nested tuple of) `Tensor` or `np.ndarray`; all shaped
+      `[B, ...]`, `[T, ...]`, or `[B, T, ...]`.
+    reward: (possibly nested tuple of) `Tensor` or `np.ndarray`; all shaped `[B,
+      ...]`, `[T, ...]`, or `[B, T, ...]`.
+    discount: A floating point vector `Tensor` or `np.ndarray`; shaped `[B]`,
+      `[T]`, or `[B, T]` (optional).
+    step_type: `Tensor` or `np.ndarray` of `ts.StepType`, shaped `[B]`, `[T]`,
+      or `[B, T]`.
+    next_step_type: `Tensor` or `np.ndarray` of `ts.StepType`, shaped `[B]`,
+      `[T]`, or `[B, T]`.
     name_scope: Python string, name to use when creating tensors.
 
   Returns:
     A `Trajectory` instance.
   """
-  if nest_utils.has_tensors(
-      observation, action, policy_info, reward, discount):
+  if nest_utils.has_tensors(observation, action, policy_info, reward, discount):
     with tf.name_scope(name_scope):
       discount = tf.identity(discount)
       shape = tf.shape(input=discount)
@@ -227,7 +238,8 @@ def _create_trajectory(
           policy_info=make_tensors(policy_info),
           next_step_type=tf.fill(shape, next_step_type),
           reward=make_tensors(reward),
-          discount=discount)
+          discount=discount,
+      )
   else:
     discount = np.asarray(discount)
     shape = discount.shape
@@ -239,14 +251,17 @@ def _create_trajectory(
         policy_info=make_arrays(policy_info),
         next_step_type=np.full(shape, next_step_type),
         reward=make_arrays(reward),
-        discount=discount)
+        discount=discount,
+    )
 
 
-def first(observation: types.NestedSpecTensorOrArray,
-          action: types.NestedSpecTensorOrArray,
-          policy_info: types.NestedSpecTensorOrArray,
-          reward: types.NestedSpecTensorOrArray,
-          discount: types.SpecTensorOrArray) -> Trajectory:
+def first(
+    observation: types.NestedSpecTensorOrArray,
+    action: types.NestedSpecTensorOrArray,
+    policy_info: types.NestedSpecTensorOrArray,
+    reward: types.NestedSpecTensorOrArray,
+    discount: types.SpecTensorOrArray,
+) -> Trajectory:
   """Create a Trajectory transitioning between StepTypes `FIRST` and `MID`.
 
   All inputs may be batched.
@@ -255,35 +270,39 @@ def first(observation: types.NestedSpecTensorOrArray,
   as it is always expected to be a singleton array with scalar inner shape.
 
   Args:
-    observation: (possibly nested tuple of) `Tensor` or `np.ndarray`;
-      all shaped `[B, ...]`, `[T, ...]`, or `[B, T, ...]`.
-    action: (possibly nested tuple of) `Tensor` or `np.ndarray`;
-      all shaped `[B, ...]`, `[T, ...]`, or `[B, T, ...]`.
-    policy_info: (possibly nested tuple of) `Tensor` or `np.ndarray`;
-      all shaped `[B, ...]`, `[T, ...]`, or `[B, T, ...]`.
-    reward: (possibly nested tuple of) `Tensor` or `np.ndarray`;
-      all shaped `[B, ...]`, `[T, ...]`, or `[B, T, ...]`.
-    discount: A floating point vector `Tensor` or `np.ndarray`;
-      shaped `[B]`, `[T]`, or `[B, T]` (optional).
+    observation: (possibly nested tuple of) `Tensor` or `np.ndarray`; all shaped
+      `[B, ...]`, `[T, ...]`, or `[B, T, ...]`.
+    action: (possibly nested tuple of) `Tensor` or `np.ndarray`; all shaped `[B,
+      ...]`, `[T, ...]`, or `[B, T, ...]`.
+    policy_info: (possibly nested tuple of) `Tensor` or `np.ndarray`; all shaped
+      `[B, ...]`, `[T, ...]`, or `[B, T, ...]`.
+    reward: (possibly nested tuple of) `Tensor` or `np.ndarray`; all shaped `[B,
+      ...]`, `[T, ...]`, or `[B, T, ...]`.
+    discount: A floating point vector `Tensor` or `np.ndarray`; shaped `[B]`,
+      `[T]`, or `[B, T]` (optional).
 
   Returns:
     A `Trajectory` instance.
   """
-  return _create_trajectory(observation,
-                            action,
-                            policy_info,
-                            reward,
-                            discount,
-                            name_scope='trajectory_first',
-                            step_type=ts.StepType.FIRST,
-                            next_step_type=ts.StepType.MID)
+  return _create_trajectory(
+      observation,
+      action,
+      policy_info,
+      reward,
+      discount,
+      name_scope='trajectory_first',
+      step_type=ts.StepType.FIRST,
+      next_step_type=ts.StepType.MID,
+  )
 
 
-def mid(observation: types.NestedSpecTensorOrArray,
-        action: types.NestedSpecTensorOrArray,
-        policy_info: types.NestedSpecTensorOrArray,
-        reward: types.NestedSpecTensorOrArray,
-        discount: types.SpecTensorOrArray) -> Trajectory:
+def mid(
+    observation: types.NestedSpecTensorOrArray,
+    action: types.NestedSpecTensorOrArray,
+    policy_info: types.NestedSpecTensorOrArray,
+    reward: types.NestedSpecTensorOrArray,
+    discount: types.SpecTensorOrArray,
+) -> Trajectory:
   """Create a Trajectory transitioning between StepTypes `MID` and `MID`.
 
   All inputs may be batched.
@@ -292,35 +311,39 @@ def mid(observation: types.NestedSpecTensorOrArray,
   as it is always expected to be a singleton array with scalar inner shape.
 
   Args:
-    observation: (possibly nested tuple of) `Tensor` or `np.ndarray`;
-      all shaped `[B, ...]`, `[T, ...]`, or `[B, T, ...]`.
-    action: (possibly nested tuple of) `Tensor` or `np.ndarray`;
-      all shaped `[B, ...]`, `[T, ...]`, or `[B, T, ...]`.
-    policy_info: (possibly nested tuple of) `Tensor` or `np.ndarray`;
-      all shaped `[B, ...]`, `[T, ...]`, or `[B, T, ...]`.
-    reward: (possibly nested tuple of) `Tensor` or `np.ndarray`;
-      all shaped `[B, ...]`, `[T, ...]`, or `[B, T, ...]`.
-    discount: A floating point vector `Tensor` or `np.ndarray`;
-      shaped `[B]`, `[T]`, or `[B, T]` (optional).
+    observation: (possibly nested tuple of) `Tensor` or `np.ndarray`; all shaped
+      `[B, ...]`, `[T, ...]`, or `[B, T, ...]`.
+    action: (possibly nested tuple of) `Tensor` or `np.ndarray`; all shaped `[B,
+      ...]`, `[T, ...]`, or `[B, T, ...]`.
+    policy_info: (possibly nested tuple of) `Tensor` or `np.ndarray`; all shaped
+      `[B, ...]`, `[T, ...]`, or `[B, T, ...]`.
+    reward: (possibly nested tuple of) `Tensor` or `np.ndarray`; all shaped `[B,
+      ...]`, `[T, ...]`, or `[B, T, ...]`.
+    discount: A floating point vector `Tensor` or `np.ndarray`; shaped `[B]`,
+      `[T]`, or `[B, T]` (optional).
 
   Returns:
     A `Trajectory` instance.
   """
-  return _create_trajectory(observation,
-                            action,
-                            policy_info,
-                            reward,
-                            discount,
-                            name_scope='trajectory_mid',
-                            step_type=ts.StepType.MID,
-                            next_step_type=ts.StepType.MID)
+  return _create_trajectory(
+      observation,
+      action,
+      policy_info,
+      reward,
+      discount,
+      name_scope='trajectory_mid',
+      step_type=ts.StepType.MID,
+      next_step_type=ts.StepType.MID,
+  )
 
 
-def last(observation: types.NestedSpecTensorOrArray,
-         action: types.NestedSpecTensorOrArray,
-         policy_info: types.NestedSpecTensorOrArray,
-         reward: types.NestedSpecTensorOrArray,
-         discount: types.SpecTensorOrArray) -> Trajectory:
+def last(
+    observation: types.NestedSpecTensorOrArray,
+    action: types.NestedSpecTensorOrArray,
+    policy_info: types.NestedSpecTensorOrArray,
+    reward: types.NestedSpecTensorOrArray,
+    discount: types.SpecTensorOrArray,
+) -> Trajectory:
   """Create a Trajectory transitioning between StepTypes `MID` and `LAST`.
 
   All inputs may be batched.
@@ -329,35 +352,39 @@ def last(observation: types.NestedSpecTensorOrArray,
   as it is always expected to be a singleton array with scalar inner shape.
 
   Args:
-    observation: (possibly nested tuple of) `Tensor` or `np.ndarray`;
-      all shaped `[B, ...]`, `[T, ...]`, or `[B, T, ...]`.
-    action: (possibly nested tuple of) `Tensor` or `np.ndarray`;
-      all shaped `[B, ...]`, `[T, ...]`, or `[B, T, ...]`.
-    policy_info: (possibly nested tuple of) `Tensor` or `np.ndarray`;
-      all shaped `[B, ...]`, `[T, ...]`, or `[B, T, ...]`.
-    reward: (possibly nested tuple of) `Tensor` or `np.ndarray`;
-      all shaped `[B, ...]`, `[T, ...]`, or `[B, T, ...]`.
-    discount: A floating point vector `Tensor` or `np.ndarray`;
-      shaped `[B]`, `[T]`, or `[B, T]` (optional).
+    observation: (possibly nested tuple of) `Tensor` or `np.ndarray`; all shaped
+      `[B, ...]`, `[T, ...]`, or `[B, T, ...]`.
+    action: (possibly nested tuple of) `Tensor` or `np.ndarray`; all shaped `[B,
+      ...]`, `[T, ...]`, or `[B, T, ...]`.
+    policy_info: (possibly nested tuple of) `Tensor` or `np.ndarray`; all shaped
+      `[B, ...]`, `[T, ...]`, or `[B, T, ...]`.
+    reward: (possibly nested tuple of) `Tensor` or `np.ndarray`; all shaped `[B,
+      ...]`, `[T, ...]`, or `[B, T, ...]`.
+    discount: A floating point vector `Tensor` or `np.ndarray`; shaped `[B]`,
+      `[T]`, or `[B, T]` (optional).
 
   Returns:
     A `Trajectory` instance.
   """
-  return _create_trajectory(observation,
-                            action,
-                            policy_info,
-                            reward,
-                            discount,
-                            name_scope='trajectory_last',
-                            step_type=ts.StepType.MID,
-                            next_step_type=ts.StepType.LAST)
+  return _create_trajectory(
+      observation,
+      action,
+      policy_info,
+      reward,
+      discount,
+      name_scope='trajectory_last',
+      step_type=ts.StepType.MID,
+      next_step_type=ts.StepType.LAST,
+  )
 
 
-def single_step(observation: types.NestedSpecTensorOrArray,
-                action: types.NestedSpecTensorOrArray,
-                policy_info: types.NestedSpecTensorOrArray,
-                reward: types.NestedSpecTensorOrArray,
-                discount: types.SpecTensorOrArray) -> Trajectory:
+def single_step(
+    observation: types.NestedSpecTensorOrArray,
+    action: types.NestedSpecTensorOrArray,
+    policy_info: types.NestedSpecTensorOrArray,
+    reward: types.NestedSpecTensorOrArray,
+    discount: types.SpecTensorOrArray,
+) -> Trajectory:
   """Create a Trajectory transitioning between StepTypes `FIRST` and `LAST`.
 
   All inputs may be batched.
@@ -368,14 +395,14 @@ def single_step(observation: types.NestedSpecTensorOrArray,
   Args:
     observation: (possibly nested tuple of) `Tensor` or `np.ndarray`; all shaped
       `[B, ...]`, `[T, ...]`, or `[B, T, ...]`.
-    action: (possibly nested tuple of) `Tensor` or `np.ndarray`; all shaped
-      `[B, ...]`, `[T, ...]`, or `[B, T, ...]`.
+    action: (possibly nested tuple of) `Tensor` or `np.ndarray`; all shaped `[B,
+      ...]`, `[T, ...]`, or `[B, T, ...]`.
     policy_info: (possibly nested tuple of) `Tensor` or `np.ndarray`; all shaped
       `[B, ...]`, `[T, ...]`, or `[B, T, ...]`.
-    reward: (possibly nested tuple of) `Tensor` or `np.ndarray`; all shaped
-      `[B, ...]`, `[T, ...]`, or `[B, T, ...]`.
-    discount: A floating point vector `Tensor` or `np.ndarray`; shaped
-      `[B]`, `[T]`, or `[B, T]` (optional).
+    reward: (possibly nested tuple of) `Tensor` or `np.ndarray`; all shaped `[B,
+      ...]`, `[T, ...]`, or `[B, T, ...]`.
+    discount: A floating point vector `Tensor` or `np.ndarray`; shaped `[B]`,
+      `[T]`, or `[B, T]` (optional).
 
   Returns:
     A `Trajectory` instance.
@@ -388,14 +415,17 @@ def single_step(observation: types.NestedSpecTensorOrArray,
       discount,
       name_scope='trajectory_single_step',
       step_type=ts.StepType.FIRST,
-      next_step_type=ts.StepType.LAST)
+      next_step_type=ts.StepType.LAST,
+  )
 
 
-def boundary(observation: types.NestedSpecTensorOrArray,
-             action: types.NestedSpecTensorOrArray,
-             policy_info: types.NestedSpecTensorOrArray,
-             reward: types.NestedSpecTensorOrArray,
-             discount: types.SpecTensorOrArray) -> Trajectory:
+def boundary(
+    observation: types.NestedSpecTensorOrArray,
+    action: types.NestedSpecTensorOrArray,
+    policy_info: types.NestedSpecTensorOrArray,
+    reward: types.NestedSpecTensorOrArray,
+    discount: types.SpecTensorOrArray,
+) -> Trajectory:
   """Create a Trajectory transitioning between StepTypes `LAST` and `FIRST`.
 
   All inputs may be batched.
@@ -404,28 +434,30 @@ def boundary(observation: types.NestedSpecTensorOrArray,
   as it is always expected to be a singleton array with scalar inner shape.
 
   Args:
-    observation: (possibly nested tuple of) `Tensor` or `np.ndarray`;
-      all shaped `[B, ...]`, `[T, ...]`, or `[B, T, ...]`.
-    action: (possibly nested tuple of) `Tensor` or `np.ndarray`;
-      all shaped `[B, ...]`, `[T, ...]`, or `[B, T, ...]`.
-    policy_info: (possibly nested tuple of) `Tensor` or `np.ndarray`;
-      all shaped `[B, ...]`, `[T, ...]`, or `[B, T, ...]`.
-    reward: (possibly nested tuple of) `Tensor` or `np.ndarray`;
-      all shaped `[B, ...]`, `[T, ...]`, or `[B, T, ...]`.
-    discount: A floating point vector `Tensor` or `np.ndarray`;
-      shaped `[B]`, `[T]`, or `[B, T]` (optional).
+    observation: (possibly nested tuple of) `Tensor` or `np.ndarray`; all shaped
+      `[B, ...]`, `[T, ...]`, or `[B, T, ...]`.
+    action: (possibly nested tuple of) `Tensor` or `np.ndarray`; all shaped `[B,
+      ...]`, `[T, ...]`, or `[B, T, ...]`.
+    policy_info: (possibly nested tuple of) `Tensor` or `np.ndarray`; all shaped
+      `[B, ...]`, `[T, ...]`, or `[B, T, ...]`.
+    reward: (possibly nested tuple of) `Tensor` or `np.ndarray`; all shaped `[B,
+      ...]`, `[T, ...]`, or `[B, T, ...]`.
+    discount: A floating point vector `Tensor` or `np.ndarray`; shaped `[B]`,
+      `[T]`, or `[B, T]` (optional).
 
   Returns:
     A `Trajectory` instance.
   """
-  return _create_trajectory(observation,
-                            action,
-                            policy_info,
-                            reward,
-                            discount,
-                            name_scope='trajectory_boundary',
-                            step_type=ts.StepType.LAST,
-                            next_step_type=ts.StepType.FIRST)
+  return _create_trajectory(
+      observation,
+      action,
+      policy_info,
+      reward,
+      discount,
+      name_scope='trajectory_boundary',
+      step_type=ts.StepType.LAST,
+      next_step_type=ts.StepType.FIRST,
+  )
 
 
 def _maybe_static_outer_dim(t):
@@ -457,7 +489,8 @@ def from_episode(
     action: types.NestedSpecTensorOrArray,
     policy_info: types.NestedSpecTensorOrArray,
     reward: types.NestedSpecTensorOrArray,
-    discount: Optional[types.SpecTensorOrArray] = None) -> Trajectory:
+    discount: Optional[types.SpecTensorOrArray] = None,
+) -> Trajectory:
   """Create a Trajectory from tensors representing a single episode.
 
   If none of the inputs are tensors, then numpy arrays are generated instead.
@@ -482,22 +515,24 @@ def from_episode(
   Args:
     observation: (possibly nested tuple of) `Tensor` or `np.ndarray`; all shaped
       `[T, ...]`.
-    action: (possibly nested tuple of) `Tensor` or `np.ndarray`; all shaped
-      `[T, ...]`.
+    action: (possibly nested tuple of) `Tensor` or `np.ndarray`; all shaped `[T,
+      ...]`.
     policy_info: (possibly nested tuple of) `Tensor` or `np.ndarray`; all shaped
       `[T, ...]`.
-    reward: (possibly nested tuple of) `Tensor` or `np.ndarray`; all shaped
-      `[T, ...]`.
-    discount: A floating point vector `Tensor` or `np.ndarray`; shaped
-      `[T]` (optional).
+    reward: (possibly nested tuple of) `Tensor` or `np.ndarray`; all shaped `[T,
+      ...]`.
+    discount: A floating point vector `Tensor` or `np.ndarray`; shaped `[T]`
+      (optional).
 
   Returns:
     An instance of `Trajectory`.
   """
   use_tensors = nest_utils.has_tensors(
-      observation, action, policy_info, reward, discount)
+      observation, action, policy_info, reward, discount
+  )
   map_structure = functools.partial(
-      tf.nest.map_structure, expand_composites=True)
+      tf.nest.map_structure, expand_composites=True
+  )
   if use_tensors:
     ones_fn = tf.ones
     float_dtype = tf.float32
@@ -536,14 +571,17 @@ def from_episode(
         else:
           outer_dim = t.shape[0]
         if not tf.is_tensor(outer_dim) and outer_dim != num_frames:
-          raise ValueError('Expected first dimension to be {}, '
-                           'but saw outer dim: {}'.format(num_frames,
-                                                          outer_dim))
+          raise ValueError(
+              'Expected first dimension to be {}, but saw outer dim: {}'.format(
+                  num_frames, outer_dim
+              )
+          )
 
       tf.nest.map_structure(
           check_num_frames,
           (observation, action, policy_info, reward, discount),
-          expand_composites=False)
+          expand_composites=False,
+      )
 
     ts_first = convert_fn(ts.StepType.FIRST)
     ts_last = convert_fn(ts.StepType.LAST)
@@ -559,7 +597,8 @@ def from_episode(
         policy_info=identity_map(policy_info),
         next_step_type=next_step_type,
         reward=identity_map(reward),
-        discount=identity_map(discount))
+        discount=identity_map(discount),
+    )
 
   if use_tensors:
     with tf.name_scope('from_episode'):
@@ -568,9 +607,11 @@ def from_episode(
     return _from_episode(observation, action, policy_info, reward, discount)
 
 
-def from_transition(time_step: ts.TimeStep,
-                    action_step: policy_step.PolicyStep,
-                    next_time_step: ts.TimeStep) -> Trajectory:
+def from_transition(
+    time_step: ts.TimeStep,
+    action_step: policy_step.PolicyStep,
+    next_time_step: ts.TimeStep,
+) -> Trajectory:
   """Returns a `Trajectory` given transitions.
 
   `from_transition` is used by a driver to convert sequence of transitions into
@@ -598,12 +639,12 @@ def from_transition(time_step: ts.TimeStep,
       policy_info=action_step.info,
       next_step_type=next_time_step.step_type,
       reward=next_time_step.reward,
-      discount=next_time_step.discount)
+      discount=next_time_step.discount,
+  )
 
 
 def to_transition(
-    trajectory: Trajectory,
-    next_trajectory: Optional[Trajectory] = None
+    trajectory: Trajectory, next_trajectory: Optional[Trajectory] = None
 ) -> Transition:
   """Create a transition from a trajectory or two adjacent trajectories.
 
@@ -625,8 +666,8 @@ def to_transition(
   Args:
     trajectory: An instance of `Trajectory`. The tensors in Trajectory must have
       shape `[B, T, ...]` when next_trajectory is `None`.  `discount` is assumed
-      to be a scalar float; hence the shape of `trajectory.discount` must
-      be `[B, T]`.
+      to be a scalar float; hence the shape of `trajectory.discount` must be
+      `[B, T]`.
     next_trajectory: (optional) An instance of `Trajectory`.
 
   Returns:
@@ -644,28 +685,32 @@ def to_transition(
 
   if next_trajectory is None:
     next_trajectory = tf.nest.map_structure(
-        lambda t: composite.slice_from(t, axis=1, start=1), trajectory)
+        lambda t: composite.slice_from(t, axis=1, start=1), trajectory
+    )
     trajectory = tf.nest.map_structure(
-        lambda t: composite.slice_to(t, axis=1, end=-1), trajectory)
+        lambda t: composite.slice_to(t, axis=1, end=-1), trajectory
+    )
   policy_steps = policy_step.PolicyStep(
-      action=trajectory.action, state=(), info=trajectory.policy_info)
+      action=trajectory.action, state=(), info=trajectory.policy_info
+  )
   # TODO(b/130244652): Consider replacing 0 rewards & discounts with ().
   time_steps = ts.TimeStep(
       trajectory.step_type,
       reward=tf.nest.map_structure(tf.zeros_like, trajectory.reward),  # unknown
       discount=tf.zeros_like(trajectory.discount),  # unknown
-      observation=trajectory.observation)
+      observation=trajectory.observation,
+  )
   next_time_steps = ts.TimeStep(
       step_type=trajectory.next_step_type,
       reward=trajectory.reward,
       discount=trajectory.discount,
-      observation=next_trajectory.observation)
+      observation=next_trajectory.observation,
+  )
   return Transition(time_steps, policy_steps, next_time_steps)
 
 
 def to_n_step_transition(
-    trajectory: Trajectory,
-    gamma: types.Float
+    trajectory: Trajectory, gamma: types.Float
 ) -> Transition:
   """Create an n-step transition from a trajectory with `T=N + 1` frames.
 
@@ -706,8 +751,8 @@ def to_n_step_transition(
 
   Args:
     trajectory: An instance of `Trajectory`. The tensors in Trajectory must have
-      shape `[B, T, ...]`.  `discount` is assumed to be a scalar float,
-      hence the shape of `trajectory.discount` must be `[B, T]`.
+      shape `[B, T, ...]`.  `discount` is assumed to be a scalar float, hence
+      the shape of `trajectory.discount` must be `[B, T]`.
     gamma: A floating point scalar; the discount factor.
 
   Returns:
@@ -724,15 +769,19 @@ def to_n_step_transition(
 
   # Use static values when available, so that we can use XLA when the time
   # dimension is fixed.
-  time_dim = (tf.compat.dimension_value(trajectory.discount.shape[1])
-              or tf.shape(trajectory.discount)[1])
+  time_dim = (
+      tf.compat.dimension_value(trajectory.discount.shape[1])
+      or tf.shape(trajectory.discount)[1]
+  )
 
   static_time_dim = tf.get_static_value(time_dim)
   if static_time_dim in (0, 1):
     raise ValueError(
         'Trajectory frame count must be at least 2, but saw {}.  Shape of '
-        'trajectory.discount: {}'.format(static_time_dim,
-                                         trajectory.discount.shape))
+        'trajectory.discount: {}'.format(
+            static_time_dim, trajectory.discount.shape
+        )
+    )
 
   n = time_dim - 1
 
@@ -743,17 +792,17 @@ def to_n_step_transition(
 
   # Pull out x[:,0] for x in trajectory
   first_frame = tf.nest.map_structure(
-      lambda t: composite.squeeze(
-          composite.slice_to(t, axis=1, end=1),
-          axis=1),
-      trajectory)
+      lambda t: composite.squeeze(composite.slice_to(t, axis=1, end=1), axis=1),
+      trajectory,
+  )
 
   # Pull out x[:,-1] for x in trajectory
   final_frame = tf.nest.map_structure(
       lambda t: composite.squeeze(
-          composite.slice_from(t, axis=1, start=-1),
-          axis=1),
-      trajectory)
+          composite.slice_from(t, axis=1, start=-1), axis=1
+      ),
+      trajectory,
+  )
   # pylint: enable=g-long-lambda
 
   # When computing discounted return, we need to throw out the last time
@@ -763,32 +812,37 @@ def to_n_step_transition(
   discount = trajectory.discount[:, :-1]
 
   policy_steps = policy_step.PolicyStep(
-      action=first_frame.action, state=(), info=first_frame.policy_info)
+      action=first_frame.action, state=(), info=first_frame.policy_info
+  )
 
   discounted_reward = value_ops.discounted_return(
       rewards=reward,
       discounts=gamma * discount,
       time_major=False,
-      provide_all_returns=False)
+      provide_all_returns=False,
+  )
 
   # NOTE: `final_discount` will have one less discount than `discount`.
   # This is so that when the learner/update uses an additional
   # discount (e.g. gamma) we don't apply it twice.
-  final_discount = gamma**(n-1) * tf.math.reduce_prod(discount, axis=1)
+  final_discount = gamma ** (n - 1) * tf.math.reduce_prod(discount, axis=1)
 
   time_steps = ts.TimeStep(
       first_frame.step_type,
       # unknown
       reward=tf.nest.map_structure(
-          lambda r: np.nan * tf.ones_like(r), first_frame.reward),
+          lambda r: np.nan * tf.ones_like(r), first_frame.reward
+      ),
       # unknown
       discount=np.nan * tf.ones_like(first_frame.discount),
-      observation=first_frame.observation)
+      observation=first_frame.observation,
+  )
   next_time_steps = ts.TimeStep(
       step_type=final_frame.step_type,
       reward=discounted_reward,
       discount=final_discount,
-      observation=final_frame.observation)
+      observation=final_frame.observation,
+  )
   return Transition(time_steps, policy_steps, next_time_steps)
 
 
@@ -806,12 +860,14 @@ def to_transition_spec(trajectory_spec: Trajectory) -> Transition:
     A tuple `(time_steps, policy_steps, next_time_steps)` specs.
   """
   policy_step_spec = policy_step.PolicyStep(
-      action=trajectory_spec.action, state=(), info=trajectory_spec.policy_info)
+      action=trajectory_spec.action, state=(), info=trajectory_spec.policy_info
+  )
   time_step_spec = ts.TimeStep(
       trajectory_spec.step_type,
       reward=trajectory_spec.reward,
       discount=trajectory_spec.discount,
-      observation=trajectory_spec.observation)
+      observation=trajectory_spec.observation,
+  )
   return Transition(time_step_spec, policy_step_spec, time_step_spec)
 
 
@@ -830,7 +886,9 @@ def _validate_rank(variable, min_rank, max_rank=None):
   if rank < min_rank or rank > max_rank:
     raise ValueError(
         'Expect variable within rank [{},{}], but got rank {}.'.format(
-            min_rank, max_rank, rank))
+            min_rank, max_rank, rank
+        )
+    )
 
 
 def experience_to_transitions(
@@ -840,7 +898,8 @@ def experience_to_transitions(
   transitions = to_transition(experience)
 
   if squeeze_time_dim:
-    transitions = tf.nest.map_structure(lambda x: composite.squeeze(x, 1),
-                                        transitions)
+    transitions = tf.nest.map_structure(
+        lambda x: composite.squeeze(x, 1), transitions
+    )
 
   return transitions

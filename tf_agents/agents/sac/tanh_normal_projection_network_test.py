@@ -20,7 +20,6 @@ from __future__ import print_function
 
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 import tensorflow_probability as tfp
-
 from tf_agents.agents.sac import tanh_normal_projection_network
 from tf_agents.distributions import utils as distribution_utils
 from tf_agents.networks import sequential
@@ -36,27 +35,33 @@ class TanhNormalProjectionNetworkTest(tf.test.TestCase):
   def testBuild(self):
     output_spec = tensor_spec.BoundedTensorSpec([2], tf.float32, 0, 1)
     network = tanh_normal_projection_network.TanhNormalProjectionNetwork(
-        output_spec)
+        output_spec
+    )
 
     inputs = _get_inputs(batch_size=3, num_input_dims=5)
 
     distribution, _ = network(inputs, outer_rank=1)
     self.evaluate(tf.compat.v1.global_variables_initializer())
-    self.assertEqual(tfp.distributions.MultivariateNormalDiag,
-                     type(distribution.input_distribution))
+    self.assertEqual(
+        tfp.distributions.MultivariateNormalDiag,
+        type(distribution.input_distribution),
+    )
 
     means = distribution.input_distribution.loc
     stds = distribution.input_distribution.scale
 
-    self.assertAllEqual(means.shape.as_list(),
-                        [3] + output_spec.shape.as_list())
-    self.assertAllEqual(stds.shape.as_list(),
-                        [3] + output_spec.shape.as_list()*2)
+    self.assertAllEqual(
+        means.shape.as_list(), [3] + output_spec.shape.as_list()
+    )
+    self.assertAllEqual(
+        stds.shape.as_list(), [3] + output_spec.shape.as_list() * 2
+    )
 
   def testTrainableVariables(self):
     output_spec = tensor_spec.BoundedTensorSpec([2], tf.float32, 0, 1)
     network = tanh_normal_projection_network.TanhNormalProjectionNetwork(
-        output_spec)
+        output_spec
+    )
 
     inputs = _get_inputs(batch_size=3, num_input_dims=5)
 
@@ -71,7 +76,8 @@ class TanhNormalProjectionNetworkTest(tf.test.TestCase):
   def testSequentialNetwork(self):
     output_spec = tensor_spec.BoundedTensorSpec([2], tf.float32, 0, 1)
     network = tanh_normal_projection_network.TanhNormalProjectionNetwork(
-        output_spec)
+        output_spec
+    )
 
     inputs = tf.random.stateless_uniform(shape=[3, 5], seed=[0, 0])
     output, _ = network(inputs, outer_rank=1)
@@ -88,19 +94,23 @@ class TanhNormalProjectionNetworkTest(tf.test.TestCase):
           validate_args=True,
       )
       return distribution_utils.scale_distribution_to_spec(
-          distribution, output_spec)
+          distribution, output_spec
+      )
 
     # Create a sequential network.
     sequential_network = sequential.Sequential(
-        [network._projection_layer] + [tf.keras.layers.Lambda(create_dist)])
+        [network._projection_layer] + [tf.keras.layers.Lambda(create_dist)]
+    )
     sequential_output, _ = sequential_network(inputs)
 
     # Check that mode and standard deviation are the same.
     self.evaluate(tf.compat.v1.global_variables_initializer())
     self.assertAllClose(
-        self.evaluate(output.mode()), self.evaluate(sequential_output.mode()))
+        self.evaluate(output.mode()), self.evaluate(sequential_output.mode())
+    )
     self.assertAllClose(
-        self.evaluate(output.stddev()), self.evaluate(output.stddev()))
+        self.evaluate(output.stddev()), self.evaluate(output.stddev())
+    )
 
 
 if __name__ == '__main__':

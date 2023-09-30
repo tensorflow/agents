@@ -37,12 +37,10 @@ from tensorflow.python.ops import list_ops  # TF internal
 _a = np.asarray
 
 
-def sample_as_dataset(replay_buffer,
-                      num_steps=None,
-                      batch_size=None):
+def sample_as_dataset(replay_buffer, num_steps=None, batch_size=None):
   ds = replay_buffer.as_dataset(
-      num_steps=num_steps,
-      sample_batch_size=batch_size)
+      num_steps=num_steps, sample_batch_size=batch_size
+  )
   # Note, we don't use tf.contrib.data.get_single_element because the dataset
   # contains more than one element.
   if tf.executing_eagerly():
@@ -59,11 +57,13 @@ def iterator_from_dataset(
     num_steps=None,
     batch_size=None,
     single_deterministic_pass=None,
-    session=None):
+    session=None,
+):
   ds = replay_buffer.as_dataset(
       num_steps=num_steps,
       sample_batch_size=batch_size,
-      single_deterministic_pass=single_deterministic_pass)
+      single_deterministic_pass=single_deterministic_pass,
+  )
 
   if tf.executing_eagerly():
     for value in iter(ds):
@@ -93,13 +93,15 @@ class EpisodicReplayBufferTest(test_utils.TestCase, parameterized.TestCase):
 
   def testCreateEpisodeId(self):
     spec = [
-        specs.TensorSpec([3], tf.float32, 'action'), [
+        specs.TensorSpec([3], tf.float32, 'action'),
+        [
             specs.TensorSpec([5], tf.float32, 'lidar'),
-            specs.TensorSpec([3, 2], tf.float32, 'camera')
-        ]
+            specs.TensorSpec([3, 2], tf.float32, 'camera'),
+        ],
     ]
     replay_buffer = episodic_replay_buffer.EpisodicReplayBuffer(
-        spec, capacity=2)
+        spec, capacity=2
+    )
 
     episode_ids = replay_buffer.create_episode_ids()
 
@@ -107,13 +109,15 @@ class EpisodicReplayBufferTest(test_utils.TestCase, parameterized.TestCase):
 
   def testCreateBatchEpisodeIds(self):
     spec = [
-        specs.TensorSpec([3], tf.float32, 'action'), [
+        specs.TensorSpec([3], tf.float32, 'action'),
+        [
             specs.TensorSpec([5], tf.float32, 'lidar'),
-            specs.TensorSpec([3, 2], tf.float32, 'camera')
-        ]
+            specs.TensorSpec([3, 2], tf.float32, 'camera'),
+        ],
     ]
     replay_buffer = episodic_replay_buffer.EpisodicReplayBuffer(
-        spec, capacity=5)
+        spec, capacity=5
+    )
 
     episodes_0 = replay_buffer.create_episode_ids(2)
     episodes_1 = replay_buffer.create_episode_ids(3)
@@ -123,28 +127,33 @@ class EpisodicReplayBufferTest(test_utils.TestCase, parameterized.TestCase):
 
   def testCreateTooManyBatchEpisodeIdsRaisesError(self):
     spec = [
-        specs.TensorSpec([3], tf.float32, 'action'), [
+        specs.TensorSpec([3], tf.float32, 'action'),
+        [
             specs.TensorSpec([5], tf.float32, 'lidar'),
-            specs.TensorSpec([3, 2], tf.float32, 'camera')
-        ]
+            specs.TensorSpec([3, 2], tf.float32, 'camera'),
+        ],
     ]
     replay_buffer = episodic_replay_buffer.EpisodicReplayBuffer(
-        spec, capacity=2)
+        spec, capacity=2
+    )
 
-    with self.assertRaisesRegexp(
-        ValueError, 'Buffer cannot create episode_ids when '
-        'num_episodes 3 > capacity 2.'):
+    with self.assertRaisesRegex(
+        ValueError,
+        'Buffer cannot create episode_ids when num_episodes 3 > capacity 2.',
+    ):
       replay_buffer.create_episode_ids(num_episodes=3)
 
   def testGetEpisodeId(self):
     spec = [
-        specs.TensorSpec([3], tf.float32, 'action'), [
+        specs.TensorSpec([3], tf.float32, 'action'),
+        [
             specs.TensorSpec([5], tf.float32, 'lidar'),
-            specs.TensorSpec([3, 2], tf.float32, 'camera')
-        ]
+            specs.TensorSpec([3, 2], tf.float32, 'camera'),
+        ],
     ]
     replay_buffer = episodic_replay_buffer.EpisodicReplayBuffer(
-        spec, capacity=2)
+        spec, capacity=2
+    )
     episode_id = replay_buffer.create_episode_ids()
     self.evaluate(tf.compat.v1.global_variables_initializer())
     self.evaluate(tf.compat.v1.local_variables_initializer())
@@ -152,22 +161,24 @@ class EpisodicReplayBufferTest(test_utils.TestCase, parameterized.TestCase):
 
     # episode_id should be updated when begin_episode is True.
     new_episode_id_0 = replay_buffer._get_episode_id(
-        episode_id, begin_episode=True)
+        episode_id, begin_episode=True
+    )
 
     # episode_id should not be updated when begin_episode is False and the input
     # episode_id is not negative.
     new_episode_id_1 = replay_buffer._get_episode_id(
-        new_episode_id_0, begin_episode=False)
+        new_episode_id_0, begin_episode=False
+    )
 
     # episode_id should be updated when begin_episode is True even when the
     # input episode_id is not negative.
     new_episode_id_2 = replay_buffer._get_episode_id(
-        new_episode_id_1, begin_episode=True)
+        new_episode_id_1, begin_episode=True
+    )
 
-    (new_episode_id_0_value,
-     new_episode_id_1_value,
-     new_episode_id_2_value) = self.evaluate(
-         (new_episode_id_0, new_episode_id_1, new_episode_id_2))
+    (new_episode_id_0_value, new_episode_id_1_value, new_episode_id_2_value) = (
+        self.evaluate((new_episode_id_0, new_episode_id_1, new_episode_id_2))
+    )
 
     self.assertEqual(new_episode_id_0_value, 0)
     self.assertEqual(new_episode_id_1_value, 0)
@@ -175,13 +186,15 @@ class EpisodicReplayBufferTest(test_utils.TestCase, parameterized.TestCase):
 
   def testGetBatchEpisodeIds(self):
     spec = [
-        specs.TensorSpec([3], tf.float32, 'action'), [
+        specs.TensorSpec([3], tf.float32, 'action'),
+        [
             specs.TensorSpec([5], tf.float32, 'lidar'),
-            specs.TensorSpec([3, 2], tf.float32, 'camera')
-        ]
+            specs.TensorSpec([3, 2], tf.float32, 'camera'),
+        ],
     ]
     replay_buffer = episodic_replay_buffer.EpisodicReplayBuffer(
-        spec, capacity=5)
+        spec, capacity=5
+    )
     episode_ids = [replay_buffer.create_episode_ids(num_episodes=3)]
     self.evaluate(tf.compat.v1.global_variables_initializer())
     self.evaluate(tf.compat.v1.local_variables_initializer())
@@ -189,43 +202,63 @@ class EpisodicReplayBufferTest(test_utils.TestCase, parameterized.TestCase):
 
     # batch_episode_ids should be updated the first time regardless of
     # begin_episode.
-    episode_ids.append(replay_buffer._get_batch_episode_ids(
-        episode_ids[-1], begin_episode=False))
+    episode_ids.append(
+        replay_buffer._get_batch_episode_ids(
+            episode_ids[-1], begin_episode=False
+        )
+    )
     expected_ids.append([0, 1, 2])
 
     # batch_episode_ids should not be updated when begin_episode is False.
-    episode_ids.append(replay_buffer._get_batch_episode_ids(
-        episode_ids[-1], begin_episode=False))
+    episode_ids.append(
+        replay_buffer._get_batch_episode_ids(
+            episode_ids[-1], begin_episode=False
+        )
+    )
     expected_ids.append([0, 1, 2])
 
-    episode_ids.append(replay_buffer._get_batch_episode_ids(
-        episode_ids[-1], begin_episode=[False, False, False]))
+    episode_ids.append(
+        replay_buffer._get_batch_episode_ids(
+            episode_ids[-1], begin_episode=[False, False, False]
+        )
+    )
     expected_ids.append([0, 1, 2])
 
     # batch_episode_ids should be updated only when begin_episode is True.
-    episode_ids.append(replay_buffer._get_batch_episode_ids(
-        episode_ids[-1], begin_episode=[True, False, False]))
+    episode_ids.append(
+        replay_buffer._get_batch_episode_ids(
+            episode_ids[-1], begin_episode=[True, False, False]
+        )
+    )
     expected_ids.append([3, 1, 2])
 
-    episode_ids.append(replay_buffer._get_batch_episode_ids(
-        episode_ids[-1], begin_episode=[False, True, False]))
+    episode_ids.append(
+        replay_buffer._get_batch_episode_ids(
+            episode_ids[-1], begin_episode=[False, True, False]
+        )
+    )
     expected_ids.append([3, 4, 2])
 
-    episode_ids.append(replay_buffer._get_batch_episode_ids(
-        episode_ids[-1], begin_episode=[False, True, True]))
+    episode_ids.append(
+        replay_buffer._get_batch_episode_ids(
+            episode_ids[-1], begin_episode=[False, True, True]
+        )
+    )
     expected_ids.append([3, 5, 6])
 
     self.assertAllEqual(expected_ids, self.evaluate(episode_ids))
 
   def testGetEpisodeIdBeginEpisodeFalse(self):
     spec = [
-        specs.TensorSpec([3], tf.float32, 'action'), [
+        specs.TensorSpec([3], tf.float32, 'action'),
+        [
             specs.TensorSpec([5], tf.float32, 'lidar'),
-            specs.TensorSpec([3, 2], tf.float32, 'camera')
-        ]
+            specs.TensorSpec([3, 2], tf.float32, 'camera'),
+        ],
     ]
     replay_buffer = episodic_replay_buffer.EpisodicReplayBuffer(
-        spec, capacity=2)
+        spec, capacity=2
+    )
     episode_id = replay_buffer.create_episode_ids()
     self.evaluate(tf.compat.v1.global_variables_initializer())
     self.evaluate(tf.compat.v1.local_variables_initializer())
@@ -234,33 +267,38 @@ class EpisodicReplayBufferTest(test_utils.TestCase, parameterized.TestCase):
     # episode_id should be updated regardless begin_episode being False since
     # the initial value of the episode_id_var is not valid (id >= 0).
     episode_id_0 = replay_buffer._get_episode_id(
-        episode_id, begin_episode=False)
+        episode_id, begin_episode=False
+    )
     expected_id_0 = 0
 
     # episode_id should be updated because begin_episode is True.
     episode_id_1 = replay_buffer._get_episode_id(
-        episode_id_0, begin_episode=True)
+        episode_id_0, begin_episode=True
+    )
     expected_id_1 = 1
 
     # episode_id should not be updated because begin_episode is False.
     episode_id_2 = replay_buffer._get_episode_id(
-        episode_id_1, begin_episode=False)
+        episode_id_1, begin_episode=False
+    )
     expected_id_2 = 1
 
     self.assertAllEqual(
         (expected_id_0, expected_id_1, expected_id_2),
-        self.evaluate(
-            (episode_id_0, episode_id_1, episode_id_2)))
+        self.evaluate((episode_id_0, episode_id_1, episode_id_2)),
+    )
 
   def testGetTwoEpisodeId(self):
     spec = [
-        specs.TensorSpec([3], tf.float32, 'action'), [
+        specs.TensorSpec([3], tf.float32, 'action'),
+        [
             specs.TensorSpec([5], tf.float32, 'lidar'),
-            specs.TensorSpec([3, 2], tf.float32, 'camera')
-        ]
+            specs.TensorSpec([3, 2], tf.float32, 'camera'),
+        ],
     ]
     replay_buffer = episodic_replay_buffer.EpisodicReplayBuffer(
-        spec, capacity=2)
+        spec, capacity=2
+    )
     episode_id_0 = replay_buffer.create_episode_ids()
     episode_id_1 = replay_buffer.create_episode_ids()
     self.evaluate(tf.compat.v1.global_variables_initializer())
@@ -271,39 +309,45 @@ class EpisodicReplayBufferTest(test_utils.TestCase, parameterized.TestCase):
     # episode_id will be updated regardless of begin_episode being False since
     # it doesn't have a valid value >= 0.
     episode_id_0 = replay_buffer._get_episode_id(
-        replay_buffer.create_episode_ids())
+        replay_buffer.create_episode_ids()
+    )
     with tf.control_dependencies([episode_id_0]):
       episode_id_1 = replay_buffer._get_episode_id(
-          replay_buffer.create_episode_ids())
+          replay_buffer.create_episode_ids()
+      )
     expected_id_0 = 0
     expected_id_1 = 1
 
     with tf.control_dependencies([episode_id_0, episode_id_1]):
       # Now episode_id should be updated only when begin_episode is True.
       episode_id_0_next = replay_buffer._get_episode_id(
-          episode_id_0, begin_episode=False)
+          episode_id_0, begin_episode=False
+      )
       with tf.control_dependencies([episode_id_0_next]):
         episode_id_1_next = replay_buffer._get_episode_id(
-            episode_id_1, begin_episode=True)
+            episode_id_1, begin_episode=True
+        )
       expected_id_0_next = 0
       expected_id_1_next = 2
 
     self.assertEqual(
-        (expected_id_0, expected_id_1,
-         expected_id_0_next, expected_id_1_next),
-        self.evaluate((
-            episode_id_0, episode_id_1,
-            episode_id_0_next, episode_id_1_next)))
+        (expected_id_0, expected_id_1, expected_id_0_next, expected_id_1_next),
+        self.evaluate(
+            (episode_id_0, episode_id_1, episode_id_0_next, episode_id_1_next)
+        ),
+    )
 
   def testMaybeEndEpisode(self):
     spec = [
-        specs.TensorSpec([3], tf.float32, 'action'), [
+        specs.TensorSpec([3], tf.float32, 'action'),
+        [
             specs.TensorSpec([5], tf.float32, 'lidar'),
-            specs.TensorSpec([3, 2], tf.float32, 'camera')
-        ]
+            specs.TensorSpec([3, 2], tf.float32, 'camera'),
+        ],
     ]
     replay_buffer = episodic_replay_buffer.EpisodicReplayBuffer(
-        spec, capacity=2)
+        spec, capacity=2
+    )
     episode_id = replay_buffer.create_episode_ids()
     self.evaluate(tf.compat.v1.global_variables_initializer())
     self.evaluate(tf.compat.v1.local_variables_initializer())
@@ -314,7 +358,8 @@ class EpisodicReplayBufferTest(test_utils.TestCase, parameterized.TestCase):
       completed_episodes = replay_buffer._completed_episodes()
 
     episode_id_value, completed_value, completed_episodes_value = self.evaluate(
-        (episode_id, completed, completed_episodes))
+        (episode_id, completed, completed_episodes)
+    )
     self.assertEqual(0, episode_id_value)
     self.assertEqual(False, completed_value)
     self.assertEmpty(completed_episodes_value)
@@ -324,7 +369,8 @@ class EpisodicReplayBufferTest(test_utils.TestCase, parameterized.TestCase):
     with tf.control_dependencies([completed]):
       completed_episodes = replay_buffer._completed_episodes()
     completed_value, completed_episodes_value = self.evaluate(
-        (completed, completed_episodes))
+        (completed, completed_episodes)
+    )
     self.assertEqual(True, completed_value)
     self.assertEqual([0], completed_episodes_value)
 
@@ -333,29 +379,34 @@ class EpisodicReplayBufferTest(test_utils.TestCase, parameterized.TestCase):
     with tf.control_dependencies([completed]):
       completed_episodes = replay_buffer._completed_episodes()
     completed_value, completed_episodes_value = self.evaluate(
-        (completed, completed_episodes))
+        (completed, completed_episodes)
+    )
     self.assertEqual(False, completed_value)
     self.assertEqual([0], completed_episodes_value)
 
   def testGetBatchEpisodeIdsEndEpisode(self):
     spec = [
-        specs.TensorSpec([3], tf.float32, 'action'), [
+        specs.TensorSpec([3], tf.float32, 'action'),
+        [
             specs.TensorSpec([5], tf.float32, 'lidar'),
-            specs.TensorSpec([3, 2], tf.float32, 'camera')
-        ]
+            specs.TensorSpec([3, 2], tf.float32, 'camera'),
+        ],
     ]
     replay_buffer = episodic_replay_buffer.EpisodicReplayBuffer(
-        spec, capacity=3)
+        spec, capacity=3
+    )
     batch_episode_ids = [replay_buffer.create_episode_ids(num_episodes=3)]
     expected_episode_ids = [[-1, -1, -1]]
     self.evaluate(tf.compat.v1.global_variables_initializer())
     self.evaluate(tf.compat.v1.local_variables_initializer())
 
     batch_episode_ids.append(
-        replay_buffer._get_batch_episode_ids(batch_episode_ids[-1]))
+        replay_buffer._get_batch_episode_ids(batch_episode_ids[-1])
+    )
     with tf.control_dependencies([batch_episode_ids[-1]]):
       completed = [
-          replay_buffer._maybe_end_batch_episodes(batch_episode_ids[-1])]
+          replay_buffer._maybe_end_batch_episodes(batch_episode_ids[-1])
+      ]
     with tf.control_dependencies(completed):
       completed_episodes = [replay_buffer._completed_episodes()]
     expected_episode_ids.append([0, 1, 2])
@@ -366,7 +417,9 @@ class EpisodicReplayBufferTest(test_utils.TestCase, parameterized.TestCase):
     with tf.control_dependencies([completed_episodes[-1]]):
       batch_episode_ids.append(
           replay_buffer._get_batch_episode_ids(
-              batch_episode_ids[-1], end_episode=True))
+              batch_episode_ids[-1], end_episode=True
+          )
+      )
     with tf.control_dependencies([batch_episode_ids[-1]]):
       completed_episodes.append(replay_buffer._completed_episodes())
     expected_episode_ids.append([0, 1, 2])
@@ -376,7 +429,9 @@ class EpisodicReplayBufferTest(test_utils.TestCase, parameterized.TestCase):
     with tf.control_dependencies([completed_episodes[-1]]):
       batch_episode_ids.append(
           replay_buffer._get_batch_episode_ids(
-              batch_episode_ids[-1], begin_episode=True))
+              batch_episode_ids[-1], begin_episode=True
+          )
+      )
     with tf.control_dependencies([batch_episode_ids[-1]]):
       completed_episodes.append(replay_buffer._completed_episodes())
     expected_episode_ids.append([3, 4, 5])
@@ -386,34 +441,40 @@ class EpisodicReplayBufferTest(test_utils.TestCase, parameterized.TestCase):
     with tf.control_dependencies([completed_episodes[-1]]):
       batch_episode_ids.append(
           replay_buffer._get_batch_episode_ids(
-              batch_episode_ids[-1], end_episode=[False, True, False]))
+              batch_episode_ids[-1], end_episode=[False, True, False]
+          )
+      )
     with tf.control_dependencies([batch_episode_ids[-1]]):
       completed_episodes.append(replay_buffer._completed_episodes())
     expected_episode_ids.append([3, 4, 5])
     expected_completed_episodes.append([4])
 
-    (batch_episode_ids_values,
-     completed_episodes_values,
-     completed_values) = self.evaluate(
-         (batch_episode_ids, completed_episodes, completed))
+    (batch_episode_ids_values, completed_episodes_values, completed_values) = (
+        self.evaluate((batch_episode_ids, completed_episodes, completed))
+    )
 
     self.assertAllEqual(expected_episode_ids, batch_episode_ids_values)
     tf.nest.map_structure(
         self.assertAllEqual,
         [np.array(x) for x in expected_completed_episodes],
-        completed_episodes_values)
+        completed_episodes_values,
+    )
     self.assertAllEqual(expected_completed, completed_values)
 
   def testAddSingleSample(self):
     spec = [
-        specs.TensorSpec([3], tf.float32, 'action'), [
+        specs.TensorSpec([3], tf.float32, 'action'),
+        [
             specs.TensorSpec([5], tf.float32, 'lidar'),
-            specs.TensorSpec([3, 2], tf.float32, 'camera')
-        ]
+            specs.TensorSpec([3, 2], tf.float32, 'camera'),
+        ],
     ]
     replay_buffer = episodic_replay_buffer.EpisodicReplayBuffer(
-        spec, capacity=3,
-        begin_episode_fn=lambda _: False, end_episode_fn=lambda _: False)
+        spec,
+        capacity=3,
+        begin_episode_fn=lambda _: False,
+        end_episode_fn=lambda _: False,
+    )
     episode_ids = replay_buffer.create_episode_ids(num_episodes=1)
 
     action = 1 * np.ones(spec[0].shape.as_list(), dtype=np.float32)
@@ -423,7 +484,8 @@ class EpisodicReplayBufferTest(test_utils.TestCase, parameterized.TestCase):
     values_batched = tf.nest.map_structure(lambda t: tf.stack([t] * 1), values)
 
     episode_len_1_values = tf.nest.map_structure(
-        lambda arr: np.expand_dims(arr, 0), values)
+        lambda arr: np.expand_dims(arr, 0), values
+    )
 
     new_episode_ids = replay_buffer.add_batch(values_batched, episode_ids)
     sample, _ = replay_buffer.get_next()
@@ -433,23 +495,28 @@ class EpisodicReplayBufferTest(test_utils.TestCase, parameterized.TestCase):
     new_episode_ids_value = self.evaluate(new_episode_ids)
     self.assertEqual(new_episode_ids_value, 0)
     sample_ = self.evaluate(sample)
-    self._assertNestedCloseness(self.assertAllClose, episode_len_1_values,
-                                sample_)
+    self._assertNestedCloseness(
+        self.assertAllClose, episode_len_1_values, sample_
+    )
 
   def testNumFrames(self):
     spec = [
-        specs.TensorSpec([3], tf.float32, 'action'), [
+        specs.TensorSpec([3], tf.float32, 'action'),
+        [
             specs.TensorSpec([5], tf.float32, 'lidar'),
-            specs.TensorSpec([3, 2], tf.float32, 'camera')
-        ]
+            specs.TensorSpec([3, 2], tf.float32, 'camera'),
+        ],
     ]
     replay_buffer = episodic_replay_buffer.EpisodicReplayBuffer(
-        spec, capacity=5,
-        begin_episode_fn=lambda _: False, end_episode_fn=lambda _: False)
+        spec,
+        capacity=5,
+        begin_episode_fn=lambda _: False,
+        end_episode_fn=lambda _: False,
+    )
 
     episode_ids_var = common.create_variable(
-        'episode_id', initial_value=-1,
-        shape=(2,), use_local_variable=True)
+        'episode_id', initial_value=-1, shape=(2,), use_local_variable=True
+    )
 
     action = 1 * np.ones(spec[0].shape.as_list(), dtype=np.float32)
     lidar = 2 * np.ones(spec[1][0].shape.as_list(), dtype=np.float32)
@@ -478,62 +545,79 @@ class EpisodicReplayBufferTest(test_utils.TestCase, parameterized.TestCase):
         specs.TensorSpec([3], tf.float32, 'action'),
         [
             specs.TensorSpec([5], tf.float32, 'lidar'),
-            specs.TensorSpec([3, 2], tf.float32, 'camera')
-        ]
+            specs.TensorSpec([3, 2], tf.float32, 'camera'),
+        ],
     ]
     replay_buffer = episodic_replay_buffer.EpisodicReplayBuffer(
-        spec, capacity=2)
+        spec, capacity=2
+    )
 
     self.evaluate(tf.compat.v1.global_variables_initializer())
     self.evaluate(tf.compat.v1.local_variables_initializer())
 
-    with self.assertRaisesRegexp(
-        tf.errors.InvalidArgumentError, 'EpisodicReplayBuffer is empty. Make '
-        'sure to add items before sampling the buffer.'):
+    with self.assertRaisesRegex(
+        tf.errors.InvalidArgumentError,
+        'EpisodicReplayBuffer is empty. Make '
+        'sure to add items before sampling the buffer.',
+    ):
       sample, _ = replay_buffer.get_next()
       self.evaluate(sample)
 
   def testIterateEmpty(self):
     spec = specs.TensorSpec([3], tf.int32, 'lidar')
     replay_buffer = episodic_replay_buffer.EpisodicReplayBuffer(
-        spec, capacity=2)
+        spec, capacity=2
+    )
 
     self.evaluate(tf.compat.v1.global_variables_initializer())
     self.evaluate(tf.compat.v1.local_variables_initializer())
 
-    with self.assertRaisesRegexp(
-        tf.errors.InvalidArgumentError, 'EpisodicReplayBuffer is empty. Make '
-        'sure to add items before sampling the buffer.'):
+    with self.assertRaisesRegex(
+        tf.errors.InvalidArgumentError,
+        'EpisodicReplayBuffer is empty. Make '
+        'sure to add items before sampling the buffer.',
+    ):
       sample_two_steps = sample_as_dataset(
-          replay_buffer, num_steps=2, batch_size=1)[0]
+          replay_buffer, num_steps=2, batch_size=1
+      )[0]
       self.evaluate(sample_two_steps)
 
-    with self.assertRaisesRegexp(
-        tf.errors.InvalidArgumentError, 'EpisodicReplayBuffer is empty. Make '
-        'sure to add items before sampling the buffer.'):
-      sample_episode = sample_as_dataset(replay_buffer, num_steps=2,
-                                         batch_size=1)[0]
+    with self.assertRaisesRegex(
+        tf.errors.InvalidArgumentError,
+        'EpisodicReplayBuffer is empty. Make '
+        'sure to add items before sampling the buffer.',
+    ):
+      sample_episode = sample_as_dataset(
+          replay_buffer, num_steps=2, batch_size=1
+      )[0]
       self.evaluate(sample_episode)
 
-    with self.assertRaisesRegexp(
-        tf.errors.InvalidArgumentError, 'EpisodicReplayBuffer is empty. Make '
-        'sure to add items before sampling the buffer.'):
+    with self.assertRaisesRegex(
+        tf.errors.InvalidArgumentError,
+        'EpisodicReplayBuffer is empty. Make '
+        'sure to add items before sampling the buffer.',
+    ):
       sample_episode = sample_as_dataset(
-          replay_buffer, num_steps=2, batch_size=1)[0]
+          replay_buffer, num_steps=2, batch_size=1
+      )[0]
       self.evaluate(sample_episode)
 
   def testAsDatasetBatchSizeFullEpisodeRaisesError(self):
     spec = specs.TensorSpec([3], tf.int32, 'lidar')
     replay_buffer = episodic_replay_buffer.EpisodicReplayBuffer(
-        spec, capacity=10)
+        spec, capacity=10
+    )
     with self.assertRaises(ValueError):
       sample_as_dataset(replay_buffer, num_steps=None, batch_size=10)
 
   def testAddSteps(self):
     spec = specs.TensorSpec([3], tf.int32, 'lidar')
     replay_buffer = episodic_replay_buffer.EpisodicReplayBuffer(
-        spec, capacity=2,
-        begin_episode_fn=lambda _: False, end_episode_fn=lambda _: False)
+        spec,
+        capacity=2,
+        begin_episode_fn=lambda _: False,
+        end_episode_fn=lambda _: False,
+    )
     episode_id = replay_buffer.create_episode_ids()
 
     values = np.ones(spec.shape.as_list())
@@ -550,8 +634,11 @@ class EpisodicReplayBufferTest(test_utils.TestCase, parameterized.TestCase):
   def testAddStepsGetEpisode(self):
     spec = specs.TensorSpec([5], tf.int32, 'lidar')
     replay_buffer = episodic_replay_buffer.EpisodicReplayBuffer(
-        spec, capacity=2,
-        begin_episode_fn=lambda _: False, end_episode_fn=lambda _: False)
+        spec,
+        capacity=2,
+        begin_episode_fn=lambda _: False,
+        end_episode_fn=lambda _: False,
+    )
 
     episode_id = replay_buffer.create_episode_ids()
 
@@ -569,8 +656,11 @@ class EpisodicReplayBufferTest(test_utils.TestCase, parameterized.TestCase):
   def testAddStepsGetEpisodes(self):
     spec = specs.TensorSpec([5], tf.int32, 'lidar')
     replay_buffer = episodic_replay_buffer.EpisodicReplayBuffer(
-        spec, capacity=2,
-        begin_episode_fn=lambda _: False, end_episode_fn=lambda _: False)
+        spec,
+        capacity=2,
+        begin_episode_fn=lambda _: False,
+        end_episode_fn=lambda _: False,
+    )
     episode_id_0 = replay_buffer.create_episode_ids()
     episode_id_1 = replay_buffer.create_episode_ids()
 
@@ -599,8 +689,11 @@ class EpisodicReplayBufferTest(test_utils.TestCase, parameterized.TestCase):
 
     spec = specs.TensorSpec([3], tf.int32, 'lidar')
     replay_buffer = episodic_replay_buffer.EpisodicReplayBuffer(
-        spec, capacity=2,
-        begin_episode_fn=lambda _: False, end_episode_fn=lambda _: False)
+        spec,
+        capacity=2,
+        begin_episode_fn=lambda _: False,
+        end_episode_fn=lambda _: False,
+    )
     episode_ids = replay_buffer.create_episode_ids()
 
     values = np.ones(spec.shape.as_list())
@@ -610,16 +703,18 @@ class EpisodicReplayBufferTest(test_utils.TestCase, parameterized.TestCase):
     with self.cached_session() as sess:
       sess.run(tf.compat.v1.global_variables_initializer())
       sess.run(tf.compat.v1.local_variables_initializer())
-      sess.run(replay_buffer.add_sequence(batch, episode_ids),
-               {batch: values})
+      sess.run(replay_buffer.add_sequence(batch, episode_ids), {batch: values})
       sample_ = sess.run(sample)
       self._assertContains([values], list(sample_))
 
   def testMultipleAddBatch(self):
     spec = specs.TensorSpec([3], tf.int32, 'lidar')
     replay_buffer = episodic_replay_buffer.EpisodicReplayBuffer(
-        spec, capacity=3,
-        begin_episode_fn=lambda _: False, end_episode_fn=lambda _: False)
+        spec,
+        capacity=3,
+        begin_episode_fn=lambda _: False,
+        end_episode_fn=lambda _: False,
+    )
 
     values = np.ones(spec.shape.as_list(), dtype=np.int32)
     values = np.stack([values, 10 * values, 100 * values])
@@ -646,12 +741,9 @@ class EpisodicReplayBufferTest(test_utils.TestCase, parameterized.TestCase):
     self.evaluate(tf.compat.v1.global_variables_initializer())
     self.evaluate(tf.compat.v1.local_variables_initializer())
     self.assertAllEqual(
-        ([0, 1, 2],
-         [3, 1, 4],
-         [3, 5, 4]),
-        self.evaluate((new_episode_ids,
-                       new_episode_ids_2,
-                       new_episode_ids_3)))
+        ([0, 1, 2], [3, 1, 4], [3, 5, 4]),
+        self.evaluate((new_episode_ids, new_episode_ids_2, new_episode_ids_3)),
+    )
     self.assertEqual(5, self.evaluate(replay_buffer._get_last_episode_id()))
     items_ = self.evaluate(items)
     self.assertAllEqual(items_[0], [values[0], values[0]])
@@ -662,8 +754,11 @@ class EpisodicReplayBufferTest(test_utils.TestCase, parameterized.TestCase):
     num_episodes = 3
     spec = specs.TensorSpec([3], tf.int32, 'lidar')
     replay_buffer = episodic_replay_buffer.EpisodicReplayBuffer(
-        spec, capacity=num_episodes, begin_episode_fn=lambda _: False,
-        end_episode_fn=lambda _: False)
+        spec,
+        capacity=num_episodes,
+        begin_episode_fn=lambda _: False,
+        end_episode_fn=lambda _: False,
+    )
     episode_ids = replay_buffer.create_episode_ids(num_episodes)
 
     values = np.ones(spec.shape.as_list(), dtype=np.int32)
@@ -683,8 +778,11 @@ class EpisodicReplayBufferTest(test_utils.TestCase, parameterized.TestCase):
 
     spec = specs.TensorSpec([3], tf.int32, 'lidar')
     replay_buffer = episodic_replay_buffer.EpisodicReplayBuffer(
-        spec, capacity=3, begin_episode_fn=lambda _: False,
-        end_episode_fn=lambda _: False)
+        spec,
+        capacity=3,
+        begin_episode_fn=lambda _: False,
+        end_episode_fn=lambda _: False,
+    )
     episode_ids = replay_buffer.create_episode_ids(3)
 
     values = np.ones(spec.shape.as_list(), dtype=np.int32)
@@ -694,8 +792,7 @@ class EpisodicReplayBufferTest(test_utils.TestCase, parameterized.TestCase):
     with self.cached_session() as sess:
       sess.run(tf.compat.v1.global_variables_initializer())
       sess.run(tf.compat.v1.local_variables_initializer())
-      sess.run(
-          replay_buffer.add_batch(batch, episode_ids), {batch: values})
+      sess.run(replay_buffer.add_batch(batch, episode_ids), {batch: values})
       self.assertEqual(2, sess.run(replay_buffer._get_last_episode_id()))
       self.assertAllEqual(values, sess.run(items)[0])
       # Make sure it's safe to run the tf.data pipeline for gather_all twice!
@@ -717,11 +814,15 @@ class EpisodicReplayBufferTest(test_utils.TestCase, parameterized.TestCase):
     spec = specs.TensorSpec([], tf.int32, 'action')
     num_adds = 10
     replay_buffer = episodic_replay_buffer.EpisodicReplayBuffer(
-        spec, capacity=num_adds, begin_episode_fn=lambda _: False,
-        end_episode_fn=lambda _: False)
+        spec,
+        capacity=num_adds,
+        begin_episode_fn=lambda _: False,
+        end_episode_fn=lambda _: False,
+    )
     expected_items = range(num_adds)
-    items_batched = tf.nest.map_structure(lambda t: tf.stack([t] * 1),
-                                          expected_items)
+    items_batched = tf.nest.map_structure(
+        lambda t: tf.stack([t] * 1), expected_items
+    )
     add_ops = []
     for item in items_batched:
       episode_ids = replay_buffer.create_episode_ids(1)
@@ -739,20 +840,25 @@ class EpisodicReplayBufferTest(test_utils.TestCase, parameterized.TestCase):
     episode_length = 3
     spec = specs.TensorSpec([], tf.int32, 'action')
     replay_buffer = episodic_replay_buffer.EpisodicReplayBuffer(
-        spec, capacity=num_episodes - 1,
-        begin_episode_fn=lambda _: True, end_episode_fn=lambda _: False)
+        spec,
+        capacity=num_episodes - 1,
+        begin_episode_fn=lambda _: True,
+        end_episode_fn=lambda _: False,
+    )
     episode_id = replay_buffer.create_episode_ids()
     self.evaluate(tf.compat.v1.global_variables_initializer())
     self.evaluate(tf.compat.v1.local_variables_initializer())
     for i in range(num_episodes):
       episode_id = replay_buffer.add_sequence(
-          i * tf.ones([episode_length], dtype=tf.int32),
-          episode_id)
+          i * tf.ones([episode_length], dtype=tf.int32), episode_id
+      )
     self.evaluate(episode_id)
     episodes = replay_buffer.extract([1, 0], clear_data=False)
     [
-        episodes_length_, episodes_completed_, extracted_first_,
-        extracted_second_
+        episodes_length_,
+        episodes_completed_,
+        extracted_first_,
+        extracted_second_,
     ] = self.evaluate([
         episodes.length,
         episodes.completed,
@@ -767,32 +873,39 @@ class EpisodicReplayBufferTest(test_utils.TestCase, parameterized.TestCase):
     # The location associated with episode ID 0 is not cleared.
     self.assertAllClose(
         self.evaluate(replay_buffer._get_episode(num_episodes - 1)),
-        [num_episodes - 1] * episode_length)
+        [num_episodes - 1] * episode_length,
+    )
     # The episode ID 1 (extracted) was not cleared.
     self.assertAllClose(
-        self.evaluate(replay_buffer._get_episode(1)), [1.0] * episode_length)
+        self.evaluate(replay_buffer._get_episode(1)), [1.0] * episode_length
+    )
 
   def testExtractAndClear(self):
     num_episodes = 5
     episode_length = 3
     spec = specs.TensorSpec([], tf.int32, 'action')
     replay_buffer = episodic_replay_buffer.EpisodicReplayBuffer(
-        spec, capacity=num_episodes - 1,
-        begin_episode_fn=lambda _: True, end_episode_fn=lambda _: False)
+        spec,
+        capacity=num_episodes - 1,
+        begin_episode_fn=lambda _: True,
+        end_episode_fn=lambda _: False,
+    )
     episode_id = replay_buffer.create_episode_ids()
 
     self.evaluate(tf.compat.v1.global_variables_initializer())
     self.evaluate(tf.compat.v1.local_variables_initializer())
     for i in range(num_episodes):
       episode_id = replay_buffer.add_sequence(
-          i * tf.ones([episode_length], dtype=tf.int32),
-          episode_id)
+          i * tf.ones([episode_length], dtype=tf.int32), episode_id
+      )
     self.evaluate(episode_id)  # Run the insertions.
 
     episodes = replay_buffer.extract([1, 0], clear_data=True)
     [
-        episodes_length_, episodes_completed_, extracted_first_,
-        extracted_second_
+        episodes_length_,
+        episodes_completed_,
+        extracted_first_,
+        extracted_second_,
     ] = self.evaluate([
         episodes.length,
         episodes.completed,
@@ -807,24 +920,34 @@ class EpisodicReplayBufferTest(test_utils.TestCase, parameterized.TestCase):
     # The location associated with episode ID 0 (extracted) was cleared.
     self.assertAllEqual(
         self.evaluate(
-            tf.size(input=replay_buffer._get_episode(num_episodes - 1))), 0)
+            tf.size(input=replay_buffer._get_episode(num_episodes - 1))
+        ),
+        0,
+    )
     # The episode ID 1 (extracted) was cleared.
     self.assertEqual(
-        self.evaluate(tf.size(input=replay_buffer._get_episode(1))), 0)
+        self.evaluate(tf.size(input=replay_buffer._get_episode(1))), 0
+    )
 
   @parameterized.parameters([dict(stateless=False), dict(stateless=True)])
   def testExtend(self, stateless):
     spec = specs.TensorSpec([], tf.int32, 'action')
     replay_buffer = episodic_replay_buffer.EpisodicReplayBuffer(
-        spec, capacity=3, begin_episode_fn=lambda _: False,
-        end_episode_fn=lambda _: False)
+        spec,
+        capacity=3,
+        begin_episode_fn=lambda _: False,
+        end_episode_fn=lambda _: False,
+    )
 
     if stateless:
       extend_ids = replay_buffer.create_episode_ids(3)
+      stateful_replay_buffer = None
     else:
       stateful_replay_buffer = (
           episodic_replay_buffer.StatefulEpisodicReplayBuffer(
-              replay_buffer, num_episodes=3))
+              replay_buffer, num_episodes=3
+          )
+      )
       extend_ids = stateful_replay_buffer.episode_ids
 
     episodes1 = episodic_replay_buffer.Episodes(
@@ -833,45 +956,55 @@ class EpisodicReplayBufferTest(test_utils.TestCase, parameterized.TestCase):
         tensor_lists=tf.stack([
             list_ops.tensor_list_from_tensor(
                 tf.constant([100, 200], dtype=spec.dtype),
-                element_shape=spec.shape),
+                element_shape=spec.shape,
+            ),
             list_ops.tensor_list_from_tensor(
-                tf.constant([999], dtype=spec.dtype), element_shape=spec.shape),
+                tf.constant([999], dtype=spec.dtype), element_shape=spec.shape
+            ),
             list_ops.tensor_list_from_tensor(
                 tf.constant([1, 2, 3], dtype=spec.dtype),
-                element_shape=spec.shape),
-        ]))
+                element_shape=spec.shape,
+            ),
+        ]),
+    )
 
     episodes2 = episodic_replay_buffer.Episodes(
         length=tf.constant([1, 3], dtype=tf.int64),
         completed=tf.constant([0, 1], dtype=tf.uint8),
         tensor_lists=tf.stack([
             list_ops.tensor_list_from_tensor(
-                tf.constant([888], dtype=spec.dtype), element_shape=spec.shape),
+                tf.constant([888], dtype=spec.dtype), element_shape=spec.shape
+            ),
             list_ops.tensor_list_from_tensor(
                 tf.constant([4, 5, 6], dtype=spec.dtype),
-                element_shape=spec.shape),
-        ]))
+                element_shape=spec.shape,
+            ),
+        ]),
+    )
 
     self.evaluate(tf.compat.v1.global_variables_initializer())
     self.evaluate(tf.compat.v1.local_variables_initializer())
     if stateless:
       extended_ids_1 = replay_buffer.extend_episodes(
-          extend_ids, [0, 1, 2], episodes1)
+          extend_ids, [0, 1, 2], episodes1
+      )
       extend_ids = extended_ids_1
       replay_buffer._begin_episode_fn = lambda _: [False, True]
       extended_ids_2 = replay_buffer.extend_episodes(
-          extend_ids, [1, 2], episodes2)
+          extend_ids, [1, 2], episodes2
+      )
     else:
       replay_buffer._begin_episode_fn = lambda _: False
       extended_ids_1 = stateful_replay_buffer.extend_episodes(
-          [0, 1, 2], episodes1)
+          [0, 1, 2], episodes1
+      )
       replay_buffer._begin_episode_fn = lambda _: [False, True]
-      extended_ids_2 = stateful_replay_buffer.extend_episodes(
-          [1, 2], episodes2)
+      extended_ids_2 = stateful_replay_buffer.extend_episodes([1, 2], episodes2)
 
     if stateless:
-      extended_ids_1_value, extended_ids_2_value = (
-          self.evaluate((extended_ids_1, extended_ids_2)))
+      extended_ids_1_value, extended_ids_2_value = self.evaluate(
+          (extended_ids_1, extended_ids_2)
+      )
     else:
       extended_ids_1_value = self.evaluate(extended_ids_1)
       extended_ids_2_value = self.evaluate(extended_ids_2)
@@ -882,8 +1015,9 @@ class EpisodicReplayBufferTest(test_utils.TestCase, parameterized.TestCase):
     if not stateless:
       self.assertAllEqual(self.evaluate(extend_ids), [0, 1, 3])
 
-    self.assertAllEqual(self.evaluate(
-        replay_buffer._get_episode(1)), [999, 888])
+    self.assertAllEqual(
+        self.evaluate(replay_buffer._get_episode(1)), [999, 888]
+    )
     self.assertAllEqual(self.evaluate(replay_buffer._get_episode(2)), [1, 2, 3])
     self.assertAllEqual(self.evaluate(replay_buffer._get_episode(3)), [4, 5, 6])
 
@@ -893,8 +1027,11 @@ class EpisodicReplayBufferTest(test_utils.TestCase, parameterized.TestCase):
 
     empty_values = np.empty((0, 3), dtype=np.int32)
     replay_buffer = episodic_replay_buffer.EpisodicReplayBuffer(
-        spec, capacity=2,
-        begin_episode_fn=lambda _: False, end_episode_fn=lambda _: False)
+        spec,
+        capacity=2,
+        begin_episode_fn=lambda _: False,
+        end_episode_fn=lambda _: False,
+    )
 
     episode_id_1 = replay_buffer.create_episode_ids(1)
     episode_id_2 = replay_buffer.create_episode_ids(1)
@@ -924,7 +1061,8 @@ class EpisodicReplayBufferTest(test_utils.TestCase, parameterized.TestCase):
     self.assertAllEqual(self.evaluate(replay_buffer._episode_lengths), [0, 0])
 
   def _create_rb_and_add_3N_episodes(
-      self, drop_remainder=False, window_shift=None, repeat=1):
+      self, drop_remainder=False, window_shift=None, repeat=1
+  ):
     spec = {'a': specs.TensorSpec([], tf.int32, 'spec')}
     replay_buffer = episodic_replay_buffer.EpisodicReplayBuffer(
         spec,
@@ -932,7 +1070,8 @@ class EpisodicReplayBufferTest(test_utils.TestCase, parameterized.TestCase):
         dataset_drop_remainder=drop_remainder,
         dataset_window_shift=window_shift,
         begin_episode_fn=lambda _: False,
-        end_episode_fn=lambda _: False)
+        end_episode_fn=lambda _: False,
+    )
     self.evaluate(tf.compat.v1.global_variables_initializer())
     self.evaluate(tf.compat.v1.local_variables_initializer())
 
@@ -956,8 +1095,9 @@ class EpisodicReplayBufferTest(test_utils.TestCase, parameterized.TestCase):
       episode_id = replay_buffer.add_sequence({'a': -values}, episode_id)
     new_episode_id = self.evaluate(episode_id)
 
-    assert new_episode_id >= original_episode_id + repeat * 3, (
-        '{} vs. {}'.format(new_episode_id, original_episode_id + repeat * 3))
+    assert (
+        new_episode_id >= original_episode_id + repeat * 3
+    ), '{} vs. {}'.format(new_episode_id, original_episode_id + repeat * 3)
 
     return replay_buffer
 
@@ -966,47 +1106,55 @@ class EpisodicReplayBufferTest(test_utils.TestCase, parameterized.TestCase):
     with self.cached_session() as session:
       pass
     itr = iterator_from_dataset(
-        replay_buffer,
-        single_deterministic_pass=True,
-        session=session)
+        replay_buffer, single_deterministic_pass=True, session=session
+    )
 
     tf.nest.map_structure(
-        self.assertAllEqual, {'a': _a([1, 10, 100])}, next(itr))
+        self.assertAllEqual, {'a': _a([1, 10, 100])}, next(itr)
+    )
     tf.nest.map_structure(
-        self.assertAllEqual, {'a': _a([2, 20, 200, 3, 30, 300])}, next(itr))
+        self.assertAllEqual, {'a': _a([2, 20, 200, 3, 30, 300])}, next(itr)
+    )
     tf.nest.map_structure(
-        self.assertAllEqual, {'a': _a([-1, -10, -100])}, next(itr))
+        self.assertAllEqual, {'a': _a([-1, -10, -100])}, next(itr)
+    )
     with self.assertRaises((tf.errors.OutOfRangeError, StopIteration)):
       next(itr)
 
   @parameterized.parameters(
-      [dict(drop_remainder=False), dict(drop_remainder=True)])
-  def testSingleDeterministicPassAsDatasetWithNumSteps(
-      self, drop_remainder):
+      [dict(drop_remainder=False), dict(drop_remainder=True)]
+  )
+  def testSingleDeterministicPassAsDatasetWithNumSteps(self, drop_remainder):
     replay_buffer = self._create_rb_and_add_3N_episodes(
-        drop_remainder=drop_remainder)
+        drop_remainder=drop_remainder
+    )
     with self.cached_session() as session:
       pass
     itr = iterator_from_dataset(
         replay_buffer,
         num_steps=5,
         single_deterministic_pass=True,
-        session=session)
+        session=session,
+    )
 
     tf.nest.map_structure(
-        self.assertAllEqual, {'a': _a([1, 10, 100, 2, 20])}, next(itr))
+        self.assertAllEqual, {'a': _a([1, 10, 100, 2, 20])}, next(itr)
+    )
     tf.nest.map_structure(
-        self.assertAllEqual, {'a': _a([200, 3, 30, 300, -1])}, next(itr))
+        self.assertAllEqual, {'a': _a([200, 3, 30, 300, -1])}, next(itr)
+    )
     if not drop_remainder:
       tf.nest.map_structure(
-          self.assertAllEqual, {'a': _a([-10, -100])}, next(itr))
+          self.assertAllEqual, {'a': _a([-10, -100])}, next(itr)
+      )
     with self.assertRaises((tf.errors.OutOfRangeError, StopIteration)):
       next(itr)
 
   def testSingleDeterministicPassAsDatasetWithNumStepsBatchSize(self):
     # Add 6 episodes, repeating 3 episodes twice.
     replay_buffer = self._create_rb_and_add_3N_episodes(
-        window_shift=None, drop_remainder=False, repeat=2)
+        window_shift=None, drop_remainder=False, repeat=2
+    )
     with self.cached_session() as session:
       pass
     itr = iterator_from_dataset(
@@ -1014,25 +1162,34 @@ class EpisodicReplayBufferTest(test_utils.TestCase, parameterized.TestCase):
         batch_size=3,
         num_steps=5,
         single_deterministic_pass=True,
-        session=session)
+        session=session,
+    )
 
     # NOTE(ebrevdo): Here, the final steps of the final episodes get cut off.
-    tf.nest.map_structure(self.assertAllEqual,
-                          {'a': _a([[1, 10, 100, 1, 10],
-                                    [2, 20, 200, 3, 30],
-                                    [-1, -10, -100, -1, -10]])},
-                          next(itr))
+    tf.nest.map_structure(
+        self.assertAllEqual,
+        {
+            'a': _a([
+                [1, 10, 100, 1, 10],
+                [2, 20, 200, 3, 30],
+                [-1, -10, -100, -1, -10],
+            ])
+        },
+        next(itr),
+    )
     # Note here we are missing the final [100] from episode 4, the final [30,
     # 300] from episode 5, and the final [-100] from episode 6.
     tf.nest.map_structure(
-        self.assertAllEqual, {'a': _a([[300, 2, 20, 200, 3]])}, next(itr))
+        self.assertAllEqual, {'a': _a([[300, 2, 20, 200, 3]])}, next(itr)
+    )
     with self.assertRaises((tf.errors.OutOfRangeError, StopIteration)):
       next(itr)
 
   def testSingleDeterministicPassAsDatasetWithNumStepsBatchSizeAndShift(self):
     # Add 6 episodes, repeating 3 episodes twice.
     replay_buffer = self._create_rb_and_add_3N_episodes(
-        window_shift=1, drop_remainder=False, repeat=2)
+        window_shift=1, drop_remainder=False, repeat=2
+    )
     with self.cached_session() as session:
       pass
     itr = iterator_from_dataset(
@@ -1040,33 +1197,58 @@ class EpisodicReplayBufferTest(test_utils.TestCase, parameterized.TestCase):
         batch_size=3,
         num_steps=5,
         single_deterministic_pass=True,
-        session=session)
+        session=session,
+    )
 
     # Due to window_shift == 1, we see two instances of each block: the
     # original, and one shifted left by 1.  For example, if we have two episodes
     # in a batch entry, [1, 10, 100] and [1, 10, 100] again, then with num_steps
     # == 5 we'll see one block that's [1, 10, 100, 1, 10] and a second one
     # that's shifted: [10, 100, 1, 10, 100].
-    tf.nest.map_structure(self.assertAllEqual,
-                          {'a': _a([[1, 10, 100, 1, 10],
-                                    [2, 20, 200, 3, 30],
-                                    [-1, -10, -100, -1, -10]])},
-                          next(itr))
-    tf.nest.map_structure(self.assertAllEqual,
-                          {'a': _a([[10, 100, 1, 10, 100],
-                                    [20, 200, 3, 30, 300],
-                                    [-10, -100, -1, -10, -100]])},
-                          next(itr))
-    tf.nest.map_structure(self.assertAllEqual,
-                          {'a': _a([[200, 3, 30, 300, 2],
-                                    [3, 30, 300, 2, 20],
-                                    [30, 300, 2, 20, 200]])},
-                          next(itr))
-    tf.nest.map_structure(self.assertAllEqual,
-                          {'a': _a([[300, 2, 20, 200, 3],
-                                    [2, 20, 200, 3, 30],
-                                    [20, 200, 3, 30, 300]])},
-                          next(itr))
+    tf.nest.map_structure(
+        self.assertAllEqual,
+        {
+            'a': _a([
+                [1, 10, 100, 1, 10],
+                [2, 20, 200, 3, 30],
+                [-1, -10, -100, -1, -10],
+            ])
+        },
+        next(itr),
+    )
+    tf.nest.map_structure(
+        self.assertAllEqual,
+        {
+            'a': _a([
+                [10, 100, 1, 10, 100],
+                [20, 200, 3, 30, 300],
+                [-10, -100, -1, -10, -100],
+            ])
+        },
+        next(itr),
+    )
+    tf.nest.map_structure(
+        self.assertAllEqual,
+        {
+            'a': _a([
+                [200, 3, 30, 300, 2],
+                [3, 30, 300, 2, 20],
+                [30, 300, 2, 20, 200],
+            ])
+        },
+        next(itr),
+    )
+    tf.nest.map_structure(
+        self.assertAllEqual,
+        {
+            'a': _a([
+                [300, 2, 20, 200, 3],
+                [2, 20, 200, 3, 30],
+                [20, 200, 3, 30, 300],
+            ])
+        },
+        next(itr),
+    )
     with self.assertRaises((tf.errors.OutOfRangeError, StopIteration)):
       next(itr)
 
@@ -1086,17 +1268,21 @@ class StatefulEpisodicReplayBufferTest(test_utils.TestCase):
 
   def testCreateEpisodeId(self):
     spec = [
-        specs.TensorSpec([3], tf.float32, 'action'), [
+        specs.TensorSpec([3], tf.float32, 'action'),
+        [
             specs.TensorSpec([5], tf.float32, 'lidar'),
-            specs.TensorSpec([3, 2], tf.float32, 'camera')
-        ]
+            specs.TensorSpec([3, 2], tf.float32, 'camera'),
+        ],
     ]
     replay_buffer = episodic_replay_buffer.EpisodicReplayBuffer(
-        spec, capacity=2)
+        spec, capacity=2
+    )
     replay_buffer_stateful_0 = (
-        episodic_replay_buffer.StatefulEpisodicReplayBuffer(replay_buffer))
+        episodic_replay_buffer.StatefulEpisodicReplayBuffer(replay_buffer)
+    )
     replay_buffer_stateful_1 = (
-        episodic_replay_buffer.StatefulEpisodicReplayBuffer(replay_buffer))
+        episodic_replay_buffer.StatefulEpisodicReplayBuffer(replay_buffer)
+    )
 
     episode_0 = replay_buffer_stateful_0.episode_ids
     episode_1 = replay_buffer_stateful_1.episode_ids
@@ -1108,20 +1294,26 @@ class StatefulEpisodicReplayBufferTest(test_utils.TestCase):
 
   def testCreateBatchEpisodeIds(self):
     spec = [
-        specs.TensorSpec([3], tf.float32, 'action'), [
+        specs.TensorSpec([3], tf.float32, 'action'),
+        [
             specs.TensorSpec([5], tf.float32, 'lidar'),
-            specs.TensorSpec([3, 2], tf.float32, 'camera')
-        ]
+            specs.TensorSpec([3, 2], tf.float32, 'camera'),
+        ],
     ]
     replay_buffer = episodic_replay_buffer.EpisodicReplayBuffer(
-        spec, capacity=5)
+        spec, capacity=5
+    )
 
     replay_buffer_stateful_0 = (
         episodic_replay_buffer.StatefulEpisodicReplayBuffer(
-            replay_buffer, num_episodes=2))
+            replay_buffer, num_episodes=2
+        )
+    )
     replay_buffer_stateful_1 = (
         episodic_replay_buffer.StatefulEpisodicReplayBuffer(
-            replay_buffer, num_episodes=3))
+            replay_buffer, num_episodes=3
+        )
+    )
     episodes_0 = replay_buffer_stateful_0.episode_ids
     episodes_1 = replay_buffer_stateful_1.episode_ids
 
@@ -1132,28 +1324,37 @@ class StatefulEpisodicReplayBufferTest(test_utils.TestCase):
 
   def testCreateTooManyBatchEpisodeIdsRaisesError(self):
     spec = [
-        specs.TensorSpec([3], tf.float32, 'action'), [
+        specs.TensorSpec([3], tf.float32, 'action'),
+        [
             specs.TensorSpec([5], tf.float32, 'lidar'),
-            specs.TensorSpec([3, 2], tf.float32, 'camera')
-        ]
+            specs.TensorSpec([3, 2], tf.float32, 'camera'),
+        ],
     ]
     replay_buffer = episodic_replay_buffer.EpisodicReplayBuffer(
-        spec, capacity=2)
+        spec, capacity=2
+    )
 
-    with self.assertRaisesRegexp(
-        ValueError, 'Buffer cannot create episode_ids when '
-        'num_episodes 3 > capacity 2.'):
+    with self.assertRaisesRegex(
+        ValueError,
+        'Buffer cannot create episode_ids when num_episodes 3 > capacity 2.',
+    ):
       episodic_replay_buffer.StatefulEpisodicReplayBuffer(
-          replay_buffer, num_episodes=3)
+          replay_buffer, num_episodes=3
+      )
 
   def testAddSingleMultipleTimesSampleAsDatasetBatched(self):
     spec = specs.TensorSpec([3], tf.int32, 'lidar')
     replay_buffer = episodic_replay_buffer.EpisodicReplayBuffer(
-        spec, capacity=10, begin_episode_fn=lambda _: False,
-        end_episode_fn=lambda _: False)
+        spec,
+        capacity=10,
+        begin_episode_fn=lambda _: False,
+        end_episode_fn=lambda _: False,
+    )
     replay_buffer_stateful = (
         episodic_replay_buffer.StatefulEpisodicReplayBuffer(
-            replay_buffer, num_episodes=1))
+            replay_buffer, num_episodes=1
+        )
+    )
     values = np.expand_dims(np.ones(spec.shape.as_list(), dtype=np.int32), 0)
     values = [values, 10 * values, 100 * values]
     simple_values = [1, 10, 100]
@@ -1163,8 +1364,9 @@ class StatefulEpisodicReplayBufferTest(test_utils.TestCase):
     self.evaluate(replay_buffer_stateful.add_batch(values[0]))
     self.evaluate(replay_buffer_stateful.add_batch(values[1]))
     self.evaluate(replay_buffer_stateful.add_batch(values[2]))
-    sample_next = (sample_as_dataset(replay_buffer, num_steps=3,
-                                     batch_size=100)[0])
+    sample_next = sample_as_dataset(replay_buffer, num_steps=3, batch_size=100)[
+        0
+    ]
 
     self.assertEqual(tf.compat.dimension_value(sample_next.shape[2]), 3)
     sample_ = self.evaluate(sample_next)
@@ -1174,20 +1376,27 @@ class StatefulEpisodicReplayBufferTest(test_utils.TestCase):
     self.assertEqual(sample_.shape, (100, 3, 3))
 
     for multi_item in sample_:
-      self._assertCircularOrdering(simple_values,
-                                   [item[0] for item in multi_item])
+      self._assertCircularOrdering(
+          simple_values, [item[0] for item in multi_item]
+      )
 
     self._assertContains(
-        list(values), [multi_item[0] for multi_item in sample_])
+        list(values), [multi_item[0] for multi_item in sample_]
+    )
 
   def testAddSingleMultipleTimesSampleAsDatasetBatchedMultiStep(self):
     spec = specs.TensorSpec([3], tf.int32, 'lidar')
     replay_buffer = episodic_replay_buffer.EpisodicReplayBuffer(
-        spec, capacity=2, begin_episode_fn=lambda _: False,
-        end_episode_fn=lambda _: False)
+        spec,
+        capacity=2,
+        begin_episode_fn=lambda _: False,
+        end_episode_fn=lambda _: False,
+    )
     replay_buffer_stateful = (
         episodic_replay_buffer.StatefulEpisodicReplayBuffer(
-            replay_buffer, num_episodes=1))
+            replay_buffer, num_episodes=1
+        )
+    )
     values = np.expand_dims(np.ones(spec.shape.as_list(), dtype=np.int32), 0)
     values = [values, 10 * values, 100 * values]
     simple_values = [1, 10, 100]
@@ -1196,8 +1405,9 @@ class StatefulEpisodicReplayBufferTest(test_utils.TestCase):
     self.evaluate(replay_buffer_stateful.add_batch(values[0]))
     self.evaluate(replay_buffer_stateful.add_batch(values[1]))
     self.evaluate(replay_buffer_stateful.add_batch(values[2]))
-    sample_next = (
-        sample_as_dataset(replay_buffer, num_steps=2, batch_size=100)[0])
+    sample_next = sample_as_dataset(replay_buffer, num_steps=2, batch_size=100)[
+        0
+    ]
     self.assertEqual(sample_next.shape[1:].as_list(), [2, 3])
     sample_ = self.evaluate(sample_next)
 
@@ -1205,21 +1415,28 @@ class StatefulEpisodicReplayBufferTest(test_utils.TestCase):
     self.assertEqual(sample_.shape, (100, 2, 3))
 
     for multi_item in sample_:
-      self._assertCircularOrdering(simple_values,
-                                   [item[0] for item in multi_item])
+      self._assertCircularOrdering(
+          simple_values, [item[0] for item in multi_item]
+      )
 
     self._assertContains(
-        list(values), [multi_item[0] for multi_item in sample_])
+        list(values), [multi_item[0] for multi_item in sample_]
+    )
 
   def testAddBatch(self):
     spec = specs.TensorSpec([3], tf.int32, 'lidar')
     replay_buffer = episodic_replay_buffer.EpisodicReplayBuffer(
-        spec, capacity=3,
-        begin_episode_fn=lambda _: False, end_episode_fn=lambda _: False)
+        spec,
+        capacity=3,
+        begin_episode_fn=lambda _: False,
+        end_episode_fn=lambda _: False,
+    )
 
     stateful_replay_buffer = (
         episodic_replay_buffer.StatefulEpisodicReplayBuffer(
-            replay_buffer, num_episodes=3))
+            replay_buffer, num_episodes=3
+        )
+    )
     values = np.ones(spec.shape.as_list(), dtype=np.int32)
     values = np.stack([values, 10 * values, 100 * values])
     new_episode_ids = stateful_replay_buffer.add_batch(values)
@@ -1231,8 +1448,9 @@ class StatefulEpisodicReplayBufferTest(test_utils.TestCase):
     #  (batch_size, time_steps, depth) == (3, 1, 3).
     #
     # Instead we concat here to make testing easier below.
-    items = tf.nest.map_structure(lambda *x: tf.concat(x, 0), item_0, item_1,
-                                  item_2)
+    items = tf.nest.map_structure(
+        lambda *x: tf.concat(x, 0), item_0, item_1, item_2
+    )
     self.evaluate(tf.compat.v1.global_variables_initializer())
     self.evaluate(tf.compat.v1.local_variables_initializer())
     self.assertAllEqual([0, 1, 2], self.evaluate(new_episode_ids))
@@ -1240,15 +1458,21 @@ class StatefulEpisodicReplayBufferTest(test_utils.TestCase):
     self.assertAllEqual(values, self.evaluate(items))
 
   def testMultipleAddBatch(self):
-    spec = (specs.TensorSpec([3], tf.int32, 'lidar'),
-            specs.TensorSpec([], tf.bool, 'begin_episode'))
+    spec = (
+        specs.TensorSpec([3], tf.int32, 'lidar'),
+        specs.TensorSpec([], tf.bool, 'begin_episode'),
+    )
     replay_buffer = episodic_replay_buffer.EpisodicReplayBuffer(
-        spec, capacity=3,
+        spec,
+        capacity=3,
         begin_episode_fn=lambda value_and_begin: value_and_begin[1],
-        end_episode_fn=lambda _: False)
+        end_episode_fn=lambda _: False,
+    )
     stateful_replay_buffer = (
         episodic_replay_buffer.StatefulEpisodicReplayBuffer(
-            replay_buffer, num_episodes=3))
+            replay_buffer, num_episodes=3
+        )
+    )
     episode_ids_var = stateful_replay_buffer.episode_ids
 
     values = np.ones(spec[0].shape.as_list(), dtype=np.int32)
@@ -1256,35 +1480,35 @@ class StatefulEpisodicReplayBufferTest(test_utils.TestCase):
     # In this case all episodes are valid, so it will add all the values.
     # Add 1 to ep0, 10 to ep1, 100 to ep2
     new_episode_ids = stateful_replay_buffer.add_batch(
-        (values, tf.constant([False, False, False])))
+        (values, tf.constant([False, False, False]))
+    )
     with tf.control_dependencies([new_episode_ids]):
       items = [[replay_buffer._get_episode(i) for i in [0, 1, 2]]]
     # In this case the second episode is invalid, so it won't add its values.
     # Add 1 to ep3 (was ep0), ., 100 to ep4 (was ep1).
     with tf.control_dependencies(items[-1][0]):
       new_episode_ids_2 = stateful_replay_buffer.add_batch(
-          (values, tf.constant([True, False, True])))
+          (values, tf.constant([True, False, True]))
+      )
     with tf.control_dependencies([new_episode_ids_2]):
       items.append([replay_buffer._get_episode(i) for i in [2, 3, 4]])
     # In this case all episodes are valid, so it will add all the values.
     # Add 1 to ep3, 10 to ep5 (was ep2), 100 to ep4.
     with tf.control_dependencies(items[-1][0]):
       new_episode_ids_3 = stateful_replay_buffer.add_batch(
-          (values, tf.constant([False, True, False])))
+          (values, tf.constant([False, True, False]))
+      )
     with tf.control_dependencies([new_episode_ids_3]):
       # End result: ep3 with [1, 1], ep4 with [100, 100], ep5 with [10].
       items.append([replay_buffer._get_episode(i) for i in [3, 4, 5]])
 
     self.evaluate(tf.compat.v1.global_variables_initializer())
     self.evaluate(tf.compat.v1.local_variables_initializer())
-    (new_episode_ids,
-     new_episode_ids_2,
-     new_episode_ids_3,
-     items) = self.evaluate(
-         (new_episode_ids,
-          new_episode_ids_2,
-          new_episode_ids_3,
-          items))
+    (new_episode_ids, new_episode_ids_2, new_episode_ids_3, items) = (
+        self.evaluate(
+            (new_episode_ids, new_episode_ids_2, new_episode_ids_3, items)
+        )
+    )
     self.assertAllEqual([0, 1, 2], new_episode_ids)
     self.assertAllEqual([3, 1, 4], new_episode_ids_2)
     self.assertAllEqual([3, 5, 4], new_episode_ids_3)
@@ -1308,10 +1532,13 @@ class StatefulEpisodicReplayBufferTest(test_utils.TestCase):
   def testGatherAll(self):
     spec = specs.TensorSpec([], tf.int32, 'action')
     replay_buffer = episodic_replay_buffer.EpisodicReplayBuffer(
-        spec, begin_episode_fn=lambda _: False, end_episode_fn=lambda _: False)
+        spec, begin_episode_fn=lambda _: False, end_episode_fn=lambda _: False
+    )
     replay_buffer_stateful = (
         episodic_replay_buffer.StatefulEpisodicReplayBuffer(
-            replay_buffer, num_episodes=1))
+            replay_buffer, num_episodes=1
+        )
+    )
 
     action_state = common.create_variable('counter', -1, dtype=spec.dtype)
     action = lambda: tf.expand_dims(action_state.assign_add(1), 0)
@@ -1337,14 +1564,19 @@ class StatefulEpisodicReplayBufferTest(test_utils.TestCase):
     num_adds = 5
     spec = specs.TensorSpec([], tf.int32, 'action')
     replay_buffer = episodic_replay_buffer.EpisodicReplayBuffer(
-        spec, capacity=3,
-        begin_episode_fn=lambda _: True, end_episode_fn=lambda _: False)
+        spec,
+        capacity=3,
+        begin_episode_fn=lambda _: True,
+        end_episode_fn=lambda _: False,
+    )
 
     a_state = common.create_variable('counter', -1, dtype=spec.dtype)
     a = lambda: tf.expand_dims(a_state.assign_add(1), 0)
     replay_buffer_stateful = (
         episodic_replay_buffer.StatefulEpisodicReplayBuffer(
-            replay_buffer, num_episodes=1))
+            replay_buffer, num_episodes=1
+        )
+    )
 
     if tf.executing_eagerly():
       # pylint: disable=g-long-lambda
@@ -1368,19 +1600,26 @@ class StatefulEpisodicReplayBufferTest(test_utils.TestCase):
     num_adds = 5
     spec = specs.TensorSpec([], tf.int32, 'action')
     replay_buffer = episodic_replay_buffer.EpisodicReplayBuffer(
-        spec, capacity=3,
-        begin_episode_fn=lambda _: True, end_episode_fn=lambda _: False)
+        spec,
+        capacity=3,
+        begin_episode_fn=lambda _: True,
+        end_episode_fn=lambda _: False,
+    )
 
     a_state = common.create_variable('counter', -1, dtype=spec.dtype)
     a = lambda: tf.expand_dims(a_state.assign_add(1), 0)
 
     replay_buffer_stateful = (
         episodic_replay_buffer.StatefulEpisodicReplayBuffer(
-            replay_buffer, num_episodes=1))
+            replay_buffer, num_episodes=1
+        )
+    )
     episode_id_var = replay_buffer_stateful.episode_ids
     if tf.executing_eagerly():
+
       def add():
         return replay_buffer_stateful.add_batch(a())
+
       items = replay_buffer.gather_all
     else:
       add = replay_buffer_stateful.add_batch(a())
@@ -1400,18 +1639,25 @@ class StatefulEpisodicReplayBufferTest(test_utils.TestCase):
   def testAddToStaleEpisodeIDIsAvoided(self):
     spec = specs.TensorSpec([], tf.int32, 'action')
     replay_buffer = episodic_replay_buffer.EpisodicReplayBuffer(
-        spec, capacity=1,
-        begin_episode_fn=lambda _: False, end_episode_fn=lambda _: False)
+        spec,
+        capacity=1,
+        begin_episode_fn=lambda _: False,
+        end_episode_fn=lambda _: False,
+    )
 
     a_state = common.create_variable('counter', -1, dtype=spec.dtype)
     a = lambda: tf.expand_dims(a_state.assign_add(1), 0)
 
     replay_buffer_stateful_0 = (
         episodic_replay_buffer.StatefulEpisodicReplayBuffer(
-            replay_buffer, num_episodes=1))
+            replay_buffer, num_episodes=1
+        )
+    )
     replay_buffer_stateful_1 = (
         episodic_replay_buffer.StatefulEpisodicReplayBuffer(
-            replay_buffer, num_episodes=1))
+            replay_buffer, num_episodes=1
+        )
+    )
     episode_id_var_0 = replay_buffer_stateful_0.episode_ids
     episode_id_var_1 = replay_buffer_stateful_1.episode_ids
 
@@ -1437,18 +1683,25 @@ class StatefulEpisodicReplayBufferTest(test_utils.TestCase):
     num_adds = 3
     spec = specs.TensorSpec([], tf.int32, 'action')
     replay_buffer = episodic_replay_buffer.EpisodicReplayBuffer(
-        spec, capacity=4,
-        begin_episode_fn=lambda _: True, end_episode_fn=lambda _: False)
+        spec,
+        capacity=4,
+        begin_episode_fn=lambda _: True,
+        end_episode_fn=lambda _: False,
+    )
 
     a = common.create_variable('a', 0, dtype=spec.dtype)
     b = common.create_variable('b', 10, dtype=spec.dtype)
 
     replay_buffer_stateful_0 = (
         episodic_replay_buffer.StatefulEpisodicReplayBuffer(
-            replay_buffer, num_episodes=1))
+            replay_buffer, num_episodes=1
+        )
+    )
     replay_buffer_stateful_1 = (
         episodic_replay_buffer.StatefulEpisodicReplayBuffer(
-            replay_buffer, num_episodes=1))
+            replay_buffer, num_episodes=1
+        )
+    )
     episode_id_var_0 = replay_buffer_stateful_0.episode_ids
     episode_id_var_1 = replay_buffer_stateful_1.episode_ids
 
@@ -1458,17 +1711,18 @@ class StatefulEpisodicReplayBufferTest(test_utils.TestCase):
     def add_elem_0(variable):
       elem = tf.expand_dims(variable, 0)
       replay_buffer_stateful_0.add_batch(elem)
+      return elem
 
     @common.function
     def add_elem_1(variable):
       elem = tf.expand_dims(variable, 0)
       replay_buffer_stateful_1.add_batch(elem)
+      return elem
 
     self.evaluate(tf.compat.v1.global_variables_initializer())
     self.evaluate(tf.compat.v1.local_variables_initializer())
     for _ in range(num_adds):
-      self.evaluate([add_elem_0(a),
-                     add_elem_1(b)])
+      self.evaluate([add_elem_0(a), add_elem_1(b)])
       self.evaluate([a.assign_add(1), b.assign_add(1)])
     items = replay_buffer.gather_all()
     items_ = self.evaluate(items)[0]

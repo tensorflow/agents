@@ -25,7 +25,6 @@ from __future__ import print_function
 
 import gin
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
-
 from tf_agents.networks import network
 from tf_agents.networks import q_network
 from tf_agents.specs import tensor_spec
@@ -45,16 +44,18 @@ class CategoricalQNetwork(network.Network):
   (called atoms) in np.linspace(-10.0, 10.0, 51).
   """
 
-  def __init__(self,
-               input_tensor_spec,
-               action_spec,
-               num_atoms=51,
-               preprocessing_layers=None,
-               preprocessing_combiner=None,
-               conv_layer_params=None,
-               fc_layer_params=None,
-               activation_fn=tf.nn.relu,
-               name='CategoricalQNetwork'):
+  def __init__(
+      self,
+      input_tensor_spec,
+      action_spec,
+      num_atoms=51,
+      preprocessing_layers=None,
+      preprocessing_combiner=None,
+      conv_layer_params=None,
+      fc_layer_params=None,
+      activation_fn=tf.nn.relu,
+      name='CategoricalQNetwork',
+  ):
     """Creates an instance of `CategoricalQNetwork`.
 
     The logits output by __call__ will ultimately have a shape of
@@ -73,14 +74,14 @@ class CategoricalQNetwork(network.Network):
       num_atoms: The number of atoms to use in our approximate probability
         distributions. Defaults to 51 to produce C51.
       preprocessing_layers: (Optional.) A nest of `tf.keras.layers.Layer`
-        representing preprocessing for the different observations.
-        All of these layers must not be already built. For more details see
-        the documentation of `networks.EncodingNetwork`.
+        representing preprocessing for the different observations. All of these
+        layers must not be already built. For more details see the documentation
+        of `networks.EncodingNetwork`.
       preprocessing_combiner: (Optional.) A keras layer that takes a flat list
-        of tensors and combines them. Good options include
-        `tf.keras.layers.Add` and `tf.keras.layers.Concatenate(axis=-1)`.
-        This layer must not be already built. For more details see
-        the documentation of `networks.EncodingNetwork`.
+        of tensors and combines them. Good options include `tf.keras.layers.Add`
+        and `tf.keras.layers.Concatenate(axis=-1)`. This layer must not be
+        already built. For more details see the documentation of
+        `networks.EncodingNetwork`.
       conv_layer_params: Optional list of convolution layer parameters for
         observations, where each item is a length-three tuple indicating
         (num_units, kernel_size, stride).
@@ -93,19 +94,20 @@ class CategoricalQNetwork(network.Network):
       TypeError: `action_spec` is not a `BoundedTensorSpec`.
     """
     super(CategoricalQNetwork, self).__init__(
-        input_tensor_spec=input_tensor_spec,
-        state_spec=(),
-        name=name)
+        input_tensor_spec=input_tensor_spec, state_spec=(), name=name
+    )
 
     if not isinstance(action_spec, tensor_spec.BoundedTensorSpec):
-      raise TypeError('action_spec must be a BoundedTensorSpec. Got: %s' % (
-          action_spec,))
+      raise TypeError(
+          'action_spec must be a BoundedTensorSpec. Got: %s' % (action_spec,)
+      )
 
     self._num_actions = action_spec.maximum - action_spec.minimum + 1
     self._num_atoms = num_atoms
 
     q_network_action_spec = tensor_spec.BoundedTensorSpec(
-        (), tf.int32, minimum=0, maximum=self._num_actions * num_atoms - 1)
+        (), tf.int32, minimum=0, maximum=self._num_actions * num_atoms - 1
+    )
 
     self._q_network = q_network.QNetwork(
         input_tensor_spec=input_tensor_spec,
@@ -115,7 +117,8 @@ class CategoricalQNetwork(network.Network):
         conv_layer_params=conv_layer_params,
         fc_layer_params=fc_layer_params,
         activation_fn=activation_fn,
-        name=name)
+        name=name,
+    )
 
   @property
   def num_atoms(self):
@@ -135,6 +138,7 @@ class CategoricalQNetwork(network.Network):
       A tuple `(logits, network_state)`.
     """
     logits, network_state = self._q_network(
-        observation, step_type, network_state, training=training)
+        observation, step_type, network_state, training=training
+    )
     logits = tf.reshape(logits, [-1, self._num_actions, self._num_atoms])
     return logits, network_state

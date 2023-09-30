@@ -17,7 +17,6 @@
 import os
 
 from absl.testing import absltest
-
 import graph_builder
 
 TEST_DATA = 'test_data'
@@ -28,7 +27,9 @@ class GraphBuilderTest(absltest.TestCase):
   def test_align_and_aggregate(self):
     """Tests combining data from 3 differnet logs into a single result."""
     event_log_dirs = [
-        'event_log_ant_eval00', 'event_log_ant_eval01', 'event_log_ant_eval02'
+        'event_log_ant_eval00',
+        'event_log_ant_eval01',
+        'event_log_ant_eval02',
     ]
     event_log_paths = [
         os.path.join(TEST_DATA, log_dir) for log_dir in event_log_dirs
@@ -48,7 +49,9 @@ class GraphBuilderTest(absltest.TestCase):
     """
     output_path = self.create_tempdir()
     event_log_dirs = [
-        'event_log_ant_eval00', 'event_log_ant_eval01', 'event_log_ant_eval02'
+        'event_log_ant_eval00',
+        'event_log_ant_eval01',
+        'event_log_ant_eval02',
     ]
     event_log_paths = [
         os.path.join(TEST_DATA, log_dir) for log_dir in event_log_dirs
@@ -57,7 +60,8 @@ class GraphBuilderTest(absltest.TestCase):
         event_log_paths,
         'AverageReturn',
         graph_agg=graph_builder.GraphAggTypes.MEDIAN,
-        output_path=output_path.full_path)
+        output_path=output_path.full_path,
+    )
     data_collector, _ = stat_builder._gather_data()
     agg_results = stat_builder._align_and_aggregate(data_collector)
     stat_builder._output_graph(agg_results, len(event_log_dirs))

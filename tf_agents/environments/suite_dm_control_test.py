@@ -19,7 +19,6 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 import numpy as np
-
 from tf_agents.environments import py_environment
 from tf_agents.environments import suite_dm_control
 from tf_agents.environments import utils
@@ -53,8 +52,9 @@ class SuiteDMControlTest(test_utils.TestCase):
 
   def testPixelObservationSpec(self):
     render_kwargs = dict(width=100, height=50)
-    env = suite_dm_control.load_pixels('ball_in_cup', 'catch',
-                                       render_kwargs=render_kwargs)
+    env = suite_dm_control.load_pixels(
+        'ball_in_cup', 'catch', render_kwargs=render_kwargs
+    )
     obs_spec = env.observation_spec()
 
     self.assertEqual(np.uint8, obs_spec['pixels'].dtype)

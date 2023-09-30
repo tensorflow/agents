@@ -23,7 +23,6 @@ import os
 
 from absl import flags
 import tensorflow.compat.v2 as tf
-
 from tf_agents.keras_layers import inner_reshape
 from tf_agents.networks import nest_map
 from tf_agents.networks import sequential
@@ -43,8 +42,8 @@ class MyPolicy(tf_policy.TFPolicy):
 
   def __init__(self, time_step_spec, net):
     super(MyPolicy, self).__init__(
-        time_step_spec,
-        action_spec=tf.TensorSpec((None,), tf.float32))
+        time_step_spec, action_spec=tf.TensorSpec((None,), tf.float32)
+    )
     self._net = net
 
   def _action(self, time_step, policy_state=(), seed=None):
@@ -70,135 +69,183 @@ class NestMapTest(test_utils.TestCase):
 
   def testCreateAndCall(self):
     net = sequential.Sequential([
-        nest_map.NestMap(
-            {'inp1': tf.keras.layers.Dense(8),
-             'inp2': sequential.Sequential([
-                 tf.keras.layers.Conv2D(2, 3),
-                 # Convert 3 inner dimensions to [8] for RNN.
-                 inner_reshape.InnerReshape([None] * 3, [8]),
-             ]),
-             'inp3': tf.keras.layers.LSTM(
-                 8, return_state=True, return_sequences=True)}),
+        nest_map.NestMap({
+            'inp1': tf.keras.layers.Dense(8),
+            'inp2': sequential.Sequential([
+                tf.keras.layers.Conv2D(2, 3),
+                # Convert 3 inner dimensions to [8] for RNN.
+                inner_reshape.InnerReshape([None] * 3, [8]),
+            ]),
+            'inp3': tf.keras.layers.LSTM(
+                8, return_state=True, return_sequences=True
+            ),
+        }),
         nest_map.NestFlatten(),
-        tf.keras.layers.Add()])
+        tf.keras.layers.Add(),
+    ])
     self.assertEqual(
         net.state_spec,
-        ({
-            'inp1': (),
-            'inp2': (),
-            'inp3': (2 * (tf.TensorSpec(shape=(8,), dtype=tf.float32),),),
-        },))
-    output_spec = net.create_variables(
-        {
-            'inp1': tf.TensorSpec(shape=(3,), dtype=tf.float32),
-            'inp2': tf.TensorSpec(shape=(4, 4, 2,), dtype=tf.float32),
-            'inp3': tf.TensorSpec(shape=(3,), dtype=tf.float32),
-        })
+        (
+            {
+                'inp1': (),
+                'inp2': (),
+                'inp3': (2 * (tf.TensorSpec(shape=(8,), dtype=tf.float32),),),
+            },
+        ),
+    )
+    output_spec = net.create_variables({
+        'inp1': tf.TensorSpec(shape=(3,), dtype=tf.float32),
+        'inp2': tf.TensorSpec(
+            shape=(
+                4,
+                4,
+                2,
+            ),
+            dtype=tf.float32,
+        ),
+        'inp3': tf.TensorSpec(shape=(3,), dtype=tf.float32),
+    })
     self.assertEqual(output_spec, tf.TensorSpec(shape=(8,), dtype=tf.float32))
 
     inputs = {
         'inp1': tf.ones((8, 10, 3), dtype=tf.float32),
         'inp2': tf.ones((8, 10, 4, 4, 2), dtype=tf.float32),
-        'inp3': tf.ones((8, 10, 3), dtype=tf.float32)
+        'inp3': tf.ones((8, 10, 3), dtype=tf.float32),
     }
     output, next_state = net(inputs)
     self.assertEqual(output.shape, tf.TensorShape([8, 10, 8]))
     self.assertEqual(
         tf.nest.map_structure(lambda t: t.shape, next_state),
-        ({
-            'inp1': (),
-            'inp2': (),
-            'inp3': (2 * (tf.TensorShape([8, 8]),),),
-        },))
+        (
+            {
+                'inp1': (),
+                'inp2': (),
+                'inp3': (2 * (tf.TensorShape([8, 8]),),),
+            },
+        ),
+    )
 
     # Test passing in a state.
     output, next_state = net(inputs, next_state)
     self.assertEqual(output.shape, tf.TensorShape([8, 10, 8]))
     self.assertEqual(
         tf.nest.map_structure(lambda t: t.shape, next_state),
-        ({
-            'inp1': (),
-            'inp2': (),
-            'inp3': (2 * (tf.TensorShape([8, 8]),),),
-        },))
+        (
+            {
+                'inp1': (),
+                'inp2': (),
+                'inp3': (2 * (tf.TensorShape([8, 8]),),),
+            },
+        ),
+    )
 
   def testNestedNest(self):
     # layer structure: {'a': {'b': .}}
     net = nest_map.NestMap(
-        {'a': nest_map.NestMap(
-            {'b': tf.keras.layers.Dense(8)})})
+        {'a': nest_map.NestMap({'b': tf.keras.layers.Dense(8)})}
+    )
     net.create_variables({'a': {'b': tf.TensorSpec((1,), dtype=tf.float32)}})
 
   def testNestedNestWithNestedState(self):
     # layer structure: (., {'a': {'b': .}})
-    net = nest_map.NestMap(
-        (tf.keras.layers.Dense(7),
-         {'a': nest_map.NestMap(
-             {'b': tf.keras.layers.LSTM(
-                 8, return_state=True, return_sequences=True)})}))
+    net = nest_map.NestMap((
+        tf.keras.layers.Dense(7),
+        {
+            'a': nest_map.NestMap(
+                {
+                    'b': tf.keras.layers.LSTM(
+                        8, return_state=True, return_sequences=True
+                    )
+                }
+            )
+        },
+    ))
     # TODO(b/177337002): remove the forced tuple wrapping the LSTM
     # state once we make a generic KerasWrapper network and clean up
     # Sequential and NestMap to use that instead of singleton Sequential.
     out, state = net(
         (tf.ones((1, 2)), {'a': {'b': tf.ones((1, 2))}}),
-        network_state=((), {'a': {'b': ((tf.ones((1, 8)), tf.ones((1, 8))),)}}))
+        network_state=((), {'a': {'b': ((tf.ones((1, 8)), tf.ones((1, 8))),)}}),
+    )
     nest_utils.assert_matching_dtypes_and_inner_shapes(
         out,
         (
             tf.TensorSpec(dtype=tf.float32, shape=(7,)),
-            {'a': {'b': tf.TensorSpec(dtype=tf.float32, shape=(8,))}}
+            {'a': {'b': tf.TensorSpec(dtype=tf.float32, shape=(8,))}},
         ),
-        caller=self, tensors_name='out', specs_name='out_expected')
+        caller=self,
+        tensors_name='out',
+        specs_name='out_expected',
+    )
     nest_utils.assert_matching_dtypes_and_inner_shapes(
         state,
         (
             (),
-            {'a': {'b': ((tf.TensorSpec(dtype=tf.float32, shape=(8,)),
-                          tf.TensorSpec(dtype=tf.float32, shape=(8,))),)}}
+            {
+                'a': {
+                    'b': (
+                        (
+                            tf.TensorSpec(dtype=tf.float32, shape=(8,)),
+                            tf.TensorSpec(dtype=tf.float32, shape=(8,)),
+                        ),
+                    )
+                }
+            },
         ),
-        caller=self, tensors_name='state', specs_name='state_expected')
+        caller=self,
+        tensors_name='state',
+        specs_name='state_expected',
+    )
 
   def testIncompatibleStructureInputs(self):
     with self.assertRaisesRegex(
         TypeError,
-        r'`nested_layers` and `input_spec` do not have matching structures'):
+        r'`nested_layers` and `input_spec` do not have matching structures',
+    ):
       nest_map.NestMap(
           [tf.keras.layers.Dense(8)],
-          input_spec={'ick': tf.TensorSpec(8, tf.float32)})
+          input_spec={'ick': tf.TensorSpec(8, tf.float32)},
+      )
 
     with self.assertRaisesRegex(
         TypeError,
-        r'`self.nested_layers` and `inputs` do not have matching structures'):
+        r'`self.nested_layers` and `inputs` do not have matching structures',
+    ):
       net = nest_map.NestMap([tf.keras.layers.Dense(8)])
       net.create_variables({'ick': tf.TensorSpec((1,), dtype=tf.float32)})
 
     with self.assertRaisesRegex(
         TypeError,
-        r'`self.nested_layers` and `inputs` do not have matching structures'):
+        r'`self.nested_layers` and `inputs` do not have matching structures',
+    ):
       net = nest_map.NestMap([tf.keras.layers.Dense(8)])
       net({'ick': tf.constant([[1.0]])})
 
     with self.assertRaisesRegex(
         ValueError,
-        r'`network_state` and `state_spec` do not have matching structures'):
+        r'`network_state` and `state_spec` do not have matching structures',
+    ):
       net = nest_map.NestMap(
-          tf.keras.layers.LSTM(8, return_state=True, return_sequences=True))
+          tf.keras.layers.LSTM(8, return_state=True, return_sequences=True)
+      )
       net(tf.ones((1, 2)), network_state=(tf.ones((1, 1)), ()))
 
   def testPolicySaverCompatibility(self):
     observation_spec = {
         'a': tf.TensorSpec(4, tf.float32),
-        'b': tf.TensorSpec(3, tf.float32)
+        'b': tf.TensorSpec(3, tf.float32),
     }
     time_step_tensor_spec = ts.time_step_spec(observation_spec)
-    net = nest_map.NestMap(
-        {'a': tf.keras.layers.LSTM(8, return_state=True, return_sequences=True),
-         'b': tf.keras.layers.Dense(8)})
+    net = nest_map.NestMap({
+        'a': tf.keras.layers.LSTM(8, return_state=True, return_sequences=True),
+        'b': tf.keras.layers.Dense(8),
+    })
     net.create_variables(observation_spec)
     policy = MyPolicy(time_step_tensor_spec, net)
 
     sample = tensor_spec.sample_spec_nest(
-        time_step_tensor_spec, outer_dims=(5,))
+        time_step_tensor_spec, outer_dims=(5,)
+    )
 
     step = policy.action(sample)
     self.assertEqual(step.action.shape.as_list(), [5, 8])

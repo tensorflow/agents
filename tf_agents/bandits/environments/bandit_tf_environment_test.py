@@ -32,12 +32,13 @@ class ZerosEnvironment(bandit_tf_environment.BanditTFEnvironment):
   """A simple environment that returns zeros for observations and rewards."""
 
   def __init__(self, observation_shape, batch_size=1):
-    observation_spec = tensor_spec.TensorSpec(shape=observation_shape,
-                                              dtype=tf.float32,
-                                              name='observation')
+    observation_spec = tensor_spec.TensorSpec(
+        shape=observation_shape, dtype=tf.float32, name='observation'
+    )
     time_step_spec = ts.time_step_spec(observation_spec)
-    super(ZerosEnvironment, self).__init__(time_step_spec=time_step_spec,
-                                           batch_size=batch_size)
+    super(ZerosEnvironment, self).__init__(
+        time_step_spec=time_step_spec, batch_size=batch_size
+    )
 
   def _apply_action(self, action):
     return tf.zeros(self.batch_size)
@@ -52,17 +53,17 @@ class MultipleRewardsEnvironment(bandit_tf_environment.BanditTFEnvironment):
 
   def __init__(self, observation_shape, batch_size=1, num_rewards=1):
     self._num_rewards = num_rewards
-    reward_spec = tensor_spec.TensorSpec(shape=[self._num_rewards],
-                                         dtype=tf.float32,
-                                         name='reward')
+    reward_spec = tensor_spec.TensorSpec(
+        shape=[self._num_rewards], dtype=tf.float32, name='reward'
+    )
 
-    observation_spec = tensor_spec.TensorSpec(shape=observation_shape,
-                                              dtype=tf.float32,
-                                              name='observation')
+    observation_spec = tensor_spec.TensorSpec(
+        shape=observation_shape, dtype=tf.float32, name='observation'
+    )
     time_step_spec = ts.time_step_spec(observation_spec, reward_spec)
     super(MultipleRewardsEnvironment, self).__init__(
-        time_step_spec=time_step_spec,
-        batch_size=batch_size)
+        time_step_spec=time_step_spec, batch_size=batch_size
+    )
 
   def _apply_action(self, action):
     return tf.zeros([self.batch_size, self._num_rewards])
@@ -75,20 +76,27 @@ class MultipleRewardsEnvironment(bandit_tf_environment.BanditTFEnvironment):
 class BanditTFEnvironmentTest(tf.test.TestCase, parameterized.TestCase):
 
   @parameterized.named_parameters(
-      dict(testcase_name='_observation_[]_batch_1',
-           observation_shape=[3],
-           batch_size=1),
-      dict(testcase_name='_observation_[7]_batch_32',
-           observation_shape=[7],
-           batch_size=32),
-      dict(testcase_name='_observation_[3, 4, 5]_batch_11',
-           observation_shape=[3, 4, 5],
-           batch_size=11)
-      )
+      dict(
+          testcase_name='_observation_[]_batch_1',
+          observation_shape=[3],
+          batch_size=1,
+      ),
+      dict(
+          testcase_name='_observation_[7]_batch_32',
+          observation_shape=[7],
+          batch_size=32,
+      ),
+      dict(
+          testcase_name='_observation_[3, 4, 5]_batch_11',
+          observation_shape=[3, 4, 5],
+          batch_size=11,
+      ),
+  )
   def testObservationAndRewardShapes(self, batch_size, observation_shape):
     """Exercise `reset` and `step`. Ensure correct shapes are returned."""
-    env = ZerosEnvironment(batch_size=batch_size,
-                           observation_shape=observation_shape)
+    env = ZerosEnvironment(
+        batch_size=batch_size, observation_shape=observation_shape
+    )
 
     @common.function
     def observation_and_reward():
@@ -102,42 +110,47 @@ class BanditTFEnvironmentTest(tf.test.TestCase, parameterized.TestCase):
     expected_reward = np.zeros(batch_size)
 
     np.testing.assert_array_almost_equal(
-        expected_observation, self.evaluate(observation))
-    np.testing.assert_array_almost_equal(
-        expected_reward, self.evaluate(reward))
+        expected_observation, self.evaluate(observation)
+    )
+    np.testing.assert_array_almost_equal(expected_reward, self.evaluate(reward))
 
   @parameterized.named_parameters(
-      dict(testcase_name='',
-           observation_shape=[32],
-           batch_size=12),
-      )
+      dict(testcase_name='', observation_shape=[32], batch_size=12),
+  )
   def testTwoConsecutiveSteps(self, batch_size, observation_shape):
     """Test two consecutive calls to `step`."""
-    env = ZerosEnvironment(batch_size=batch_size,
-                           observation_shape=observation_shape)
+    env = ZerosEnvironment(
+        batch_size=batch_size, observation_shape=observation_shape
+    )
     self.evaluate(tf.compat.v1.global_variables_initializer())
     self.evaluate(env.reset())
     self.evaluate(env.step(tf.zeros(batch_size)))
     self.evaluate(env.step(tf.zeros(batch_size)))
 
   @parameterized.named_parameters(
-      dict(testcase_name='_observation_[3]_batch5_2rewards',
-           observation_shape=[3],
-           batch_size=5,
-           num_rewards=2),
-      dict(testcase_name='_observation_[7]_batch8_4rewards',
-           observation_shape=[7],
-           batch_size=8,
-           num_rewards=4),
-      )
+      dict(
+          testcase_name='_observation_[3]_batch5_2rewards',
+          observation_shape=[3],
+          batch_size=5,
+          num_rewards=2,
+      ),
+      dict(
+          testcase_name='_observation_[7]_batch8_4rewards',
+          observation_shape=[7],
+          batch_size=8,
+          num_rewards=4,
+      ),
+  )
   def testMultipleRewardsEnvironment(
-      self, batch_size, observation_shape, num_rewards):
+      self, batch_size, observation_shape, num_rewards
+  ):
     """Test the multiple-rewards case. Ensure correct shapes are returned."""
 
     env = MultipleRewardsEnvironment(
         observation_shape=observation_shape,
         batch_size=batch_size,
-        num_rewards=num_rewards)
+        num_rewards=num_rewards,
+    )
 
     observation = env.reset().observation
     reward = env.step(tf.zeros(batch_size)).reward
@@ -146,11 +159,12 @@ class BanditTFEnvironmentTest(tf.test.TestCase, parameterized.TestCase):
     expected_reward = np.zeros([batch_size, num_rewards])
 
     np.testing.assert_array_almost_equal(
-        expected_observation, self.evaluate(observation))
-    np.testing.assert_array_almost_equal(
-        expected_reward, self.evaluate(reward))
+        expected_observation, self.evaluate(observation)
+    )
+    np.testing.assert_array_almost_equal(expected_reward, self.evaluate(reward))
 
     self.assertEqual(env.reward_spec().shape, num_rewards)
+
 
 if __name__ == '__main__':
   tf.test.main()

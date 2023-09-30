@@ -20,7 +20,6 @@ from __future__ import division
 from __future__ import print_function
 
 from absl.testing import parameterized
-
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 from tf_agents.metrics import batched_py_metric
 from tf_agents.metrics import py_metrics
@@ -36,42 +35,43 @@ class BatchedPyMetricTest(parameterized.TestCase, tf.test.TestCase):
     # Order of args for trajectory methods:
     # observation, action, policy_info, reward, discount
     ts0 = nest_utils.stack_nested_tensors([
-        trajectory.boundary((), (), (), 0., 1.),
-        trajectory.boundary((), (), (), 0., 1.)
+        trajectory.boundary((), (), (), 0.0, 1.0),
+        trajectory.boundary((), (), (), 0.0, 1.0),
     ])
     ts1 = nest_utils.stack_nested_tensors([
-        trajectory.first((), (), (), 1., 1.),
-        trajectory.first((), (), (), 2., 1.)
+        trajectory.first((), (), (), 1.0, 1.0),
+        trajectory.first((), (), (), 2.0, 1.0),
     ])
     ts2 = nest_utils.stack_nested_tensors([
-        trajectory.last((), (), (), 3., 1.),
-        trajectory.last((), (), (), 4., 1.)
+        trajectory.last((), (), (), 3.0, 1.0),
+        trajectory.last((), (), (), 4.0, 1.0),
     ])
     ts3 = nest_utils.stack_nested_tensors([
-        trajectory.boundary((), (), (), 0., 1.),
-        trajectory.boundary((), (), (), 0., 1.)
+        trajectory.boundary((), (), (), 0.0, 1.0),
+        trajectory.boundary((), (), (), 0.0, 1.0),
     ])
     ts4 = nest_utils.stack_nested_tensors([
-        trajectory.first((), (), (), 5., 1.),
-        trajectory.first((), (), (), 6., 1.)
+        trajectory.first((), (), (), 5.0, 1.0),
+        trajectory.first((), (), (), 6.0, 1.0),
     ])
     ts5 = nest_utils.stack_nested_tensors([
-        trajectory.last((), (), (), 7., 1.),
-        trajectory.last((), (), (), 8., 1.)
+        trajectory.last((), (), (), 7.0, 1.0),
+        trajectory.last((), (), (), 8.0, 1.0),
     ])
 
     self._ts = [ts0, ts1, ts2, ts3, ts4, ts5]
 
-  @parameterized.named_parameters(
-      [('testMetricIsComputedCorrectlyNoSteps', 0, 0),
-       ('testMetricIsComputedCorrectlyPartialEpisode', 2, 0),
-       ('testMetricIsComputedCorrectlyOneEpisode', 3, 5),
-       ('testMetricIsComputedCorrectlyOneAndPartialEpisode', 5, 5),
-       ('testMetricIsComputedCorrectlyTwoEpisodes', 6, 9),
-      ])
+  @parameterized.named_parameters([
+      ('testMetricIsComputedCorrectlyNoSteps', 0, 0),
+      ('testMetricIsComputedCorrectlyPartialEpisode', 2, 0),
+      ('testMetricIsComputedCorrectlyOneEpisode', 3, 5),
+      ('testMetricIsComputedCorrectlyOneAndPartialEpisode', 5, 5),
+      ('testMetricIsComputedCorrectlyTwoEpisodes', 6, 9),
+  ])
   def testMetricIsComputedCorrectly(self, num_time_steps, expected_reward):
     batched_avg_return_metric = batched_py_metric.BatchedPyMetric(
-        py_metrics.AverageReturnMetric)
+        py_metrics.AverageReturnMetric
+    )
     tf_avg_return_metric = tf_py_metric.TFPyMetric(batched_avg_return_metric)
     deps = []
     for i in range(num_time_steps):
@@ -85,7 +85,8 @@ class BatchedPyMetricTest(parameterized.TestCase, tf.test.TestCase):
 
   def testMetricPrefix(self):
     batched_avg_return_metric = batched_py_metric.BatchedPyMetric(
-        py_metrics.AverageReturnMetric, prefix='CustomPrefix')
+        py_metrics.AverageReturnMetric, prefix='CustomPrefix'
+    )
     self.assertEqual(batched_avg_return_metric.prefix, 'CustomPrefix')
 
     tf_avg_return_metric = tf_py_metric.TFPyMetric(batched_avg_return_metric)
@@ -93,7 +94,8 @@ class BatchedPyMetricTest(parameterized.TestCase, tf.test.TestCase):
 
   def testReset(self):
     batched_avg_return_metric = batched_py_metric.BatchedPyMetric(
-        py_metrics.AverageReturnMetric)
+        py_metrics.AverageReturnMetric
+    )
     tf_avg_return_metric = tf_py_metric.TFPyMetric(batched_avg_return_metric)
 
     deps = []

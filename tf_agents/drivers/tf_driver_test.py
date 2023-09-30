@@ -20,10 +20,8 @@ from __future__ import division
 from __future__ import print_function
 
 from absl.testing import parameterized
-
 import numpy as np
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
-
 from tf_agents.drivers import test_utils as driver_test_utils
 from tf_agents.drivers import tf_driver
 from tf_agents.environments import batched_py_environment
@@ -39,7 +37,6 @@ class MockReplayBufferObserver(object):
     self._trajectories = []
 
   def __call__(self, trajectory_):
-
     def _add_trajectory(*t):
       self._trajectories.append(tf.nest.pack_sequence_as(trajectory_, t))
 
@@ -53,8 +50,8 @@ class TFDriverTest(parameterized.TestCase, test_utils.TestCase):
 
   def setUp(self):
     super(TFDriverTest, self).setUp()
-    f0 = np.array(0., dtype=np.float32)
-    f1 = np.array(1., dtype=np.float32)
+    f0 = np.array(0.0, dtype=np.float32)
+    f1 = np.array(1.0, dtype=np.float32)
 
     # Order of args for trajectory methods:
     # (observation, action, policy_info, reward, discount)
@@ -79,8 +76,9 @@ class TFDriverTest(parameterized.TestCase, test_utils.TestCase):
   def testRunOnce(self, max_steps, max_episodes, expected_steps):
     env = driver_test_utils.PyEnvironmentMock()
     tf_env = tf_py_environment.TFPyEnvironment(env)
-    policy = driver_test_utils.TFPolicyMock(tf_env.time_step_spec(),
-                                            tf_env.action_spec())
+    policy = driver_test_utils.TFPolicyMock(
+        tf_env.time_step_spec(), tf_env.action_spec()
+    )
 
     replay_buffer_observer = MockReplayBufferObserver()
     transition_replay_buffer_observer = MockReplayBufferObserver()
@@ -90,7 +88,8 @@ class TFDriverTest(parameterized.TestCase, test_utils.TestCase):
         observers=[replay_buffer_observer],
         transition_observers=[transition_replay_buffer_observer],
         max_steps=max_steps,
-        max_episodes=max_episodes)
+        max_episodes=max_episodes,
+    )
 
     initial_time_step = tf_env.reset()
     initial_policy_state = policy.get_initial_state(batch_size=1)
@@ -109,8 +108,9 @@ class TFDriverTest(parameterized.TestCase, test_utils.TestCase):
 
     env = driver_test_utils.PyEnvironmentMock()
     tf_env = tf_py_environment.TFPyEnvironment(env)
-    policy = driver_test_utils.TFPolicyMock(tf_env.time_step_spec(),
-                                            tf_env.action_spec())
+    policy = driver_test_utils.TFPolicyMock(
+        tf_env.time_step_spec(), tf_env.action_spec()
+    )
 
     replay_buffer_observer = MockReplayBufferObserver()
     driver = tf_driver.TFDriver(
@@ -125,7 +125,8 @@ class TFDriverTest(parameterized.TestCase, test_utils.TestCase):
     policy_state = policy.get_initial_state(batch_size=1)
     for _ in range(num_steps):
       time_step, policy_state = self.evaluate(
-          driver.run(time_step, policy_state))
+          driver.run(time_step, policy_state)
+      )
     trajectories = replay_buffer_observer.gather_all()
     self.assertEqual(trajectories, self._trajectories[:num_expected_steps])
 
@@ -135,8 +136,9 @@ class TFDriverTest(parameterized.TestCase, test_utils.TestCase):
 
     env = driver_test_utils.PyEnvironmentMock()
     tf_env = tf_py_environment.TFPyEnvironment(env)
-    policy = driver_test_utils.TFPolicyMock(tf_env.time_step_spec(),
-                                            tf_env.action_spec())
+    policy = driver_test_utils.TFPolicyMock(
+        tf_env.time_step_spec(), tf_env.action_spec()
+    )
 
     replay_buffer_observer = MockReplayBufferObserver()
     driver = tf_driver.TFDriver(
@@ -151,7 +153,8 @@ class TFDriverTest(parameterized.TestCase, test_utils.TestCase):
     policy_state = policy.get_initial_state(batch_size=1)
     for _ in range(num_episodes):
       time_step, policy_state = self.evaluate(
-          driver.run(time_step, policy_state))
+          driver.run(time_step, policy_state)
+      )
     trajectories = replay_buffer_observer.gather_all()
     self.assertEqual(trajectories, self._trajectories[:num_expected_steps])
 
@@ -165,8 +168,9 @@ class TFDriverTest(parameterized.TestCase, test_utils.TestCase):
     env = driver_test_utils.PyEnvironmentMock()
     tf_env = tf_py_environment.TFPyEnvironment(env)
 
-    policy = driver_test_utils.TFPolicyMock(tf_env.time_step_spec(),
-                                            tf_env.action_spec())
+    policy = driver_test_utils.TFPolicyMock(
+        tf_env.time_step_spec(), tf_env.action_spec()
+    )
 
     replay_buffer_observer = MockReplayBufferObserver()
     with self.assertRaises(ValueError):
@@ -186,7 +190,6 @@ class TFDriverTest(parameterized.TestCase, test_utils.TestCase):
       ('FourStepsTwoEpisodesBoundaryNotCounted', 4, 2, 2),
   ])
   def testBatchedEnvironment(self, max_steps, max_episodes, expected_length):
-
     expected_trajectories = [
         trajectory.Trajectory(
             step_type=np.array([0, 0]),
@@ -194,32 +197,36 @@ class TFDriverTest(parameterized.TestCase, test_utils.TestCase):
             action=np.array([2, 1]),
             policy_info=np.array([4, 2]),
             next_step_type=np.array([1, 1]),
-            reward=np.array([1., 1.]),
-            discount=np.array([1., 1.])),
+            reward=np.array([1.0, 1.0]),
+            discount=np.array([1.0, 1.0]),
+        ),
         trajectory.Trajectory(
             step_type=np.array([1, 1]),
             observation=np.array([2, 1]),
             action=np.array([1, 2]),
             policy_info=np.array([2, 4]),
             next_step_type=np.array([2, 1]),
-            reward=np.array([1., 1.]),
-            discount=np.array([0., 1.])),
+            reward=np.array([1.0, 1.0]),
+            discount=np.array([0.0, 1.0]),
+        ),
         trajectory.Trajectory(
             step_type=np.array([2, 1]),
             observation=np.array([3, 3]),
             action=np.array([2, 1]),
             policy_info=np.array([4, 2]),
             next_step_type=np.array([0, 2]),
-            reward=np.array([0., 1.]),
-            discount=np.array([1., 0.])),
+            reward=np.array([0.0, 1.0]),
+            discount=np.array([1.0, 0.0]),
+        ),
         trajectory.Trajectory(
             step_type=np.array([0, 2]),
             observation=np.array([0, 4]),
             action=np.array([2, 2]),
             policy_info=np.array([4, 4]),
             next_step_type=np.array([1, 0]),
-            reward=np.array([1., 0.]),
-            discount=np.array([1., 1.]))
+            reward=np.array([1.0, 0.0]),
+            discount=np.array([1.0, 1.0]),
+        ),
     ]
 
     env1 = driver_test_utils.PyEnvironmentMock(final_state=3)
@@ -231,7 +238,8 @@ class TFDriverTest(parameterized.TestCase, test_utils.TestCase):
         tf_env.time_step_spec(),
         tf_env.action_spec(),
         batch_size=2,
-        initial_policy_state=tf.constant([1, 2], dtype=tf.int32))
+        initial_policy_state=tf.constant([1, 2], dtype=tf.int32),
+    )
 
     replay_buffer_observer = MockReplayBufferObserver()
 
@@ -248,7 +256,8 @@ class TFDriverTest(parameterized.TestCase, test_utils.TestCase):
     trajectories = replay_buffer_observer.gather_all()
 
     self.assertEqual(
-        len(trajectories), len(expected_trajectories[:expected_length]))
+        len(trajectories), len(expected_trajectories[:expected_length])
+    )
 
     for t1, t2 in zip(trajectories, expected_trajectories[:expected_length]):
       for t1_field, t2_field in zip(t1, t2):

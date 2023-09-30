@@ -20,11 +20,11 @@ from __future__ import division
 from __future__ import print_function
 
 import functools
+
 import gin
 import numpy as np
 from six.moves import range
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
-
 from tf_agents.bandits.agents import utils
 from tf_agents.bandits.environments import wheel_py_environment
 
@@ -80,12 +80,14 @@ def sliding_linear_reward_fn_generator(context_dim, num_actions, variance):
     return [float(j) for j in range(begin, end)]
 
   return linear_reward_fn_generator(
-      [_float_range(i, i + context_dim) for i in range(num_actions)], variance)
+      [_float_range(i, i + context_dim) for i in range(num_actions)], variance
+  )
 
 
 @gin.configurable
-def normalized_sliding_linear_reward_fn_generator(context_dim, num_actions,
-                                                  variance):
+def normalized_sliding_linear_reward_fn_generator(
+    context_dim, num_actions, variance
+):
   """Similar to the function above, but returns smaller-range functions.
 
   Every linear function has an underlying parameter consisting of `context_dim`
@@ -105,15 +107,19 @@ def normalized_sliding_linear_reward_fn_generator(context_dim, num_actions,
   def _float_range(begin, end, normalizer=1):
     return [float(j) / normalizer for j in range(begin, end)]
 
-  return linear_reward_fn_generator([
-      _float_range(i, i + context_dim, normalizer=context_dim + num_actions)
-      for i in range(num_actions)
-  ], variance)
+  return linear_reward_fn_generator(
+      [
+          _float_range(i, i + context_dim, normalizer=context_dim + num_actions)
+          for i in range(num_actions)
+      ],
+      variance,
+  )
 
 
 @gin.configurable
-def structured_linear_reward_fn_generator(context_dim, num_actions, variance,
-                                          drift_coefficient=0.1):
+def structured_linear_reward_fn_generator(
+    context_dim, num_actions, variance, drift_coefficient=0.1
+):
   """A function that returns `num_actions` noisy linear functions.
 
   Every linear function is related to its previous one:
@@ -144,8 +150,9 @@ def structured_linear_reward_fn_generator(context_dim, num_actions, variance,
 
 @gin.configurable
 def context_sampling_fn(batch_size, context_dim):
-  return np.random.randint(
-      -10, 10, [batch_size, context_dim]).astype(np.float32)
+  return np.random.randint(-10, 10, [batch_size, context_dim]).astype(
+      np.float32
+  )
 
 
 @gin.configurable
@@ -175,7 +182,8 @@ def linear_multiple_reward_fn_generator(per_action_theta_list):
 
 @gin.configurable
 def random_linear_multiple_reward_fn_generator(
-    context_dim, num_actions, num_rewards, squeeze_dims=True):
+    context_dim, num_actions, num_rewards, squeeze_dims=True
+):
   """A function that returns `num_actions` linear functions.
 
   For each action, the corresponding linear function has underlying parameters
@@ -199,12 +207,14 @@ def random_linear_multiple_reward_fn_generator(
       return params
 
   return linear_multiple_reward_fn_generator(
-      [_gen_multiple_rewards_for_action() for _ in range(num_actions)])
+      [_gen_multiple_rewards_for_action() for _ in range(num_actions)]
+  )
 
 
 @gin.configurable
-def compute_optimal_reward(observation, per_action_reward_fns,
-                           enable_noise=False):
+def compute_optimal_reward(
+    observation, per_action_reward_fns, enable_noise=False
+):
   """Computes the optimal reward.
 
   Args:
@@ -218,30 +228,34 @@ def compute_optimal_reward(observation, per_action_reward_fns,
   """
   num_actions = len(per_action_reward_fns)
   rewards = np.stack(
-      [per_action_reward_fns[a](observation, enable_noise)
-       for a in range(num_actions)],
-      axis=-1)
+      [
+          per_action_reward_fns[a](observation, enable_noise)
+          for a in range(num_actions)
+      ],
+      axis=-1,
+  )
   # `rewards` should be of shape [`batch_size`, `num_actions`].
   optimal_action_reward = np.max(rewards, axis=-1)
   return optimal_action_reward
 
 
 @gin.configurable
-def tf_compute_optimal_reward(observation,
-                              per_action_reward_fns,
-                              enable_noise=False):
+def tf_compute_optimal_reward(
+    observation, per_action_reward_fns, enable_noise=False
+):
   """TF wrapper around `compute_optimal_reward` to be used in `tf_metrics`."""
   compute_optimal_reward_fn = functools.partial(
       compute_optimal_reward,
       per_action_reward_fns=per_action_reward_fns,
-      enable_noise=enable_noise)
+      enable_noise=enable_noise,
+  )
   return tf.py_function(compute_optimal_reward_fn, [observation], tf.float32)
 
 
 @gin.configurable
-def compute_optimal_action(observation,
-                           per_action_reward_fns,
-                           enable_noise=False):
+def compute_optimal_action(
+    observation, per_action_reward_fns, enable_noise=False
+):
   """Computes the optimal action.
 
   Args:
@@ -254,32 +268,38 @@ def compute_optimal_action(observation,
     The optimal action, that is, the one with the highest reward.
   """
   num_actions = len(per_action_reward_fns)
-  rewards = np.stack([
-      per_action_reward_fns[a](observation, enable_noise)
-      for a in range(num_actions)
-  ],
-                     axis=-1)
+  rewards = np.stack(
+      [
+          per_action_reward_fns[a](observation, enable_noise)
+          for a in range(num_actions)
+      ],
+      axis=-1,
+  )
 
   optimal_action = np.argmax(rewards, axis=-1)
   return optimal_action
 
 
 @gin.configurable
-def tf_compute_optimal_action(observation,
-                              per_action_reward_fns,
-                              enable_noise=False,
-                              action_dtype=tf.int32):
+def tf_compute_optimal_action(
+    observation,
+    per_action_reward_fns,
+    enable_noise=False,
+    action_dtype=tf.int32,
+):
   """TF wrapper around `compute_optimal_action` to be used in `tf_metrics`."""
   compute_optimal_action_fn = functools.partial(
       compute_optimal_action,
       per_action_reward_fns=per_action_reward_fns,
-      enable_noise=enable_noise)
+      enable_noise=enable_noise,
+  )
   return tf.py_function(compute_optimal_action_fn, [observation], action_dtype)
 
 
 @gin.configurable
 def compute_optimal_reward_with_environment_dynamics(
-    observation, environment_dynamics):
+    observation, environment_dynamics
+):
   """Computes the optimal reward using the environment dynamics.
 
   Args:
@@ -295,7 +315,8 @@ def compute_optimal_reward_with_environment_dynamics(
 
 @gin.configurable
 def compute_optimal_action_with_environment_dynamics(
-    observation, environment_dynamics):
+    observation, environment_dynamics
+):
   """Computes the optimal action using the environment dynamics.
 
   Args:
@@ -311,7 +332,8 @@ def compute_optimal_action_with_environment_dynamics(
 
 @gin.configurable
 def compute_optimal_action_with_classification_environment(
-    observation, environment):
+    observation, environment
+):
   """Helper function for gin configurable SuboptimalArms metric."""
   del observation
   return environment.compute_optimal_action()
@@ -319,27 +341,35 @@ def compute_optimal_action_with_classification_environment(
 
 @gin.configurable
 def compute_optimal_reward_with_classification_environment(
-    observation, environment):
+    observation, environment
+):
   """Helper function for gin configurable Regret metric."""
   del observation
   return environment.compute_optimal_reward()
 
 
 @gin.configurable
-def tf_wheel_bandit_compute_optimal_action(observation,
-                                           delta,
-                                           action_dtype=tf.int32):
+def tf_wheel_bandit_compute_optimal_action(
+    observation, delta, action_dtype=tf.int32
+):
   """TF wrapper around `compute_optimal_action` to be used in `tf_metrics`."""
-  return tf.py_function(wheel_py_environment.compute_optimal_action,
-                        [observation, delta], action_dtype)
+  return tf.py_function(
+      wheel_py_environment.compute_optimal_action,
+      [observation, delta],
+      action_dtype,
+  )
 
 
 @gin.configurable
-def tf_wheel_bandit_compute_optimal_reward(observation, delta, mu_inside,
-                                           mu_high):
+def tf_wheel_bandit_compute_optimal_reward(
+    observation, delta, mu_inside, mu_high
+):
   """TF wrapper around `compute_optimal_reward` to be used in `tf_metrics`."""
-  return tf.py_function(wheel_py_environment.compute_optimal_reward,
-                        [observation, delta, mu_inside, mu_high], tf.float32)
+  return tf.py_function(
+      wheel_py_environment.compute_optimal_reward,
+      [observation, delta, mu_inside, mu_high],
+      tf.float32,
+  )
 
 
 @gin.configurable
@@ -350,9 +380,9 @@ def compute_optimal_reward_with_movielens_environment(observation, environment):
 
 
 @gin.configurable
-def compute_optimal_action_with_movielens_environment(observation,
-                                                      environment,
-                                                      action_dtype=tf.int32):
+def compute_optimal_action_with_movielens_environment(
+    observation, environment, action_dtype=tf.int32
+):
   """Helper function for gin configurable SuboptimalArms metric."""
   del observation
   return tf.py_function(environment.compute_optimal_action, [], action_dtype)

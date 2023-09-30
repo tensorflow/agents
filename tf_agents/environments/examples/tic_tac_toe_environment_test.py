@@ -16,7 +16,6 @@
 """Tests for tf_agents.environments.examples.tic_tac_toe_environment."""
 
 import numpy as np
-
 from tf_agents.environments import utils as env_utils
 from tf_agents.environments.examples.tic_tac_toe_environment import TicTacToeEnvironment
 from tf_agents.trajectories.time_step import StepType
@@ -29,7 +28,7 @@ class TicTacToeEnvironmentTest(test_utils.TestCase):
   def setUp(self):
     super(TicTacToeEnvironmentTest, self).setUp()
     np.random.seed(0)
-    self.discount = np.asarray(1., dtype=np.float32)
+    self.discount = np.asarray(1.0, dtype=np.float32)
     self.env = TicTacToeEnvironment()
     ts = self.env.reset()
     np.testing.assert_array_equal(np.zeros((3, 3), np.int32), ts.observation)
@@ -39,32 +38,41 @@ class TicTacToeEnvironmentTest(test_utils.TestCase):
 
   def test_check_states(self):
     self.assertEqual(
-        (False, 0.),
-        self.env._check_states(np.array([[0, 0, 0], [0, 0, 0], [0, 0, 1]])))
+        (False, 0.0),
+        self.env._check_states(np.array([[0, 0, 0], [0, 0, 0], [0, 0, 1]])),
+    )
     self.assertEqual(
-        (True, -1.),
-        self.env._check_states(np.array([[2, 2, 2], [0, 1, 1], [0, 0, 0]])))
+        (True, -1.0),
+        self.env._check_states(np.array([[2, 2, 2], [0, 1, 1], [0, 0, 0]])),
+    )
     self.assertEqual(
-        (True, 1.),
-        self.env._check_states(np.array([[2, 2, 0], [1, 1, 1], [0, 0, 0]])))
+        (True, 1.0),
+        self.env._check_states(np.array([[2, 2, 0], [1, 1, 1], [0, 0, 0]])),
+    )
     self.assertEqual(
-        (False, 0.),
-        self.env._check_states(np.array([[2, 2, 1], [1, 2, 1], [1, 0, 0]])))
+        (False, 0.0),
+        self.env._check_states(np.array([[2, 2, 1], [1, 2, 1], [1, 0, 0]])),
+    )
     self.assertEqual(
-        (True, 0.),
-        self.env._check_states(np.array([[2, 1, 2], [1, 2, 1], [1, 2, 1]])))
+        (True, 0.0),
+        self.env._check_states(np.array([[2, 1, 2], [1, 2, 1], [1, 2, 1]])),
+    )
 
   def test_legal_actions(self):
     states = np.array([[0, 0, 0], [1, 0, 0], [2, 1, 0]])
-    self.assertEqual([(0, 0), (0, 1), (0, 2), (1, 1), (1, 2), (2, 2)],
-                     self.env._legal_actions(states))
+    self.assertEqual(
+        [(0, 0), (0, 1), (0, 2), (1, 1), (1, 2), (2, 2)],
+        self.env._legal_actions(states),
+    )
 
   def test_opponent_play_deterministic(self):
     # Chooses the first available space.
-    self.assertEqual((0, 0),
-                     self.env._opponent_play([[0, 0, 0], [0, 0, 0], [0, 0, 1]]))
-    self.assertEqual((2, 2),
-                     self.env._opponent_play([[1, 1, 1], [1, 1, 1], [1, 1, 0]]))
+    self.assertEqual(
+        (0, 0), self.env._opponent_play([[0, 0, 0], [0, 0, 0], [0, 0, 1]])
+    )
+    self.assertEqual(
+        (2, 2), self.env._opponent_play([[1, 1, 1], [1, 1, 1], [1, 1, 0]])
+    )
 
   def test_opponent_play_random(self):
     self.env = TicTacToeEnvironment(rng=np.random.RandomState(0))
@@ -79,48 +87,65 @@ class TicTacToeEnvironmentTest(test_utils.TestCase):
 
   def test_step_win(self):
     self.env.set_state(
-        TimeStep(StepType.MID, TicTacToeEnvironment.REWARD_DRAW_OR_NOT_FINAL,
-                 self.discount, np.array([[2, 2, 0], [0, 1, 1], [0, 0, 0]])))
+        TimeStep(
+            StepType.MID,
+            TicTacToeEnvironment.REWARD_DRAW_OR_NOT_FINAL,
+            self.discount,
+            np.array([[2, 2, 0], [0, 1, 1], [0, 0, 0]]),
+        )
+    )
 
     current_time_step = self.env.current_time_step()
     self.assertEqual(StepType.MID, current_time_step.step_type)
 
     ts = self.env.step(np.array([1, 0]))
 
-    np.testing.assert_array_equal([[2, 2, 0], [1, 1, 1], [0, 0, 0]],
-                                  ts.observation)
+    np.testing.assert_array_equal(
+        [[2, 2, 0], [1, 1, 1], [0, 0, 0]], ts.observation
+    )
     self.assertEqual(StepType.LAST, ts.step_type)
-    self.assertEqual(1., ts.reward)
+    self.assertEqual(1.0, ts.reward)
 
     # Reset if an action is taken after final state is reached.
     ts = self.env.step(np.array([2, 0]))
     self.assertEqual(StepType.FIRST, ts.step_type)
-    self.assertEqual(0., ts.reward)
+    self.assertEqual(0.0, ts.reward)
 
   def test_step_loss(self):
     self.env.set_state(
-        TimeStep(StepType.MID, TicTacToeEnvironment.REWARD_DRAW_OR_NOT_FINAL,
-                 self.discount, np.array([[2, 2, 0], [0, 1, 1], [0, 0, 0]])))
+        TimeStep(
+            StepType.MID,
+            TicTacToeEnvironment.REWARD_DRAW_OR_NOT_FINAL,
+            self.discount,
+            np.array([[2, 2, 0], [0, 1, 1], [0, 0, 0]]),
+        )
+    )
 
     current_time_step = self.env.current_time_step()
     self.assertEqual(StepType.MID, current_time_step.step_type)
 
     ts = self.env.step(np.array([2, 0]))
 
-    np.testing.assert_array_equal([[2, 2, 2], [0, 1, 1], [1, 0, 0]],
-                                  ts.observation)
+    np.testing.assert_array_equal(
+        [[2, 2, 2], [0, 1, 1], [1, 0, 0]], ts.observation
+    )
     self.assertEqual(StepType.LAST, ts.step_type)
-    self.assertEqual(-1., ts.reward)
+    self.assertEqual(-1.0, ts.reward)
 
     # Reset if an action is taken after final state is reached.
     ts = self.env.step(np.array([2, 0]))
     self.assertEqual(StepType.FIRST, ts.step_type)
-    self.assertEqual(0., ts.reward)
+    self.assertEqual(0.0, ts.reward)
 
   def test_step_illegal_move(self):
     self.env.set_state(
-        TimeStep(StepType.MID, TicTacToeEnvironment.REWARD_DRAW_OR_NOT_FINAL,
-                 self.discount, np.array([[2, 2, 0], [0, 1, 1], [0, 0, 0]])))
+        TimeStep(
+            StepType.MID,
+            TicTacToeEnvironment.REWARD_DRAW_OR_NOT_FINAL,
+            self.discount,
+            np.array([[2, 2, 0], [0, 1, 1], [0, 0, 0]]),
+        )
+    )
 
     current_time_step = self.env.current_time_step()
     self.assertEqual(StepType.MID, current_time_step.step_type)
@@ -128,15 +153,16 @@ class TicTacToeEnvironmentTest(test_utils.TestCase):
     # Taking an illegal move.
     ts = self.env.step(np.array([0, 0]))
 
-    np.testing.assert_array_equal([[2, 2, 0], [0, 1, 1], [0, 0, 0]],
-                                  ts.observation)
+    np.testing.assert_array_equal(
+        [[2, 2, 0], [0, 1, 1], [0, 0, 0]], ts.observation
+    )
     self.assertEqual(StepType.LAST, ts.step_type)
     self.assertEqual(TicTacToeEnvironment.REWARD_ILLEGAL_MOVE, ts.reward)
 
     # Reset if an action is taken after final state is reached.
     ts = self.env.step(np.array([2, 0]))
     self.assertEqual(StepType.FIRST, ts.step_type)
-    self.assertEqual(0., ts.reward)
+    self.assertEqual(0.0, ts.reward)
 
 
 if __name__ == '__main__':

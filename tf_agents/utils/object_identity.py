@@ -223,11 +223,13 @@ class ObjectIdentitySet(collections_abc.MutableSet):
 
   def intersection(self, items):
     return ObjectIdentitySet._from_storage(
-        self._storage.intersection([self._wrap_key(item) for item in items]))
+        self._storage.intersection([self._wrap_key(item) for item in items])
+    )
 
   def difference(self, items):
     return ObjectIdentitySet._from_storage(
-        self._storage.difference([self._wrap_key(item) for item in items]))
+        self._storage.difference([self._wrap_key(item) for item in items])
+    )
 
   def __len__(self):
     return len(self._storage)

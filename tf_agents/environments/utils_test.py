@@ -20,7 +20,6 @@ from __future__ import division
 from __future__ import print_function
 
 from absl.testing.absltest import mock
-
 import numpy as np
 from tf_agents.environments import random_py_environment
 from tf_agents.environments import utils
@@ -50,8 +49,9 @@ class UtilsTest(test_utils.TestCase):
         array_spec.BoundedArraySpec((1,), np.int32, -10, 10),
     ]
 
-    self._observation_spec = array_spec.BoundedArraySpec((1,), np.int32, -10,
-                                                         10)
+    self._observation_spec = array_spec.BoundedArraySpec(
+        (1,), np.int32, -10, 10
+    )
 
   def testValidateOk(self):
     env = get_mock_env(self._action_spec, self._observation_spec, None)
@@ -77,36 +77,49 @@ class UtilsTest(test_utils.TestCase):
       utils.validate_py_environment(env, episodes=1)
 
   def testValidateWrongDType(self):
-    env = get_mock_env(self._action_spec, self._observation_spec,
-                       ts.restart(np.array([0], dtype=np.int64)))
+    env = get_mock_env(
+        self._action_spec,
+        self._observation_spec,
+        ts.restart(np.array([0], dtype=np.int64)),
+    )
 
     with self.assertRaisesRegexp(ValueError, "does not match expected"):
       utils.validate_py_environment(env, episodes=1)
 
   def testValidateWrongShape(self):
-    env = get_mock_env(self._action_spec, self._observation_spec,
-                       ts.restart(np.array([0, 1], dtype=np.int32)))
+    env = get_mock_env(
+        self._action_spec,
+        self._observation_spec,
+        ts.restart(np.array([0, 1], dtype=np.int32)),
+    )
 
     with self.assertRaisesRegexp(ValueError, "does not match expected"):
       utils.validate_py_environment(env, episodes=1)
 
   def testValidateWrongDTypeAndShape(self):
-    env = get_mock_env(self._action_spec, self._observation_spec,
-                       ts.restart(np.array([0, 1], dtype=np.int64)))
+    env = get_mock_env(
+        self._action_spec,
+        self._observation_spec,
+        ts.restart(np.array([0, 1], dtype=np.int64)),
+    )
 
     with self.assertRaisesRegexp(ValueError, "does not match expected"):
       utils.validate_py_environment(env, episodes=1)
 
   def testValidateOutOfBounds(self):
-    env = get_mock_env(self._action_spec, self._observation_spec,
-                       ts.restart(np.array([-11], dtype=np.int32)))
+    env = get_mock_env(
+        self._action_spec,
+        self._observation_spec,
+        ts.restart(np.array([-11], dtype=np.int32)),
+    )
 
     with self.assertRaisesRegexp(ValueError, "does not match expected"):
       utils.validate_py_environment(env, episodes=1)
 
   def testValidateBoundedSpecDistinctBounds(self):
-    observation_spec = array_spec.BoundedArraySpec((3,), np.int32,
-                                                   [-10, -5, -2], [10, 5, 2])
+    observation_spec = array_spec.BoundedArraySpec(
+        (3,), np.int32, [-10, -5, -2], [10, 5, 2]
+    )
     env = get_mock_env(self._action_spec, observation_spec, None)
     rng = np.random.RandomState()
     sample_fn = lambda: array_spec.sample_spec_nest(env.observation_spec(), rng)
@@ -125,7 +138,8 @@ class UtilsTest(test_utils.TestCase):
     batch_size = 2
     obs_spec = array_spec.BoundedArraySpec((2, 3), np.int32, -10, 10)
     env = random_py_environment.RandomPyEnvironment(
-        obs_spec, batch_size=batch_size)
+        obs_spec, batch_size=batch_size
+    )
     utils.validate_py_environment(env)
 
 

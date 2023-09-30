@@ -22,7 +22,6 @@ import gin
 import numpy as np
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 import tensorflow_probability as tfp
-
 from tf_agents.networks import network
 from tf_agents.networks import utils
 from tf_agents.specs import distribution_spec
@@ -33,10 +32,12 @@ from tf_agents.specs import tensor_spec
 class CategoricalProjectionNetwork(network.DistributionNetwork):
   """Generates a tfp.distribution.Categorical by predicting logits."""
 
-  def __init__(self,
-               sample_spec,
-               logits_init_output_factor=0.1,
-               name='CategoricalProjectionNetwork'):
+  def __init__(
+      self,
+      sample_spec,
+      logits_init_output_factor=0.1,
+      name='CategoricalProjectionNetwork',
+  ):
     """Creates an instance of CategoricalProjectionNetwork.
 
     Args:
@@ -46,29 +47,35 @@ class CategoricalProjectionNetwork(network.DistributionNetwork):
         weights.
       name: A string representing name of the network.
     """
-    unique_num_actions = np.unique(sample_spec.maximum - sample_spec.minimum +
-                                   1)
+    unique_num_actions = np.unique(
+        sample_spec.maximum - sample_spec.minimum + 1
+    )
     if len(unique_num_actions) > 1 or np.any(unique_num_actions <= 0):
-      raise ValueError('Bounds on discrete actions must be the same for all '
-                       'dimensions and have at least 1 action. Projection '
-                       'Network requires num_actions to be equal across '
-                       'action dimensions. Implement a more general '
-                       'categorical projection if you need more flexibility.')
+      raise ValueError(
+          'Bounds on discrete actions must be the same for all '
+          'dimensions and have at least 1 action. Projection '
+          'Network requires num_actions to be equal across '
+          'action dimensions. Implement a more general '
+          'categorical projection if you need more flexibility.'
+      )
 
     output_shape = sample_spec.shape.concatenate([int(unique_num_actions)])
-    output_spec = self._output_distribution_spec(output_shape, sample_spec,
-                                                 name)
+    output_spec = self._output_distribution_spec(
+        output_shape, sample_spec, name
+    )
 
     super(CategoricalProjectionNetwork, self).__init__(
         # We don't need these, but base class requires them.
         input_tensor_spec=None,
         state_spec=(),
         output_spec=output_spec,
-        name=name)
+        name=name,
+    )
 
     if not tensor_spec.is_bounded(sample_spec):
       raise ValueError(
-          'sample_spec must be bounded. Got: %s.' % type(sample_spec))
+          'sample_spec must be bounded. Got: %s.' % type(sample_spec)
+      )
 
     if not tensor_spec.is_discrete(sample_spec):
       raise ValueError('sample_spec must be discrete. Got: %s.' % sample_spec)
@@ -79,24 +86,25 @@ class CategoricalProjectionNetwork(network.DistributionNetwork):
     self._projection_layer = tf.keras.layers.Dense(
         self._output_shape.num_elements(),
         kernel_initializer=tf.compat.v1.keras.initializers.VarianceScaling(
-            scale=logits_init_output_factor),
+            scale=logits_init_output_factor
+        ),
         bias_initializer=tf.keras.initializers.Zeros(),
-        name='logits')
+        name='logits',
+    )
 
   def _output_distribution_spec(self, output_shape, sample_spec, network_name):
     input_param_spec = {
-        'logits':
-            tensor_spec.TensorSpec(
-                shape=output_shape,
-                dtype=tf.float32,
-                name=network_name + '_logits')
+        'logits': tensor_spec.TensorSpec(
+            shape=output_shape, dtype=tf.float32, name=network_name + '_logits'
+        )
     }
 
     return distribution_spec.DistributionSpec(
         tfp.distributions.Categorical,
         input_param_spec,
         sample_spec=sample_spec,
-        dtype=sample_spec.dtype)
+        dtype=sample_spec.dtype,
+    )
 
   def call(self, inputs, outer_rank, training=False, mask=None):
     # outer_rank is needed because the projection is not done on the raw
@@ -123,6 +131,7 @@ class CategoricalProjectionNetwork(network.DistributionNetwork):
       # functions.
       almost_neg_inf = tf.constant(logits.dtype.min, dtype=logits.dtype)
       logits = tf.compat.v2.where(
-          tf.cast(mask, tf.bool), logits, almost_neg_inf)
+          tf.cast(mask, tf.bool), logits, almost_neg_inf
+      )
 
     return self.output_spec.build_distribution(logits=logits), ()

@@ -15,7 +15,6 @@
 
 """Tests masked distributions."""
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
-
 from tf_agents.distributions import masked
 
 
@@ -23,8 +22,9 @@ class MaskedCategoricalTest(tf.test.TestCase):
 
   def testCopy(self):
     """Confirm we can copy the distribution."""
-    distribution = masked.MaskedCategorical([100.0, 100.0, 100.0],
-                                            mask=[True, False, True])
+    distribution = masked.MaskedCategorical(
+        [100.0, 100.0, 100.0], mask=[True, False, True]
+    )
     copy = distribution.copy()
     with self.cached_session() as s:
       probs_np = s.run(copy.probs_parameter())
@@ -35,9 +35,9 @@ class MaskedCategoricalTest(tf.test.TestCase):
     self.assertAllEqual(ref_probs_np, probs_np)
 
   def testMasking(self):
-    distribution = masked.MaskedCategorical([100.0, 100.0, 100.0],
-                                            mask=[True, False, True],
-                                            neg_inf=None)
+    distribution = masked.MaskedCategorical(
+        [100.0, 100.0, 100.0], mask=[True, False, True], neg_inf=None
+    )
     sample = distribution.sample()
     results = []
 

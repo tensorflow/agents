@@ -20,7 +20,6 @@ from __future__ import division
 from __future__ import print_function
 from absl.testing import parameterized
 import numpy as np
-
 from tf_agents.environments import random_py_environment
 from tf_agents.specs import array_spec
 from tf_agents.utils import test_utils
@@ -54,7 +53,8 @@ class RandomPyEnvironmentTest(parameterized.TestCase, test_utils.TestCase):
   def testEnvMinDuration(self, min_duration):
     obs_spec = array_spec.BoundedArraySpec((2, 3), np.int32, -10, 10)
     env = random_py_environment.RandomPyEnvironment(
-        obs_spec, episode_end_probability=0.9, min_duration=min_duration)
+        obs_spec, episode_end_probability=0.9, min_duration=min_duration
+    )
     num_episodes = 100
 
     for _ in range(num_episodes):
@@ -73,7 +73,8 @@ class RandomPyEnvironmentTest(parameterized.TestCase, test_utils.TestCase):
   def testEnvMaxDuration(self, max_duration):
     obs_spec = array_spec.BoundedArraySpec((2, 3), np.int32, -10, 10)
     env = random_py_environment.RandomPyEnvironment(
-        obs_spec, episode_end_probability=0.1, max_duration=max_duration)
+        obs_spec, episode_end_probability=0.1, max_duration=max_duration
+    )
     num_episodes = 100
 
     for _ in range(num_episodes):
@@ -89,7 +90,8 @@ class RandomPyEnvironmentTest(parameterized.TestCase, test_utils.TestCase):
     obs_spec = array_spec.BoundedArraySpec((2, 3), np.int32, -10, 10)
     action_spec = array_spec.BoundedArraySpec((2, 2), np.int32, -10, 10)
     env = random_py_environment.RandomPyEnvironment(
-        obs_spec, action_spec=action_spec)
+        obs_spec, action_spec=action_spec
+    )
 
     env.step(np.array([[0, 0], [0, 0]]))
 
@@ -97,14 +99,14 @@ class RandomPyEnvironmentTest(parameterized.TestCase, test_utils.TestCase):
       env.step([0])  # pytype: disable=wrong-arg-types
 
   def testRewardFnCalled(self):
-
     def reward_fn(unused_step_type, action, unused_observation):
       return action
 
     action_spec = array_spec.BoundedArraySpec((1,), np.int32, -10, 10)
     observation_spec = array_spec.BoundedArraySpec((1,), np.int32, -10, 10)
     env = random_py_environment.RandomPyEnvironment(
-        observation_spec, action_spec, reward_fn=reward_fn)
+        observation_spec, action_spec, reward_fn=reward_fn
+    )
 
     time_step = env.step(1)  # No reward in first time_step  # pytype: disable=wrong-arg-types
     self.assertEqual(0.0, time_step.reward)
@@ -115,7 +117,8 @@ class RandomPyEnvironmentTest(parameterized.TestCase, test_utils.TestCase):
     action_spec = array_spec.BoundedArraySpec((1,), np.int32, -10, 10)
     observation_spec = array_spec.BoundedArraySpec((1,), np.int32, -10, 10)
     env = random_py_environment.RandomPyEnvironment(
-        observation_spec, action_spec, render_size=(4, 4, 3))
+        observation_spec, action_spec, render_size=(4, 4, 3)
+    )
 
     env.reset()
     img = env.render()
@@ -128,8 +131,9 @@ class RandomPyEnvironmentTest(parameterized.TestCase, test_utils.TestCase):
   def testBatchSize(self):
     batch_size = 3
     obs_spec = array_spec.BoundedArraySpec((2, 3), np.int32, -10, 10)
-    env = random_py_environment.RandomPyEnvironment(obs_spec,
-                                                    batch_size=batch_size)
+    env = random_py_environment.RandomPyEnvironment(
+        obs_spec, batch_size=batch_size
+    )
 
     time_step = env.step([0])  # pytype: disable=wrong-arg-types
     self.assertEqual(time_step.observation.shape, (3, 2, 3))
@@ -142,7 +146,8 @@ class RandomPyEnvironmentTest(parameterized.TestCase, test_utils.TestCase):
     env = random_py_environment.RandomPyEnvironment(
         obs_spec,
         reward_fn=lambda *_: np.ones(batch_size),
-        batch_size=batch_size)
+        batch_size=batch_size,
+    )
     env._done = False
     env.reset()
     time_step = env.step([0])  # pytype: disable=wrong-arg-types
@@ -152,9 +157,8 @@ class RandomPyEnvironmentTest(parameterized.TestCase, test_utils.TestCase):
     # Ensure batch size 1 with scalar reward works
     obs_spec = array_spec.BoundedArraySpec((2, 3), np.int32, -10, 10)
     env = random_py_environment.RandomPyEnvironment(
-        obs_spec,
-        reward_fn=lambda *_: np.array([1.0]),
-        batch_size=1)
+        obs_spec, reward_fn=lambda *_: np.array([1.0]), batch_size=1
+    )
     env._done = False
     env.reset()
     time_step = env.step([0])  # pytype: disable=wrong-arg-types
@@ -165,9 +169,8 @@ class RandomPyEnvironmentTest(parameterized.TestCase, test_utils.TestCase):
     # ValueError
     obs_spec = array_spec.BoundedArraySpec((2, 3), np.int32, -10, 10)
     env = random_py_environment.RandomPyEnvironment(
-        obs_spec,
-        reward_fn=lambda *_: 1.0,
-        batch_size=5)
+        obs_spec, reward_fn=lambda *_: 1.0, batch_size=5
+    )
     env.reset()
     env._done = False
     with self.assertRaises(ValueError):

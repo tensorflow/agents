@@ -21,10 +21,9 @@ from __future__ import print_function
 
 import abc
 from typing import Optional, Text
+
 import six
-
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
-
 from tf_agents.environments import tf_environment
 from tf_agents.trajectories import time_step as ts
 from tf_agents.typing import types
@@ -59,24 +58,27 @@ class BanditTFEnvironment(tf_environment.TFEnvironment):
   ```
   """
 
-  def __init__(self,
-               time_step_spec: Optional[types.NestedArray] = None,
-               action_spec: Optional[types.NestedArray] = None,
-               batch_size: Optional[types.Int] = 1,
-               name: Optional[Text] = None):
+  def __init__(
+      self,
+      time_step_spec: Optional[types.NestedArray] = None,
+      action_spec: Optional[types.NestedArray] = None,
+      batch_size: Optional[types.Int] = 1,
+      name: Optional[Text] = None,
+  ):
     """Initialize instances of `BanditTFEnvironment`.
 
     Args:
-      time_step_spec: A `TimeStep` namedtuple containing `TensorSpec`s
-        defining the tensors returned by
-        `step()` (step_type, reward, discount, and observation).
+      time_step_spec: A `TimeStep` namedtuple containing `TensorSpec`s defining
+        the tensors returned by `step()` (step_type, reward, discount, and
+        observation).
       action_spec: A nest of BoundedTensorSpec representing the actions of the
         environment.
       batch_size: The batch size expected for the actions and observations.
       name: The name of this environment instance.
     """
     self._reset_called = tf.compat.v2.Variable(
-        False, trainable=False, name='reset_called')
+        False, trainable=False, name='reset_called'
+    )
 
     def _variable_from_spec(name, spec):
       full_shape = [batch_size] + spec.shape.as_list()
@@ -89,22 +91,28 @@ class BanditTFEnvironment(tf_environment.TFEnvironment):
         _variable_from_spec(path, spec) for path, spec in paths_and_specs
     ]
     self._time_step_variables = tf.nest.pack_sequence_as(
-        time_step_spec, variables)
+        time_step_spec, variables
+    )
     self._name = name
 
     super(BanditTFEnvironment, self).__init__(
         time_step_spec=time_step_spec,
         action_spec=action_spec,
-        batch_size=batch_size)
+        batch_size=batch_size,
+    )
 
   def _update_time_step(self, time_step):
-    tf.nest.map_structure(lambda var, value: var.assign(value),
-                          self._time_step_variables, time_step)
+    tf.nest.map_structure(
+        lambda var, value: var.assign(value),
+        self._time_step_variables,
+        time_step,
+    )
 
   @common.function()
   def _current_time_step(self) -> ts.TimeStep:
     def true_fn():
       return tf.nest.map_structure(tf.identity, self._time_step_variables)
+
     def false_fn():
       current_time_step = self.reset()
       return current_time_step
@@ -114,8 +122,10 @@ class BanditTFEnvironment(tf_environment.TFEnvironment):
   @common.function
   def _reset(self) -> ts.TimeStep:
     current_time_step = ts.restart(
-        self._observe(), batch_size=self.batch_size,
-        reward_spec=self.time_step_spec().reward)
+        self._observe(),
+        batch_size=self.batch_size,
+        reward_spec=self.time_step_spec().reward,
+    )
     tf.compat.v1.assign(self._reset_called, True)
     self._update_time_step(current_time_step)
     return current_time_step
@@ -136,5 +146,5 @@ class BanditTFEnvironment(tf_environment.TFEnvironment):
     """Returns an observation."""
 
   @property
-  def name(self) -> Text:
+  def name(self) -> Optional[Text]:
     return self._name

@@ -29,9 +29,10 @@ Number = Union[int, float]
 class PerfZeroBenchmark(tf.test.Benchmark):
   """Common methods used in PerfZero Benchmarks.
 
-     Handles the resetting of flags between tests. PerfZero (OSS) runs each test
-     in a separate process reducing some need to reset the flags.
+  Handles the resetting of flags between tests. PerfZero (OSS) runs each test
+  in a separate process reducing some need to reset the flags.
   """
+
   local_flags = None
 
   def __init__(self, output_dir=None):
@@ -63,11 +64,13 @@ class PerfZeroBenchmark(tf.test.Benchmark):
     else:
       flagsaver.restore_flag_values(PerfZeroBenchmark.local_flags)
 
-  def build_metric(self,
-                   name: str,
-                   value: Number,
-                   min_value: Optional[Number] = None,
-                   max_value: Optional[Number] = None):
+  def build_metric(
+      self,
+      name: str,
+      value: Number,
+      min_value: Optional[Number] = None,
+      max_value: Optional[Number] = None,
+  ):
     """Builds a dictionary representing the metric to record.
 
     Args:

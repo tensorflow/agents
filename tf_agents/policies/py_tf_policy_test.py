@@ -37,11 +37,13 @@ from tf_agents.utils import test_utils
 
 class DummyNet(network.Network):
 
-  def __init__(self,
-               name=None,
-               num_actions=2,
-               stateful=True,
-               use_constant_initializer=True):
+  def __init__(
+      self,
+      name=None,
+      num_actions=2,
+      stateful=True,
+      use_constant_initializer=True,
+  ):
     if stateful:
       state_spec = tensor_spec.TensorSpec(shape=(1,), dtype=tf.float32)
     else:
@@ -49,7 +51,8 @@ class DummyNet(network.Network):
     super(DummyNet, self).__init__(
         input_tensor_spec=tensor_spec.TensorSpec([2], tf.float32, 'obs'),
         state_spec=state_spec,
-        name=name)
+        name=name,
+    )
 
     kernel_initializer = None
     bias_initializer = None
@@ -62,7 +65,8 @@ class DummyNet(network.Network):
         tf.keras.layers.Dense(
             num_actions,
             kernel_initializer=kernel_initializer,
-            bias_initializer=bias_initializer)
+            bias_initializer=bias_initializer,
+        )
     ]
 
   def call(self, inputs, step_type=None, network_state=()):
@@ -79,12 +83,14 @@ class DummyActionNet(network.Network):
     super(DummyActionNet, self).__init__(
         input_tensor_spec=input_tensor_spec,
         state_spec=(),
-        name='DummyActionNet')
+        name='DummyActionNet',
+    )
     self._forward = tf.keras.layers.Dense(
         output_tensor_spec.shape.num_elements(),
         activation=tf.nn.tanh,
         kernel_initializer=None,
-        bias_initializer=None)
+        bias_initializer=None,
+    )
 
   def call(self, observations, step_type, network_state):
     del step_type
@@ -105,19 +111,21 @@ class PyTFPolicyTest(test_utils.TestCase, parameterized.TestCase):
     super(PyTFPolicyTest, self).setUp()
     self._obs_spec = tensor_spec.TensorSpec([2], tf.float32, 'obs')
     self._time_step_spec = ts.time_step_spec(self._obs_spec)
-    self._action_spec = tensor_spec.BoundedTensorSpec([], tf.int32, 0, 1,
-                                                      'action')
-    self._float_action_spec = tensor_spec.BoundedTensorSpec([1], tf.float32,
-                                                            0, 1, 'action')
+    self._action_spec = tensor_spec.BoundedTensorSpec(
+        [], tf.int32, 0, 1, 'action'
+    )
+    self._float_action_spec = tensor_spec.BoundedTensorSpec(
+        [1], tf.float32, 0, 1, 'action'
+    )
     self._tf_policy = q_policy.QPolicy(
-        self._time_step_spec,
-        self._action_spec,
-        q_network=DummyNet())
+        self._time_step_spec, self._action_spec, q_network=DummyNet()
+    )
 
   def testBuild(self):
     policy = py_tf_policy.PyTFPolicy(self._tf_policy)
     expected_time_step_spec = ts.time_step_spec(
-        tensor_spec.to_nest_array_spec(self._obs_spec))
+        tensor_spec.to_nest_array_spec(self._obs_spec)
+    )
     expected_action_spec = tensor_spec.to_nest_array_spec(self._action_spec)
     self.assertEqual(expected_time_step_spec, policy.time_step_spec)
     self.assertEqual(expected_action_spec, policy.action_spec)
@@ -128,7 +136,8 @@ class PyTFPolicyTest(test_utils.TestCase, parameterized.TestCase):
     policy = py_tf_policy.PyTFPolicy(self._tf_policy)
     with self.assertRaisesRegexp(
         AttributeError,
-        "No TensorFlow session-like object was set on this 'PyTFPolicy'.*"):
+        "No TensorFlow session-like object was set on this 'PyTFPolicy'.*",
+    ):
       policy.get_initial_state()
 
   @parameterized.parameters([{'batch_size': None}, {'batch_size': 5}])
@@ -141,7 +150,9 @@ class PyTFPolicyTest(test_utils.TestCase, parameterized.TestCase):
     expected_initial_state = np.zeros([batch_size or 1, 1], dtype=np.float32)
     self.assertTrue(
         np.array_equal(
-            policy.get_initial_state(batch_size), expected_initial_state))
+            policy.get_initial_state(batch_size), expected_initial_state
+        )
+    )
 
   @parameterized.parameters([{'batch_size': None}, {'batch_size': 5}])
   def testZeroState(self, batch_size):
@@ -153,7 +164,9 @@ class PyTFPolicyTest(test_utils.TestCase, parameterized.TestCase):
     with self.cached_session():
       self.assertTrue(
           np.array_equal(
-              policy.get_initial_state(batch_size), expected_initial_state))
+              policy.get_initial_state(batch_size), expected_initial_state
+          )
+      )
 
   @parameterized.parameters([{'batch_size': None}, {'batch_size': 5}])
   def testAction(self, batch_size):
@@ -164,8 +177,9 @@ class PyTFPolicyTest(test_utils.TestCase, parameterized.TestCase):
     time_steps = ts.restart(single_observation)
     if batch_size is not None:
       time_steps = [time_steps] * batch_size
-      time_steps = fast_map_structure(lambda *arrays: np.stack(arrays),
-                                      *time_steps)
+      time_steps = fast_map_structure(
+          lambda *arrays: np.stack(arrays), *time_steps
+      )
     policy = py_tf_policy.PyTFPolicy(self._tf_policy)
 
     with self.cached_session():
@@ -185,14 +199,18 @@ class PyTFPolicyTest(test_utils.TestCase, parameterized.TestCase):
 
   @parameterized.parameters([{'batch_size': None}, {'batch_size': 5}])
   def testSaveRestore(self, batch_size):
-    policy_save_path = os.path.join(flags.FLAGS.test_tmpdir, 'policy',
-                                    str(batch_size))
+    policy_save_path = os.path.join(
+        flags.FLAGS.test_tmpdir, 'policy', str(batch_size)
+    )
 
     # Construct a policy to be saved under a tf.Graph instance.
     policy_saved_graph = tf.Graph()
     with policy_saved_graph.as_default():
-      tf_policy = q_policy.QPolicy(self._time_step_spec, self._action_spec,
-                                   DummyNet(use_constant_initializer=False))
+      tf_policy = q_policy.QPolicy(
+          self._time_step_spec,
+          self._action_spec,
+          DummyNet(use_constant_initializer=False),
+      )
 
       # Parameterized tests reuse temp directories, make no save exists.
       try:
@@ -208,19 +226,24 @@ class PyTFPolicyTest(test_utils.TestCase, parameterized.TestCase):
       # data files, but this depends on the number of devices.
       self.assertContainsSubset(
           set(['checkpoint', 'ckpt-0.index']),
-          set(tf.io.gfile.listdir(policy_save_path)))
+          set(tf.io.gfile.listdir(policy_save_path)),
+      )
 
     # Construct a policy to be restored under another tf.Graph instance.
     policy_restore_graph = tf.Graph()
     with policy_restore_graph.as_default():
-      tf_policy = q_policy.QPolicy(self._time_step_spec, self._action_spec,
-                                   DummyNet(use_constant_initializer=False))
+      tf_policy = q_policy.QPolicy(
+          self._time_step_spec,
+          self._action_spec,
+          DummyNet(use_constant_initializer=False),
+      )
       policy_restored = py_tf_policy.PyTFPolicy(tf_policy)
       policy_restored.session = tf.compat.v1.Session(graph=policy_restore_graph)
       policy_restored.initialize(batch_size)
       random_init_vals = policy_restored.session.run(tf_policy.variables())
       policy_restored.restore(
-          policy_dir=policy_save_path, graph=policy_restore_graph)
+          policy_dir=policy_save_path, graph=policy_restore_graph
+      )
       restored_vals = policy_restored.session.run(tf_policy.variables())
       for random_init_var, restored_var in zip(random_init_vals, restored_vals):
         self.assertFalse(np.array_equal(random_init_var, restored_var))
@@ -228,7 +251,8 @@ class PyTFPolicyTest(test_utils.TestCase, parameterized.TestCase):
     # Check that variables in the two policies have identical values.
     with policy_restore_graph.as_default():
       restored_values = policy_restored.session.run(
-          tf.compat.v1.global_variables())
+          tf.compat.v1.global_variables()
+      )
     with policy_saved_graph.as_default():
       initial_values = policy_saved.session.run(tf.compat.v1.global_variables())
 
@@ -247,15 +271,17 @@ class PyTFPolicyTest(test_utils.TestCase, parameterized.TestCase):
     tf_policy = q_policy.QPolicy(
         self._time_step_spec,
         self._action_spec,
-        q_network=DummyNet(stateful=False))
+        q_network=DummyNet(stateful=False),
+    )
     policy = py_tf_policy.PyTFPolicy(tf_policy)
 
     # But time_steps have batch_size of 5
     batch_size = 5
     single_observation = np.array([1, 2], dtype=np.float32)
     time_steps = [ts.restart(single_observation)] * batch_size
-    time_steps = fast_map_structure(lambda *arrays: np.stack(arrays),
-                                    *time_steps)
+    time_steps = fast_map_structure(
+        lambda *arrays: np.stack(arrays), *time_steps
+    )
 
     with self.cached_session():
       self.evaluate(tf.compat.v1.global_variables_initializer())
@@ -276,8 +302,9 @@ class PyTFPolicyTest(test_utils.TestCase, parameterized.TestCase):
     batch_size = 5
     single_observation = np.array([1, 2], dtype=np.float32)
     time_steps = [ts.restart(single_observation)] * batch_size
-    time_steps = fast_map_structure(lambda *arrays: np.stack(arrays),
-                                    *time_steps)
+    time_steps = fast_map_structure(
+        lambda *arrays: np.stack(arrays), *time_steps
+    )
 
     with self.cached_session():
       initial_state = policy.get_initial_state(batch_size=batch_size)
@@ -289,11 +316,12 @@ class PyTFPolicyTest(test_utils.TestCase, parameterized.TestCase):
       self.assertAllEqual(action_steps.state, np.zeros([5, 1]))
 
   def testSaveWrappedPolicyRestoreOuterCheckAssertConsumed(self, batch_size=5):
-
-    actor_policy_save_path = os.path.join(self.get_temp_dir(),
-                                          'actor_policy', str(batch_size))
-    noise_policy_save_path = os.path.join(self.get_temp_dir(),
-                                          'noise_policy', str(batch_size))
+    actor_policy_save_path = os.path.join(
+        self.get_temp_dir(), 'actor_policy', str(batch_size)
+    )
+    noise_policy_save_path = os.path.join(
+        self.get_temp_dir(), 'noise_policy', str(batch_size)
+    )
 
     # Construct a policy to be saved under a tf.Graph instance.
     policy_saved_graph = tf.Graph()
@@ -303,7 +331,8 @@ class PyTFPolicyTest(test_utils.TestCase, parameterized.TestCase):
           time_step_spec=self._time_step_spec,
           action_spec=self._float_action_spec,
           actor_network=actor_network,
-          clip=False)
+          clip=False,
+      )
       tf_policy = ou_noise_policy.OUNoisePolicy(wrapped_policy)
 
       # Save the exploration policy and the wrapped actor policy.
@@ -311,7 +340,8 @@ class PyTFPolicyTest(test_utils.TestCase, parameterized.TestCase):
       noise_policy_saved = py_tf_policy.PyTFPolicy(tf_policy)
       for policy_saved, policy_save_path in zip(
           [actor_policy_saved, noise_policy_saved],
-          [actor_policy_save_path, noise_policy_save_path]):
+          [actor_policy_save_path, noise_policy_save_path],
+      ):
         policy_saved.session = tf.compat.v1.Session(graph=policy_saved_graph)
         policy_saved.initialize(batch_size)
         policy_saved.save(policy_dir=policy_save_path, graph=policy_saved_graph)
@@ -324,7 +354,8 @@ class PyTFPolicyTest(test_utils.TestCase, parameterized.TestCase):
           time_step_spec=self._time_step_spec,
           action_spec=self._float_action_spec,
           actor_network=actor_network,
-          clip=False)
+          clip=False,
+      )
       tf_policy = ou_noise_policy.OUNoisePolicy(wrapped_policy)
 
       policy_restored = py_tf_policy.PyTFPolicy(tf_policy)
@@ -332,21 +363,25 @@ class PyTFPolicyTest(test_utils.TestCase, parameterized.TestCase):
       policy_restored.initialize(batch_size)
       # 1). Restoring the same noise policy as was saved.
       policy_restored.restore(
-          policy_dir=noise_policy_save_path, graph=policy_restore_graph)
+          policy_dir=noise_policy_save_path, graph=policy_restore_graph
+      )
       # 2). Restoring the actor policy inside of the noise policy. While the
       # graph for policy restore contains additional local variable for the
       # OUNoise, if there is no checking that checkpoint was consumed, this
       # also works.
       policy_restored.restore(
-          policy_dir=actor_policy_save_path, graph=policy_restore_graph,
-          assert_consumed=False)
+          policy_dir=actor_policy_save_path,
+          graph=policy_restore_graph,
+          assert_consumed=False,
+      )
       # 3). Restoring the actor policy while checking that all variables in
       # the checkpoint were found in the graph should fail.
       with self.assertRaisesRegexp(
-          AssertionError, 'not bound to checkpointed values*'):
+          AssertionError, 'not bound to checkpointed values*'
+      ):
         policy_restored.restore(
-            policy_dir=actor_policy_save_path,
-            graph=policy_restore_graph)
+            policy_dir=actor_policy_save_path, graph=policy_restore_graph
+        )
 
 
 if __name__ == '__main__':

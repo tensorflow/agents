@@ -20,6 +20,8 @@ from __future__ import division
 from __future__ import print_function
 
 import tensorflow as tf
+from tf_agents.utils import common
+
 
 __all__ = ['RNNWrapper']
 
@@ -44,17 +46,21 @@ class RNNWrapper(tf.keras.layers.Layer):
     if not isinstance(layer, tf.keras.layers.RNN):
       raise TypeError(
           'layer is not a subclass of tf.keras.layers.RNN.  Layer: {}'.format(
-              layer))
+              layer
+          )
+      )
     layer_config = layer.get_config()
     if not layer_config.get('return_state', False):
       # This is an RNN layer that doesn't return state.
       raise NotImplementedError(
           'Provided a Keras RNN layer with return_state==False. '
-          'This configuration is not supported.  Layer: {}'.format(layer))
+          'This configuration is not supported.  Layer: {}'.format(layer)
+      )
     if not layer_config.get('return_sequences', False):
       raise NotImplementedError(
           'Provided a Keras RNN layer with return_sequences==False. '
-          'This configuration is not supported.  Layer: {}'.format(layer))
+          'This configuration is not supported.  Layer: {}'.format(layer)
+      )
 
     self._layer = layer
     super(RNNWrapper, self).__init__(**kwargs)
@@ -82,7 +88,7 @@ class RNNWrapper(tf.keras.layers.Layer):
     config = {
         'layer': {
             'class_name': self._layer.__class__.__name__,
-            'config': self._layer.get_config()
+            'config': self._layer.get_config(),
         }
     }
     base_config = dict(super(RNNWrapper, self).get_config())
@@ -92,7 +98,8 @@ class RNNWrapper(tf.keras.layers.Layer):
   @classmethod
   def from_config(cls, config, custom_objects=None):
     internal_layer = tf.keras.layers.deserialize(
-        config.pop('layer'), custom_objects=custom_objects)
+        config.pop('layer'), custom_objects=custom_objects
+    )
     layer = cls(internal_layer, **config)
     return layer
 
@@ -133,7 +140,8 @@ class RNNWrapper(tf.keras.layers.Layer):
         for x in tf.nest.flatten(inputs)
     ]
     has_time_axis = all(
-        [x.shape.ndims is None or x.shape.ndims > 2 for x in inputs_flat])
+        [x.shape.ndims is None or x.shape.ndims > 2 for x in inputs_flat]
+    )
     if not has_time_axis:
       inputs_flat = [tf.expand_dims(t, axis=1) for t in inputs_flat]
     inputs = tf.nest.pack_sequence_as(inputs, inputs_flat)
@@ -162,26 +170,26 @@ class RNNWrapper(tf.keras.layers.Layer):
         for x in tf.nest.flatten(inputs)
     ]
     has_time_axis = all(
-        [x.shape.ndims is None or x.shape.ndims > 2 for x in inputs_flat])
+        [x.shape.ndims is None or x.shape.ndims > 2 for x in inputs_flat]
+    )
     if not has_time_axis:
       inputs_flat = [tf.expand_dims(t, axis=1) for t in inputs_flat]
     inputs = tf.nest.pack_sequence_as(inputs, inputs_flat)
 
-    # TODO(b/158804957): tf.function changes "if tensor:" to tensor bool expr.
-    # pylint: disable=literal-comparison
-    if initial_state is None or initial_state is () or initial_state is []:
+    if not common.safe_has_state(initial_state):
       initial_state = self._layer.get_initial_state(inputs)
-    # pylint: enable=literal-comparison
 
     outputs = self._layer(
-        inputs, initial_state=initial_state, mask=mask, training=training)
+        inputs, initial_state=initial_state, mask=mask, training=training
+    )
 
     output, new_state = outputs[0], outputs[1:]
 
     # Keras RNN's outputs[1:] does not match the nest structure of its cells'
     # state_size property.  Restructure the output state to match.
     new_state = tf.nest.pack_sequence_as(
-        self.state_size, tf.nest.flatten(new_state))
+        self.state_size, tf.nest.flatten(new_state)
+    )
 
     if not has_time_axis:
       output = tf.nest.map_structure(lambda t: tf.squeeze(t, axis=1), output)

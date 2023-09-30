@@ -51,11 +51,13 @@ class SacHaarnoja18Return(PerfZeroBenchmark):
         initial_collect_steps=10000,
         env_name='HalfCheetah-v2',
         eval_interval=50000,
-        num_iterations=3000000)
+        num_iterations=3000000,
+    )
     wall_time_sec = time.time() - start_time_sec
     event_file = utils.find_event_log(os.path.join(output_dir, 'eval'))
-    values, _ = utils.extract_event_log_values(event_file,
-                                               'Metrics/AverageReturn')
+    values, _ = utils.extract_event_log_values(
+        event_file, 'Metrics/AverageReturn'
+    )
 
     # Min/Max ranges are very large to only hard fail if very broken. The system
     # monitoring the results owns looking for anomalies.
@@ -63,16 +65,19 @@ class SacHaarnoja18Return(PerfZeroBenchmark):
         'average_return_at_env_step1000000',
         values[1000000],
         min_value=800,
-        max_value=16000)
+        max_value=16000,
+    )
 
     metric_3m = self.build_metric(
         'average_return_at_env_step3000000',
         values[3000000],
         min_value=12000,
-        max_value=16500)
+        max_value=16500,
+    )
 
     self.report_benchmark(
-        wall_time=wall_time_sec, metrics=[metric_1m, metric_3m], extras={})
+        wall_time=wall_time_sec, metrics=[metric_1m, metric_3m], extras={}
+    )
 
 
 if __name__ == '__main__':

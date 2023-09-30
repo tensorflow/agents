@@ -22,7 +22,6 @@ from __future__ import print_function
 import typing
 
 import tensorflow as tf
-
 from tf_agents.specs import tensor_spec
 from tf_agents.trajectories import policy_step
 from tf_agents.trajectories import time_step as ts
@@ -30,7 +29,6 @@ from tf_agents.trajectories import trajectory
 from tf_agents.typing import types
 from tf_agents.utils import composite
 from tf_agents.utils import nest_utils
-
 import typing_extensions as te
 
 
@@ -101,18 +99,23 @@ class DataContext(tf.Module):
       TypeError: If any of the specs are not nests containing tf.TypeSpec
         objects.
     """
+
     def _each_isinstance(spec, spec_types):
       """Checks if each element of `spec` is instance of `spec_types`."""
       return all([isinstance(s, spec_types) for s in tf.nest.flatten(spec)])
 
-    for (spec, label) in ((time_step_spec, 'time_step_spec'),
-                          (action_spec, 'action_spec'),
-                          (info_spec, 'info_spec')):
+    for spec, label in (
+        (time_step_spec, 'time_step_spec'),
+        (action_spec, 'action_spec'),
+        (info_spec, 'info_spec'),
+    ):
       if not _each_isinstance(spec, tf.TypeSpec):
         raise TypeError(
             '{} has to contain TypeSpec (TensorSpec, '
-            'SparseTensorSpec, etc) objects, but received: {}'
-            .format(label, spec))
+            'SparseTensorSpec, etc) objects, but received: {}'.format(
+                label, spec
+            )
+        )
 
     self._time_step_spec = time_step_spec
     self._action_spec = action_spec
@@ -125,20 +128,24 @@ class DataContext(tf.Module):
         policy_info=info_spec,
         next_step_type=time_step_spec.step_type,
         reward=time_step_spec.reward,
-        discount=time_step_spec.discount)
+        discount=time_step_spec.discount,
+    )
 
     if use_half_transition:
       next_time_step_spec = time_step_spec._replace(
           observation=tensor_spec.TensorSpec(
-              (), dtype=tf.float32, name='observation'))
+              (), dtype=tf.float32, name='observation'
+          )
+      )
     else:
       next_time_step_spec = time_step_spec
     self._transition_spec = trajectory.Transition(
         time_step=time_step_spec,
-        action_step=policy_step.PolicyStep(action=action_spec,
-                                           state=policy_state_spec,
-                                           info=info_spec),
-        next_time_step=next_time_step_spec)
+        action_step=policy_step.PolicyStep(
+            action=action_spec, state=policy_state_spec, info=info_spec
+        ),
+        next_time_step=next_time_step_spec,
+    )
 
   @property
   def time_step_spec(self) -> ts.TimeStep:
@@ -169,67 +176,78 @@ def _validate_trajectory(
     value: trajectory.Trajectory,
     trajectory_spec: trajectory.Trajectory,
     sequence_length: typing.Optional[int],
-    num_outer_dims: te.Literal[1, 2] = 2):  # pylint: disable=bad-whitespace
+    num_outer_dims: te.Literal[1, 2] = 2,  # pylint: disable=bad-whitespace
+):
   """Validate a Trajectory given its spec and a sequence length."""
   if not nest_utils.is_batched_nested_tensors(
-      value, trajectory_spec, num_outer_dims=num_outer_dims,
-      allow_extra_fields=True):
+      value,
+      trajectory_spec,
+      num_outer_dims=num_outer_dims,
+      allow_extra_fields=True,
+  ):
     debug_str_1 = tf.nest.map_structure(lambda tp: tp.shape, value)
     debug_str_2 = tf.nest.map_structure(
-        lambda spec: spec.shape, trajectory_spec)
+        lambda spec: spec.shape, trajectory_spec
+    )
 
     shape_str = (
-        'two outer dimensions' if num_outer_dims == 2
-        else 'one outer dimension')
+        'two outer dimensions' if num_outer_dims == 2 else 'one outer dimension'
+    )
     shape_prefix_str = '[B, T]' if num_outer_dims == 2 else '[B]'
     raise ValueError(
         'All of the Tensors in `value` must have {shape_str}. Specifically, '
         'tensors must have shape `{shape_prefix_str} + spec.shape`.\n'
         'Full shapes of value tensors:\n  {debug_str_1}.\n'
-        'Expected shapes (excluding the {shape_str}):\n  {debug_str_2}.'
-        .format(
+        'Expected shapes (excluding the {shape_str}):\n  {debug_str_2}.'.format(
             shape_str=shape_str,
             debug_str_1=debug_str_1,
             debug_str_2=debug_str_2,
-            shape_prefix_str=shape_prefix_str))
+            shape_prefix_str=shape_prefix_str,
+        )
+    )
 
   # If we have a time dimension and a train_sequence_length, make sure they
   # match.
   if sequence_length is not None:
+
     def check_shape(path, t):  # pylint: disable=invalid-name
       if t.shape[1] != sequence_length:
         debug_str = tf.nest.map_structure(lambda tp: tp.shape, value)
         raise ValueError(
             'The agent was configured to expect a `sequence_length` '
-            'of \'{seq_len}\'. Value is expected to be shaped `[B, T] + '
+            "of '{seq_len}'. Value is expected to be shaped `[B, T] + "
             'spec.shape` but at least one of the Tensors in `value` has a '
-            'time axis dim value \'{t_dim}\' vs '
-            'the expected \'{seq_len}\'.\nFirst such tensor is:\n\t'
+            "time axis dim value '{t_dim}' vs "
+            "the expected '{seq_len}'.\nFirst such tensor is:\n\t"
             'value.{path}. \nFull shape structure of '
             'value:\n\t{debug_str}'.format(
                 seq_len=sequence_length,
                 t_dim=t.shape[1],
                 path=path,
-                debug_str=debug_str))
+                debug_str=debug_str,
+            )
+        )
+
     nest_utils.map_structure_with_paths(check_shape, value)
 
 
-def _validate_transition(value: trajectory.Transition,
-                         transition_spec: trajectory.Transition,
-                         num_outer_dims: int):
+def _validate_transition(
+    value: trajectory.Transition,
+    transition_spec: trajectory.Transition,
+    num_outer_dims: int,
+):
   """Checks the given Transition for batch and time outer dimensions."""
 
   if value.action_step.state:
     # When state is not (), it does not have time dimension, therefore it needs
     # to be validated separately.
-    _validate_state(value.action_step.state,
-                    transition_spec.action_step.state)
+    _validate_state(value.action_step.state, transition_spec.action_step.state)
     action_step_without_state = value.action_step._replace(state=())
     value_to_validate = value._replace(action_step=action_step_without_state)
-    action_spec_without_state = (
-        transition_spec.action_step._replace(state=()))
+    action_spec_without_state = transition_spec.action_step._replace(state=())
     spec_to_validate = transition_spec._replace(
-        action_step=action_spec_without_state)
+        action_step=action_spec_without_state
+    )
   else:
     value_to_validate = value
     spec_to_validate = transition_spec
@@ -238,34 +256,38 @@ def _validate_transition(value: trajectory.Transition,
       value_to_validate,
       spec_to_validate,
       num_outer_dims=num_outer_dims,
-      allow_extra_fields=True):
-    debug_str_1 = tf.nest.map_structure(
-        lambda tp: tp.shape, value_to_validate)
+      allow_extra_fields=True,
+  ):
+    debug_str_1 = tf.nest.map_structure(lambda tp: tp.shape, value_to_validate)
     debug_str_2 = tf.nest.map_structure(
-        lambda spec: spec.shape, spec_to_validate)
+        lambda spec: spec.shape, spec_to_validate
+    )
     raise ValueError(
         'All of the Tensors in `value` must have a single outer (batch size) '
         'dimension. Specifically, tensors must have {} outer dimensions.'
         '\nFull shapes of value tensors:\n  {}.\n'
-        'Expected shapes (excluding the outer dimensions):\n  {}.'
-        .format(num_outer_dims, debug_str_1, debug_str_2))
+        'Expected shapes (excluding the outer dimensions):\n  {}.'.format(
+            num_outer_dims, debug_str_1, debug_str_2
+        )
+    )
 
 
 def _validate_state(state: types.NestedTensor, spec: types.NestedTensorSpec):
   if not nest_utils.is_batched_nested_tensors(
-      state,
-      spec,
-      num_outer_dims=1,
-      allow_extra_fields=False):
-    raise ValueError('action_step.state does not match spec. '
-                     'action_step.state.shape: {state_shape}, '
-                     'spec.shape: {spec_shape}'
-                     'action_step.state: {state_value}, spec: '
-                     '{spec_value}'.format(
-                         state_shape=state.shape,
-                         spec_shape=spec.shape,
-                         state_value=state,
-                         spec_value=spec))
+      state, spec, num_outer_dims=1, allow_extra_fields=False
+  ):
+    raise ValueError(
+        'action_step.state does not match spec. '
+        'action_step.state.shape: {state_shape}, '
+        'spec.shape: {spec_shape}'
+        'action_step.state: {state_value}, spec: '
+        '{spec_value}'.format(
+            state_shape=state.shape,
+            spec_shape=spec.shape,
+            state_value=state,
+            spec_value=spec,
+        )
+    )
 
 
 class AsTrajectory(tf.Module):
@@ -280,27 +302,29 @@ class AsTrajectory(tf.Module):
   converting.
   """
 
-  def __init__(self,
-               data_context: DataContext,
-               sequence_length: typing.Optional[int] = None,
-               num_outer_dims: te.Literal[1, 2] = 2):  # pylint: disable=bad-whitespace
+  def __init__(
+      self,
+      data_context: DataContext,
+      sequence_length: typing.Optional[int] = None,
+      num_outer_dims: te.Literal[1, 2] = 2,  # pylint: disable=bad-whitespace
+  ):
     """Create the AsTrajectory converter.
 
     Args:
       data_context: An instance of `DataContext`, typically accessed from the
         `TFAgent.data_context` property.
       sequence_length: The required time dimension value (if any), typically
-         determined by the subclass of `TFAgent`.
-      num_outer_dims: Expected number of outer dimensions.  Either 1 or 2.
-         If `1`, call expects an outer batch dimension.  If `2`, then call
-         expects the two outer dimensions `[batch, time]`.
+        determined by the subclass of `TFAgent`.
+      num_outer_dims: Expected number of outer dimensions.  Either 1 or 2. If
+        `1`, call expects an outer batch dimension.  If `2`, then call expects
+        the two outer dimensions `[batch, time]`.
     """
     self._data_context = data_context
     self._sequence_length = sequence_length
     self._num_outer_dims = num_outer_dims
 
   def __call__(self, value: typing.Any) -> trajectory.Trajectory:
-    """Convers `value` to a Trajectory.  Performs data validation and pruning.
+    """Convers `value` to a Trajectory. Performs data validation and pruning.
 
     - If `value` is already a `Trajectory`, only validation is performed.
     - If `value` is a `Transition` with tensors containing two (`[B, T]`)
@@ -334,15 +358,19 @@ class AsTrajectory(tf.Module):
           policy_info=value.action_step.info,
           next_step_type=value.next_time_step.step_type,
           reward=value.next_time_step.reward,
-          discount=value.next_time_step.discount)
+          discount=value.next_time_step.discount,
+      )
     else:
       raise TypeError('Input type not supported: {}'.format(value))
     _validate_trajectory(
-        value, self._data_context.trajectory_spec,
+        value,
+        self._data_context.trajectory_spec,
         sequence_length=self._sequence_length,
-        num_outer_dims=self._num_outer_dims)
+        num_outer_dims=self._num_outer_dims,
+    )
     value = nest_utils.prune_extra_keys(
-        self._data_context.trajectory_spec, value)
+        self._data_context.trajectory_spec, value
+    )
     return value
 
 
@@ -358,17 +386,20 @@ class AsTransition(tf.Module):
   converting.
   """
 
-  def __init__(self, data_context: DataContext, squeeze_time_dim=False,
-               prepend_t0_to_next_time_step=False):
+  def __init__(
+      self,
+      data_context: DataContext,
+      squeeze_time_dim=False,
+      prepend_t0_to_next_time_step=False,
+  ):
     """Creates the AsTransition converter.
 
     Args:
       data_context: An instance of `DataContext`, typically accessed from the
         `TFAgent.data_context` property.
-      squeeze_time_dim: Whether to emit a transition without time
-        dimensions.  If `True`, incoming trajectories are expected
-        to have a time dimension of exactly `2`, and emitted Transitions
-        will have no time dimensions.
+      squeeze_time_dim: Whether to emit a transition without time dimensions. If
+        `True`, incoming trajectories are expected to have a time dimension of
+        exactly `2`, and emitted Transitions will have no time dimensions.
       prepend_t0_to_next_time_step: Whether to add t0 to next_time_step. This
         option is useful when using sequential model and can allow target
         network be able to take more information. Resulting shape of
@@ -380,7 +411,7 @@ class AsTransition(tf.Module):
     self._prepend_t0_to_next_time_step = prepend_t0_to_next_time_step
 
   def __call__(self, value: typing.Any) -> trajectory.Transition:
-    """Converts `value` to a Transition.  Performs data validation and pruning.
+    """Converts `value` to a Transition. Performs data validation and pruning.
 
     - If `value` is already a `Transition`, only validation is performed.
     - If `value` is a `Trajectory` and `squeeze_time_dim = True` then
@@ -414,21 +445,25 @@ class AsTransition(tf.Module):
       _validate_trajectory(
           value,
           self._data_context.trajectory_spec,
-          sequence_length=required_sequence_length)
+          sequence_length=required_sequence_length,
+      )
       value = trajectory.to_transition(value)
       # Remove the now-singleton time dim.
       if self._squeeze_time_dim:
         value = tf.nest.map_structure(
-            lambda x: composite.squeeze(x, axis=1), value)
+            lambda x: composite.squeeze(x, axis=1), value
+        )
     else:
       raise TypeError('Input type not supported: {}'.format(value))
 
     num_outer_dims = 1 if self._squeeze_time_dim else 2
     _validate_transition(
-        value, self._data_context.transition_spec, num_outer_dims)
+        value, self._data_context.transition_spec, num_outer_dims
+    )
 
     value = nest_utils.prune_extra_keys(
-        self._data_context.transition_spec, value)
+        self._data_context.transition_spec, value
+    )
 
     if self._prepend_t0_to_next_time_step:
       # This is useful when using sequential model. It allows target_q network
@@ -436,7 +471,10 @@ class AsTransition(tf.Module):
       next_time_step_with_t0 = value.next_time_step._replace(
           observation=tf.nest.map_structure(
               lambda x, y: tf.concat([x[:, :1, ...], y], axis=1),
-              value.time_step.observation, value.next_time_step.observation))
+              value.time_step.observation,
+              value.next_time_step.observation,
+          )
+      )
 
       value = value._replace(next_time_step=next_time_step_with_t0)
     return value
@@ -463,10 +501,9 @@ class AsHalfTransition(tf.Module):
     Args:
       data_context: An instance of `DataContext`, typically accessed from the
         `TFAgent.data_context` property.
-      squeeze_time_dim: Whether to emit a transition without time
-        dimensions.  If `True`, incoming trajectories are expected
-        to have a time dimension of exactly `2`, and emitted Transitions
-        will have no time dimensions.
+      squeeze_time_dim: Whether to emit a transition without time dimensions. If
+        `True`, incoming trajectories are expected to have a time dimension of
+        exactly `2`, and emitted Transitions will have no time dimensions.
     """
     self._data_context = data_context
     self._squeeze_time_dim = squeeze_time_dim
@@ -502,32 +539,38 @@ class AsHalfTransition(tf.Module):
       _validate_trajectory(
           value,
           self._data_context.trajectory_spec,
-          sequence_length=required_sequence_length)
+          sequence_length=required_sequence_length,
+      )
       if self._squeeze_time_dim:
         value = tf.nest.map_structure(lambda e: tf.squeeze(e, axis=1), value)
       policy_steps = policy_step.PolicyStep(
-          action=value.action, state=(), info=value.policy_info)
+          action=value.action, state=(), info=value.policy_info
+      )
       # TODO(b/130244652): Consider replacing 0 rewards & discounts with ().
       time_steps = ts.TimeStep(
           value.step_type,
           reward=tf.nest.map_structure(tf.zeros_like, value.reward),  # unknown
           discount=tf.zeros_like(value.discount),  # unknown
-          observation=value.observation)
+          observation=value.observation,
+      )
       next_time_steps = ts.TimeStep(
           step_type=value.next_step_type,
           reward=value.reward,
           discount=value.discount,
-          observation=tf.zeros_like(value.discount))
+          observation=tf.zeros_like(value.discount),
+      )
       value = trajectory.Transition(time_steps, policy_steps, next_time_steps)
     else:
       raise TypeError('Input type not supported: {}'.format(value))
 
     num_outer_dims = 1 if self._squeeze_time_dim else 2
     _validate_transition(
-        value, self._data_context.transition_spec, num_outer_dims)
+        value, self._data_context.transition_spec, num_outer_dims
+    )
 
     value = nest_utils.prune_extra_keys(
-        self._data_context.transition_spec, value)
+        self._data_context.transition_spec, value
+    )
     return value
 
 
@@ -543,10 +586,12 @@ class AsNStepTransition(tf.Module):
   converting.
   """
 
-  def __init__(self,
-               data_context: DataContext,
-               gamma: types.Float,
-               n: typing.Optional[int] = None):
+  def __init__(
+      self,
+      data_context: DataContext,
+      gamma: types.Float,
+      n: typing.Optional[int] = None,
+  ):
     """Create the AsNStepTransition converter.
 
     For more details on how `Trajectory` objects are converted to N-step
@@ -595,13 +640,16 @@ class AsNStepTransition(tf.Module):
       _validate_trajectory(
           value,
           self._data_context.trajectory_spec,
-          sequence_length=None if self._n is None else self._n + 1)
+          sequence_length=None if self._n is None else self._n + 1,
+      )
       value = trajectory.to_n_step_transition(value, gamma=self._gamma)
     else:
       raise TypeError('Input type not supported: {}'.format(value))
 
     _validate_transition(
-        value, self._data_context.transition_spec, num_outer_dims=1)
+        value, self._data_context.transition_spec, num_outer_dims=1
+    )
     value = nest_utils.prune_extra_keys(
-        self._data_context.transition_spec, value)
+        self._data_context.transition_spec, value
+    )
     return value

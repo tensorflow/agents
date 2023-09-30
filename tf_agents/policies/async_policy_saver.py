@@ -18,8 +18,6 @@
 import threading
 from typing import Text
 from absl import logging
-
-
 from tf_agents.policies import policy_saver as policy_saver_module
 
 
@@ -64,9 +62,11 @@ class AsyncPolicySaver(object):
 
   def _assert_save_thread_is_alive(self):
     if self._join_save_thread or not self._save_thread.is_alive():
-      raise ValueError("Saving thread in AsyncPolicySaver is not alive. Either "
-                       "an exception has occured while saving, or the saver "
-                       "was closed.")
+      raise ValueError(
+          "Saving thread in AsyncPolicySaver is not alive. Either "
+          "an exception has occured while saving, or the saver "
+          "was closed."
+      )
 
   def save(self, export_dir: Text, blocking: bool = False):
     """Triggers an async save of the policy to the given `export_dir`.
@@ -149,4 +149,3 @@ class AsyncPolicySaver(object):
   def __getattr__(self, name: Text):
     """Forward all other calls to the base saver."""
     return getattr(self._policy_saver, name)
-

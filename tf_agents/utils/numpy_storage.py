@@ -68,7 +68,7 @@ class NumpyState(base.Trackable):
   TensorFlow variables when graph building.
   """
 
-  def _lookup_dependency(self, name):
+  def _lookup_dependency(self, name, cached_dependencies=None):
     """Create placeholder NumPy arrays for to-be-restored attributes.
 
     Typically `_lookup_dependency` is used to check by name whether a dependency
@@ -78,18 +78,24 @@ class NumpyState(base.Trackable):
 
     Args:
       name: The name of the dependency being checked.
+      cached_dependencies: Optional dictionary of dependencies.
 
     Returns:
       An existing dependency if one exists, or a new `_NumpyWrapper` placeholder
       dependency (which will generally be restored immediately).
     """
-    value = super(NumpyState, self)._lookup_dependency(name)
+    if cached_dependencies is not None:
+      value = cached_dependencies.get(name)
+    else:
+      value = super(NumpyState, self)._lookup_dependency(name)
     if value is None:
       value = _NumpyWrapper(np.array([]))
       new_reference = base.TrackableReference(name=name, ref=value)
       self._unconditional_checkpoint_dependencies.append(new_reference)
       self._unconditional_dependency_names[name] = value
       super(NumpyState, self).__setattr__(name, value)
+      if cached_dependencies:
+        cached_dependencies[name] = value
     return value
 
   def __getattribute__(self, name):
@@ -110,11 +116,14 @@ class NumpyState(base.Trackable):
       except AttributeError:
         value = _NumpyWrapper(value)
         self._track_trackable(value, name=name, overwrite=True)
-    elif (name not in ('_self_setattr_tracking', '_self_update_uid',
-                       # TODO(b/130295584): Remove these non-_self aliases when
-                       # sync issues are resolved.
-                       '_setattr_tracking', '_update_uid')
-          and getattr(self, '_setattr_tracking', True)):
+    elif name not in (
+        '_self_setattr_tracking',
+        '_self_update_uid',
+        # TODO(b/130295584): Remove these non-_self aliases when
+        # sync issues are resolved.
+        '_setattr_tracking',
+        '_update_uid',
+    ) and getattr(self, '_setattr_tracking', True):
       # Mixing restore()-created attributes with user-added checkpointable
       # objects is tricky, since we can't use the `_lookup_dependency` trick to
       # re-create attributes (we might accidentally steal the restoration for
@@ -123,10 +132,14 @@ class NumpyState(base.Trackable):
       # `_lookup_dependency` to figure out whether we should create a NumPy
       # array for the attribute or not.
       raise NotImplementedError(
-          ('Assigned %s to the %s property of %s, which is not a NumPy array. '
-           'Currently mixing NumPy arrays and other checkpointable objects is '
-           'not supported. File a feature request if this limitation bothers '
-           'you.') % (value, name, self))
+          (
+              'Assigned %s to the %s property of %s, which is not a NumPy'
+              ' array. Currently mixing NumPy arrays and other checkpointable'
+              ' objects is not supported. File a feature request if this'
+              ' limitation bothers you.'
+          )
+          % (value, name, self)
+      )
     super(NumpyState, self).__setattr__(name, value)
 
 
@@ -182,12 +195,16 @@ class NumpyStorage(tf.Module):
       ValueError: If data_spec is not an instance or nest of ArraySpecs.
     """
     self._capacity = capacity
-    if not all([
-        isinstance(spec, array_spec.ArraySpec)
-        for spec in tf.nest.flatten(data_spec)
-    ]):
-      raise ValueError('The data_spec parameter must be an instance or nest of '
-                       'array_spec.ArraySpec. Got: {}'.format(data_spec))
+    if not all(
+        [
+            isinstance(spec, array_spec.ArraySpec)
+            for spec in tf.nest.flatten(data_spec)
+        ]
+    ):
+      raise ValueError(
+          'The data_spec parameter must be an instance or nest of '
+          'array_spec.ArraySpec. Got: {}'.format(data_spec)
+      )
     self._data_spec = data_spec
     self._flat_specs = tf.nest.flatten(data_spec)
     self._np_state = NumpyState()

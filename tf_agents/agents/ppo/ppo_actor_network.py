@@ -20,9 +20,7 @@ import sys
 import numpy as np
 import tensorflow.compat.v2 as tf
 import tensorflow_probability as tfp
-
 from tf_agents.keras_layers import bias_layer
-
 from tf_agents.networks import nest_map
 from tf_agents.networks import sequential
 
@@ -35,20 +33,20 @@ def tanh_and_scale_to_spec(inputs, spec):
   return means + magnitudes * tf.tanh(inputs)
 
 
-class PPOActorNetwork():
+class PPOActorNetwork:
   """Contains the actor network structure."""
 
   def __init__(self, seed_stream_class=tfp.util.SeedStream):
     self.seed_stream_class = seed_stream_class
 
-  def create_sequential_actor_net(self,
-                                  fc_layer_units,
-                                  action_tensor_spec,
-                                  seed=None):
+  def create_sequential_actor_net(
+      self, fc_layer_units, action_tensor_spec, seed=None
+  ):
     """Helper method for creating the actor network."""
 
     self._seed_stream = self.seed_stream_class(
-        seed=seed, salt='tf_agents_sequential_layers')
+        seed=seed, salt='tf_agents_sequential_layers'
+    )
 
     def _get_seed():
       seed = self._seed_stream()
@@ -64,22 +62,27 @@ class PPOActorNetwork():
       scale = tf.math.softplus(scale)
 
       return tfp.distributions.MultivariateNormalDiag(
-          loc=loc, scale_diag=scale, validate_args=True)
+          loc=loc, scale_diag=scale, validate_args=True
+      )
 
     def means_layers():
       # TODO(b/179510447): align these parameters with Schulman 17.
       return tf.keras.layers.Dense(
           action_tensor_spec.shape.num_elements(),
           kernel_initializer=tf.keras.initializers.VarianceScaling(
-              scale=0.1, seed=_get_seed()),
-          name='means_projection_layer')
+              scale=0.1, seed=_get_seed()
+          ),
+          name='means_projection_layer',
+      )
 
     def std_layers():
       # TODO(b/179510447): align these parameters with Schulman 17.
       std_bias_initializer_value = np.log(np.exp(0.35) - 1)
       return bias_layer.BiasLayer(
           bias_initializer=tf.constant_initializer(
-              value=std_bias_initializer_value))
+              value=std_bias_initializer_value
+          )
+      )
 
     def no_op_layers():
       return tf.keras.layers.Lambda(lambda x: x)
@@ -87,17 +90,24 @@ class PPOActorNetwork():
     dense = functools.partial(
         tf.keras.layers.Dense,
         activation=tf.nn.tanh,
-        kernel_initializer=tf.keras.initializers.Orthogonal(
-            seed=_get_seed()))
+        kernel_initializer=tf.keras.initializers.Orthogonal(seed=_get_seed()),
+    )
 
     return sequential.Sequential(
-        [dense(num_units) for num_units in fc_layer_units] +
-        [means_layers()] +
-        [tf.keras.layers.Lambda(
-            lambda x: {'loc': x, 'scale': tf.zeros_like(x)})] +
-        [nest_map.NestMap({
-            'loc': no_op_layers(),
-            'scale': std_layers(),
-        })] +
+        [dense(num_units) for num_units in fc_layer_units]
+        + [means_layers()]
+        + [
+            tf.keras.layers.Lambda(
+                lambda x: {'loc': x, 'scale': tf.zeros_like(x)}
+            )
+        ]
+        + [
+            nest_map.NestMap({
+                'loc': no_op_layers(),
+                'scale': std_layers(),
+            })
+        ]
+        +
         # Create the output distribution from the mean and standard deviation.
-        [tf.keras.layers.Lambda(create_dist)])
+        [tf.keras.layers.Lambda(create_dist)]
+    )

@@ -16,7 +16,6 @@
 """Test for boltzmann_reward_prediction_policy."""
 
 import numpy as np
-
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 from tf_agents.bandits.policies import boltzmann_reward_prediction_policy as boltzmann_reward_policy
 from tf_agents.networks import network
@@ -36,9 +35,11 @@ class DummyNet(network.Network):
     self._dummy_layers = [
         tf.keras.layers.Dense(
             num_actions,
-            kernel_initializer=tf.constant_initializer([[1, 1.5, 2],
-                                                        [1, 1.5, 4]]),
-            bias_initializer=tf.constant_initializer([[1], [1], [-10]]))
+            kernel_initializer=tf.constant_initializer(
+                [[1, 1.5, 2], [1, 1.5, 4]]
+            ),
+            bias_initializer=tf.constant_initializer([[1], [1], [-10]]),
+        )
     ]
 
   def call(self, inputs, step_type=None, network_state=()):
@@ -64,7 +65,9 @@ class BoltzmannRewardPredictionPolicyTest(test_utils.TestCase):
     for k in range(3):
       num_samples_list.append(
           tf.compat.v2.Variable(
-              tf.zeros([], dtype=tf.int32), name='num_samples_{}'.format(k)))
+              tf.zeros([], dtype=tf.int32), name='num_samples_{}'.format(k)
+          )
+      )
     num_samples_list[0].assign_add(2)
     num_samples_list[1].assign_add(4)
     num_samples_list[2].assign_add(1)
@@ -74,7 +77,8 @@ class BoltzmannRewardPredictionPolicyTest(test_utils.TestCase):
         reward_network=DummyNet(self._obs_spec),
         boltzmann_gumbel_exploration_constant=10.0,
         emit_policy_info=(utils.InfoFields.PREDICTED_REWARDS_MEAN,),
-        num_samples_list=num_samples_list)
+        num_samples_list=num_samples_list,
+    )
     observations = tf.constant([[1, 2], [3, 4]], dtype=tf.float32)
     time_step = ts.restart(observations, batch_size=2)
     action_step = policy.action(time_step, seed=1)
@@ -92,7 +96,8 @@ class BoltzmannRewardPredictionPolicyTest(test_utils.TestCase):
         self._action_spec,
         reward_network=DummyNet(self._obs_spec),
         temperature=10e8,
-        emit_policy_info=(utils.InfoFields.LOG_PROBABILITY,))
+        emit_policy_info=(utils.InfoFields.LOG_PROBABILITY,),
+    )
     batch_size = 3000
     observations = tf.constant([[1, 2]] * batch_size, dtype=tf.float32)
     time_step = ts.restart(observations, batch_size=batch_size)
@@ -101,8 +106,9 @@ class BoltzmannRewardPredictionPolicyTest(test_utils.TestCase):
     self.evaluate(tf.compat.v1.global_variables_initializer())
     p_info = self.evaluate(action_step.info)
     # Check the log probabilities in the policy info are uniform.
-    self.assertAllEqual(p_info.log_probability,
-                        tf.math.log([1.0 / 3] * batch_size))
+    self.assertAllEqual(
+        p_info.log_probability, tf.math.log([1.0 / 3] * batch_size)
+    )
     # Check the empirical distribution of the chosen arms is uniform.
     actions = self.evaluate(action_step.action)
     self.assertAllInSet(actions, [0, 1, 2])
@@ -114,9 +120,12 @@ class BoltzmannRewardPredictionPolicyTest(test_utils.TestCase):
           action_chosen_count,
           1000,
           tol,
-          msg=f'action: {action} is expected to be chosen between {1000 - tol} '
-          f'and {1000 + tol} times, but was actually chosen '
-          f'{action_chosen_count} times.')
+          msg=(
+              f'action: {action} is expected to be chosen between {1000 - tol} '
+              f'and {1000 + tol} times, but was actually chosen '
+              f'{action_chosen_count} times.'
+          ),
+      )
 
   def testZeroTemperature(self):
     # With zero temperature, the chosen actions should be greedy.
@@ -125,7 +134,8 @@ class BoltzmannRewardPredictionPolicyTest(test_utils.TestCase):
         self._action_spec,
         reward_network=DummyNet(self._obs_spec),
         temperature=0.0,
-        emit_policy_info=(utils.InfoFields.LOG_PROBABILITY,))
+        emit_policy_info=(utils.InfoFields.LOG_PROBABILITY,),
+    )
     observations = tf.constant([[1, 2], [3, 4]], dtype=tf.float32)
     time_step = ts.restart(observations, batch_size=2)
     action_step = policy.action(time_step, seed=1)
@@ -141,7 +151,9 @@ class BoltzmannRewardPredictionPolicyTest(test_utils.TestCase):
     for k in range(3):
       num_samples_list.append(
           tf.compat.v2.Variable(
-              tf.zeros([], dtype=tf.int32), name='num_samples_{}'.format(k)))
+              tf.zeros([], dtype=tf.int32), name='num_samples_{}'.format(k)
+          )
+      )
     num_samples_list[0].assign_add(2)
     num_samples_list[1].assign_add(4)
     num_samples_list[2].assign_add(1)
@@ -151,7 +163,8 @@ class BoltzmannRewardPredictionPolicyTest(test_utils.TestCase):
         reward_network=DummyNet(self._obs_spec),
         boltzmann_gumbel_exploration_constant=1e-12,
         num_samples_list=num_samples_list,
-        emit_policy_info=(utils.InfoFields.PREDICTED_REWARDS_MEAN,))
+        emit_policy_info=(utils.InfoFields.PREDICTED_REWARDS_MEAN,),
+    )
     observations = tf.constant([[1, 2], [3, 4]], dtype=tf.float32)
     time_step = ts.restart(observations, batch_size=2)
     action_step = policy.action(time_step, seed=1)
@@ -167,7 +180,9 @@ class BoltzmannRewardPredictionPolicyTest(test_utils.TestCase):
     for k in range(3):
       num_samples_list.append(
           tf.compat.v2.Variable(
-              tf.zeros([], dtype=tf.int32), name='num_samples_{}'.format(k)))
+              tf.zeros([], dtype=tf.int32), name='num_samples_{}'.format(k)
+          )
+      )
     num_samples_list[0].assign_add(tf.int32.max - 10)
     num_samples_list[1].assign_add(tf.int32.max - 10)
     num_samples_list[2].assign_add(tf.int32.max - 10)
@@ -177,7 +192,8 @@ class BoltzmannRewardPredictionPolicyTest(test_utils.TestCase):
         reward_network=DummyNet(self._obs_spec),
         boltzmann_gumbel_exploration_constant=100.0,
         num_samples_list=num_samples_list,
-        emit_policy_info=(utils.InfoFields.PREDICTED_REWARDS_MEAN,))
+        emit_policy_info=(utils.InfoFields.PREDICTED_REWARDS_MEAN,),
+    )
     observations = tf.constant([[1, 2], [3, 4]], dtype=tf.float32)
     time_step = ts.restart(observations, batch_size=2)
     action_step = policy.action(time_step, seed=1)
@@ -193,7 +209,9 @@ class BoltzmannRewardPredictionPolicyTest(test_utils.TestCase):
     for k in range(3):
       num_samples_list.append(
           tf.compat.v2.Variable(
-              tf.zeros([], dtype=tf.int32), name='num_samples_{}'.format(k)))
+              tf.zeros([], dtype=tf.int32), name='num_samples_{}'.format(k)
+          )
+      )
     num_samples_list[0].assign_add(tf.int32.max - 10)
     num_samples_list[1].assign_add(1)
     num_samples_list[2].assign_add(tf.int32.max - 10)
@@ -203,7 +221,8 @@ class BoltzmannRewardPredictionPolicyTest(test_utils.TestCase):
         reward_network=DummyNet(self._obs_spec),
         boltzmann_gumbel_exploration_constant=10.0,
         num_samples_list=num_samples_list,
-        emit_policy_info=(utils.InfoFields.PREDICTED_REWARDS_MEAN,))
+        emit_policy_info=(utils.InfoFields.PREDICTED_REWARDS_MEAN,),
+    )
     batch_size = 3000
     observations = tf.constant([[1, 2]] * batch_size, dtype=tf.float32)
     time_step = ts.restart(observations, batch_size=batch_size)
@@ -214,6 +233,7 @@ class BoltzmannRewardPredictionPolicyTest(test_utils.TestCase):
     self.assertAllInSet(actions, [0, 1, 2])
     action_counts = {action: np.sum(actions == action) for action in range(3)}
     self.assertAllLess([action_counts[0], action_counts[2]], action_counts[1])
+
 
 if __name__ == '__main__':
   tf.test.main()

@@ -27,13 +27,11 @@ from typing import Callable, Optional, Text
 import gin
 import tensorflow as tf
 import tensorflow_probability as tfp
-
 from tf_agents.distributions import utils as distribution_utils
 from tf_agents.networks import network
 from tf_agents.networks import utils as network_utils
 from tf_agents.specs import distribution_spec
 from tf_agents.specs import tensor_spec
-
 from tf_agents.typing import types
 
 
@@ -45,13 +43,13 @@ class TanhNormalProjectionNetwork(network.DistributionNetwork):
   cannot be returned.
   """
 
-  def __init__(self,
-               sample_spec: types.TensorSpec,
-               activation_fn: Optional[Callable[[types.Tensor],
-                                                types.Tensor]] = None,
-               std_transform: Optional[Callable[[types.Tensor],
-                                                types.Tensor]] = tf.exp,
-               name: Text = 'TanhNormalProjectionNetwork'):
+  def __init__(
+      self,
+      sample_spec: types.TensorSpec,
+      activation_fn: Optional[Callable[[types.Tensor], types.Tensor]] = None,
+      std_transform: Optional[Callable[[types.Tensor], types.Tensor]] = tf.exp,
+      name: Text = 'TanhNormalProjectionNetwork',
+  ):
     """Creates an instance of TanhNormalProjectionNetwork.
 
     Args:
@@ -62,15 +60,17 @@ class TanhNormalProjectionNetwork(network.DistributionNetwork):
       name: A string representing name of the network.
     """
     if len(tf.nest.flatten(sample_spec)) != 1:
-      raise ValueError('Tanh Normal Projection network only supports single'
-                       ' spec samples.')
+      raise ValueError(
+          'Tanh Normal Projection network only supports single spec samples.'
+      )
     output_spec = self._output_distribution_spec(sample_spec, name)
     super(TanhNormalProjectionNetwork, self).__init__(
         # We don't need these, but base class requires them.
         input_tensor_spec=None,
         state_spec=(),
         output_spec=output_spec,
-        name=name)
+        name=name,
+    )
 
     self._sample_spec = sample_spec
     self._std_transform = std_transform
@@ -78,42 +78,49 @@ class TanhNormalProjectionNetwork(network.DistributionNetwork):
     self._projection_layer = tf.keras.layers.Dense(
         sample_spec.shape.num_elements() * 2,
         activation=activation_fn,
-        name='projection_layer')
+        name='projection_layer',
+    )
 
   def _output_distribution_spec(self, sample_spec, network_name):
     input_param_shapes = {
         'loc': sample_spec.shape,
-        'scale_diag': sample_spec.shape
+        'scale_diag': sample_spec.shape,
     }
     input_param_spec = {  # pylint: disable=g-complex-comprehension
         name: tensor_spec.TensorSpec(
-            shape=shape,
-            dtype=sample_spec.dtype,
-            name=network_name + '_' + name)
+            shape=shape, dtype=sample_spec.dtype, name=network_name + '_' + name
+        )
         for name, shape in input_param_shapes.items()
     }
 
     def distribution_builder(*args, **kwargs):
       distribution = tfp.distributions.MultivariateNormalDiag(*args, **kwargs)
       return distribution_utils.scale_distribution_to_spec(
-          distribution, sample_spec)
+          distribution, sample_spec
+      )
 
     return distribution_spec.DistributionSpec(
-        distribution_builder, input_param_spec, sample_spec=sample_spec)
+        distribution_builder, input_param_spec, sample_spec=sample_spec
+    )
 
-  def call(self,
-           inputs: types.NestedTensor,
-           outer_rank: int,
-           training: bool = False,
-           mask: Optional[types.NestedTensor] = None) -> types.NestedTensor:
+  def call(
+      self,
+      inputs: types.NestedTensor,
+      outer_rank: int,
+      training: bool = False,
+      mask: Optional[types.NestedTensor] = None,
+  ) -> types.NestedTensor:
     if inputs.dtype != self._sample_spec.dtype:  # pytype: disable=attribute-error
-      raise ValueError('Inputs to TanhNormalProjectionNetwork must match the '
-                       'sample_spec.dtype.')
+      raise ValueError(
+          'Inputs to TanhNormalProjectionNetwork must match the '
+          'sample_spec.dtype.'
+      )
 
     if mask is not None:
       raise NotImplementedError(
           'TanhNormalProjectionNetwork does not yet implement action masking; '
-          'got mask={}'.format(mask))
+          'got mask={}'.format(mask)
+      )
 
     # outer_rank is needed because the projection is not done on the raw
     # observations so getting the outer rank is hard as there is no spec to

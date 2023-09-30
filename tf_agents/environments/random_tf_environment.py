@@ -20,7 +20,6 @@ from __future__ import division
 from __future__ import print_function
 
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
-
 from tf_agents.environments import tf_environment
 from tf_agents.specs import tensor_spec
 from tf_agents.trajectories import time_step as ts
@@ -35,11 +34,13 @@ class RandomTFEnvironment(tf_environment.TFEnvironment):
   environment are compatible with the given spec.
   """
 
-  def __init__(self,
-               time_step_spec,
-               action_spec,
-               batch_size=1,
-               episode_end_probability=0.1):
+  def __init__(
+      self,
+      time_step_spec,
+      action_spec,
+      batch_size=1,
+      episode_end_probability=0.1,
+  ):
     """Initializes the environment.
 
     Args:
@@ -53,7 +54,8 @@ class RandomTFEnvironment(tf_environment.TFEnvironment):
         environment is stepped.
     """
     super(RandomTFEnvironment, self).__init__(
-        time_step_spec, action_spec, batch_size=batch_size)
+        time_step_spec, action_spec, batch_size=batch_size
+    )
     self._episode_end_probability = episode_end_probability
 
     def _variable_from_spec(name, spec):
@@ -67,21 +69,27 @@ class RandomTFEnvironment(tf_environment.TFEnvironment):
         _variable_from_spec(path, spec) for path, spec in paths_and_specs
     ]
     self._time_step_variables = tf.nest.pack_sequence_as(
-        time_step_spec, variables)
+        time_step_spec, variables
+    )
 
   def _current_time_step(self):
     """Returns the current `TimeStep`."""
     return tf.nest.map_structure(tf.identity, self._time_step_variables)
 
   def _update_time_step(self, time_step):
-    tf.nest.map_structure(lambda var, value: var.assign(value),
-                          self._time_step_variables, time_step)
+    tf.nest.map_structure(
+        lambda var, value: var.assign(value),
+        self._time_step_variables,
+        time_step,
+    )
 
   def _sample_obs_and_reward(self):
     sampled_observation = tensor_spec.sample_spec_nest(
-        self._time_step_spec.observation, outer_dims=(self.batch_size,))
+        self._time_step_spec.observation, outer_dims=(self.batch_size,)
+    )
     sampled_reward = tensor_spec.sample_spec_nest(
-        self._time_step_spec.reward, outer_dims=(self.batch_size,))
+        self._time_step_spec.reward, outer_dims=(self.batch_size,)
+    )
     return sampled_observation, sampled_reward
 
   @common.function
@@ -89,7 +97,8 @@ class RandomTFEnvironment(tf_environment.TFEnvironment):
     """Resets the environment and returns the current time_step."""
     obs, _ = self._sample_obs_and_reward()
     time_step = ts.restart(
-        obs, self._batch_size, reward_spec=self._time_step_spec.reward)
+        obs, self._batch_size, reward_spec=self._time_step_spec.reward
+    )
     self._update_time_step(time_step)
     return self._current_time_step()
 
@@ -100,7 +109,9 @@ class RandomTFEnvironment(tf_environment.TFEnvironment):
     # t[0] as the spec doesn't have a batch dim.
     tf.nest.map_structure(
         lambda spec, t: tf.Assert(spec.is_compatible_with(t[0]), [t]),
-        self._action_spec, action)
+        self._action_spec,
+        action,
+    )
 
     # If we generalize the batched data to not terminate at the same time, we
     # will need to only reset the correct batch_inidices.

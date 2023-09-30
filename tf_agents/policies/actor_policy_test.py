@@ -36,7 +36,8 @@ class DummyActionNet(network.Network):
     super(DummyActionNet, self).__init__(
         input_tensor_spec=input_tensor_spec,
         state_spec=(),
-        name='DummyActionNet')
+        name='DummyActionNet',
+    )
     single_action_spec = tf.nest.flatten(output_tensor_spec)[0]
     self._output_tensor_spec = output_tensor_spec
     self._sub_layers = [
@@ -59,35 +60,44 @@ class DummyActionNet(network.Network):
     means = tf.reshape(states, [-1] + single_action_spec.shape.as_list())
     spec_means = (single_action_spec.maximum + single_action_spec.minimum) / 2.0
     spec_ranges = (
-        single_action_spec.maximum - single_action_spec.minimum) / 2.0
+        single_action_spec.maximum - single_action_spec.minimum
+    ) / 2.0
     action_means = spec_means + spec_ranges * means
 
-    return (tf.nest.pack_sequence_as(self._output_tensor_spec, [action_means]),
-            network_state)
+    return (
+        tf.nest.pack_sequence_as(self._output_tensor_spec, [action_means]),
+        network_state,
+    )
 
 
 class DummyActionDistributionNet(DummyActionNet):
 
   def call(self, observations, step_type, network_state):
     action_means, network_state = super(DummyActionDistributionNet, self).call(
-        observations, step_type, network_state)
+        observations, step_type, network_state
+    )
 
     def _action_distribution(action_mean):
       action_std = tf.ones_like(action_mean)
       return tfp.distributions.Normal(action_mean, action_std)
 
-    return tf.nest.map_structure(_action_distribution,
-                                 action_means), network_state
+    return (
+        tf.nest.map_structure(_action_distribution, action_means),
+        network_state,
+    )
 
 
 def test_cases():
-  return parameterized.named_parameters({
-      'testcase_name': 'SimpleNet',
-      'network_ctor': DummyActionNet,
-  }, {
-      'testcase_name': 'DistributionNet',
-      'network_ctor': DummyActionDistributionNet,
-  })
+  return parameterized.named_parameters(
+      {
+          'testcase_name': 'SimpleNet',
+          'network_ctor': DummyActionNet,
+      },
+      {
+          'testcase_name': 'DistributionNet',
+          'network_ctor': DummyActionDistributionNet,
+      },
+  )
 
 
 class ActorPolicyTest(parameterized.TestCase, test_utils.TestCase):
@@ -106,16 +116,19 @@ class ActorPolicyTest(parameterized.TestCase, test_utils.TestCase):
   def _time_step_batch(self):
     return ts.TimeStep(
         tf.constant(
-            ts.StepType.FIRST, dtype=tf.int32, shape=[2], name='step_type'),
+            ts.StepType.FIRST, dtype=tf.int32, shape=[2], name='step_type'
+        ),
         tf.constant(0.0, dtype=tf.float32, shape=[2], name='reward'),
         tf.constant(1.0, dtype=tf.float32, shape=[2], name='discount'),
-        tf.constant([[1, 2], [3, 4]], dtype=tf.float32, name='observation'))
+        tf.constant([[1, 2], [3, 4]], dtype=tf.float32, name='observation'),
+    )
 
   @test_cases()
   def testBuild(self, network_ctor):
     actor_network = network_ctor(self._obs_spec, self._action_spec)
     policy = actor_policy.ActorPolicy(
-        self._time_step_spec, self._action_spec, actor_network=actor_network)
+        self._time_step_spec, self._action_spec, actor_network=actor_network
+    )
 
     self.assertEqual(policy.time_step_spec, self._time_step_spec)
     self.assertEqual(policy.action_spec, self._action_spec)
@@ -125,7 +138,8 @@ class ActorPolicyTest(parameterized.TestCase, test_utils.TestCase):
   def testActionBatch(self, network_ctor):
     actor_network = network_ctor(self._obs_spec, self._action_spec)
     policy = actor_policy.ActorPolicy(
-        self._time_step_spec, self._action_spec, actor_network=actor_network)
+        self._time_step_spec, self._action_spec, actor_network=actor_network
+    )
 
     action_step = policy.action(self._time_step_batch)
     self.assertEqual(action_step.action.shape.as_list(), [2])
@@ -139,10 +153,12 @@ class ActorPolicyTest(parameterized.TestCase, test_utils.TestCase):
     tf.compat.v1.set_random_seed(1)
     actor_network = DummyActionNet(self._obs_spec, self._action_spec)
     policy = actor_policy.ActorPolicy(
-        self._time_step_spec, self._action_spec, actor_network=actor_network)
+        self._time_step_spec, self._action_spec, actor_network=actor_network
+    )
     self.assertLen(policy.variables(), 2)
     new_policy = actor_policy.ActorPolicy(
-        self._time_step_spec, self._action_spec, actor_network=actor_network)
+        self._time_step_spec, self._action_spec, actor_network=actor_network
+    )
 
     action_step = policy.action(self._time_step_batch)
     self.assertLen(policy.variables(), 2)
@@ -155,18 +171,21 @@ class ActorPolicyTest(parameterized.TestCase, test_utils.TestCase):
     self.evaluate(tf.compat.v1.global_variables_initializer())
     self.evaluate(new_policy.update(policy))
     actions_, new_actions_ = self.evaluate(
-        [action_step.action, new_action_step.action])
+        [action_step.action, new_action_step.action]
+    )
     self.assertAllEqual(actions_, new_actions_)
 
   def testDeterministicDistribution(self):
     actor_network = DummyActionNet(self._obs_spec, self._action_spec)
     policy = actor_policy.ActorPolicy(
-        self._time_step_spec, self._action_spec, actor_network=actor_network)
+        self._time_step_spec, self._action_spec, actor_network=actor_network
+    )
 
     action_step = policy.action(self._time_step_batch)
     distribution_step = policy.distribution(self._time_step_batch)
-    self.assertIsInstance(distribution_step.action,
-                          tfp.distributions.Deterministic)
+    self.assertIsInstance(
+        distribution_step.action, tfp.distributions.Deterministic
+    )
     distribution_mean = distribution_step.action.mean()
     self.evaluate(tf.compat.v1.global_variables_initializer())
     actions_ = self.evaluate(action_step.action)
@@ -174,10 +193,12 @@ class ActorPolicyTest(parameterized.TestCase, test_utils.TestCase):
     self.assertNear(actions_[0], distribution_mean_[0], 1e-6)
 
   def testGaussianDistribution(self):
-    actor_network = DummyActionDistributionNet(self._obs_spec,
-                                               self._action_spec)
+    actor_network = DummyActionDistributionNet(
+        self._obs_spec, self._action_spec
+    )
     policy = actor_policy.ActorPolicy(
-        self._time_step_spec, self._action_spec, actor_network=actor_network)
+        self._time_step_spec, self._action_spec, actor_network=actor_network
+    )
 
     distribution_step = policy.distribution(self._time_step_batch)
     self.assertIsInstance(distribution_step.action, tfp.distributions.Normal)
@@ -199,25 +220,31 @@ class ActorPolicyDiscreteActionsTest(test_utils.TestCase):
   def _time_step_batch(self):
     return ts.TimeStep(
         tf.constant(
-            ts.StepType.FIRST, dtype=tf.int32, shape=[2], name='step_type'),
+            ts.StepType.FIRST, dtype=tf.int32, shape=[2], name='step_type'
+        ),
         tf.constant(0.0, dtype=tf.float32, shape=[2], name='reward'),
         tf.constant(1.0, dtype=tf.float32, shape=[2], name='discount'),
-        tf.constant([[1, 2], [3, 4]], dtype=tf.float32, name='observation'))
+        tf.constant([[1, 2], [3, 4]], dtype=tf.float32, name='observation'),
+    )
 
   def testBuild(self):
     actor_network = actor_distribution_network.ActorDistributionNetwork(
-        self._obs_spec, self._action_spec, fc_layer_params=(2, 1))
+        self._obs_spec, self._action_spec, fc_layer_params=(2, 1)
+    )
     policy = actor_policy.ActorPolicy(
-        self._time_step_spec, self._action_spec, actor_network=actor_network)
+        self._time_step_spec, self._action_spec, actor_network=actor_network
+    )
 
     self.assertEqual(policy.time_step_spec, self._time_step_spec)
     self.assertEqual(policy.action_spec, self._action_spec)
 
   def testActionBatch(self):
     actor_network = actor_distribution_network.ActorDistributionNetwork(
-        self._obs_spec, self._action_spec, fc_layer_params=(2, 1))
+        self._obs_spec, self._action_spec, fc_layer_params=(2, 1)
+    )
     policy = actor_policy.ActorPolicy(
-        self._time_step_spec, self._action_spec, actor_network=actor_network)
+        self._time_step_spec, self._action_spec, actor_network=actor_network
+    )
 
     action_step = policy.action(self._time_step_batch)
     self.assertEqual(action_step.action.shape.as_list(), [2])
@@ -229,9 +256,11 @@ class ActorPolicyDiscreteActionsTest(test_utils.TestCase):
 
   def testActionDistribution(self):
     actor_network = actor_distribution_network.ActorDistributionNetwork(
-        self._obs_spec, self._action_spec, fc_layer_params=(2, 1))
+        self._obs_spec, self._action_spec, fc_layer_params=(2, 1)
+    )
     policy = actor_policy.ActorPolicy(
-        self._time_step_spec, self._action_spec, actor_network=actor_network)
+        self._time_step_spec, self._action_spec, actor_network=actor_network
+    )
 
     # Force creation of variables before global_variables_initializer.
     policy.variables()
@@ -251,7 +280,8 @@ class ActorPolicyDiscreteActionsTest(test_utils.TestCase):
     input_tensor_spec = tensor_spec.TensorSpec([num_state_dims], tf.float32)
     time_step_spec = ts.time_step_spec(input_tensor_spec)
     action_spec = tensor_spec.BoundedTensorSpec(
-        (), tf.int32, 0, num_actions - 1)
+        (), tf.int32, 0, num_actions - 1
+    )
 
     # We create a fixed mask here for testing purposes. Normally the mask would
     # be part of the observation.
@@ -259,11 +289,16 @@ class ActorPolicyDiscreteActionsTest(test_utils.TestCase):
     np_mask = np.array(mask)
     tf_mask = tf.constant([mask for _ in range(batch_size)])
     actor_network = actor_distribution_network.ActorDistributionNetwork(
-        input_tensor_spec, action_spec, fc_layer_params=(2, 1))
+        input_tensor_spec, action_spec, fc_layer_params=(2, 1)
+    )
     policy = actor_policy.ActorPolicy(
-        time_step_spec, action_spec, actor_network=actor_network,
+        time_step_spec,
+        action_spec,
+        actor_network=actor_network,
         observation_and_action_constraint_splitter=(
-            lambda observation: (observation, tf_mask)))
+            lambda observation: (observation, tf_mask)
+        ),
+    )
 
     # Force creation of variables before global_variables_initializer.
     policy.variables()

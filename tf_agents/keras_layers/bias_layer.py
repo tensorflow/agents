@@ -29,6 +29,7 @@ class BiasLayer(tf.keras.layers.Layer):
 
   Args:
       bias_initializer: Initializer for the bias vector.
+
   Input shape:
       nD tensor with shape: `(batch_size, ..., input_dim)`. The most common
         situation would be a 2D input with shape `(batch_size, input_dim)`. Note
@@ -60,7 +61,8 @@ class BiasLayer(tf.keras.layers.Layer):
         shape=shape,
         initializer=self.bias_initializer,
         dtype=self.dtype,
-        trainable=True)
+        trainable=True,
+    )
     self.built = True
 
   def call(self, inputs):
@@ -75,8 +77,9 @@ class BiasLayer(tf.keras.layers.Layer):
 
   def get_config(self):
     config = {
-        'bias_initializer':
-            tf.keras.initializers.serialize(self.bias_initializer),
+        'bias_initializer': tf.keras.initializers.serialize(
+            self.bias_initializer
+        ),
     }
     base_config = super(BiasLayer, self).get_config()
     return dict(list(base_config.items()) + list(config.items()))

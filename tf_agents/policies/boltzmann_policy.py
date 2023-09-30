@@ -23,7 +23,6 @@ from typing import Optional, Text
 
 import gin
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
-
 from tf_agents.policies import tf_policy
 from tf_agents.typing import types
 
@@ -35,15 +34,17 @@ class BoltzmannPolicy(tf_policy.TFPolicy):
   The wrapped policy must expose a distribution parameterized by logits.
   """
 
-  def __init__(self,
-               policy: tf_policy.TFPolicy,
-               temperature: types.FloatOrReturningFloat = 1.0,
-               name: Optional[Text] = None):
+  def __init__(
+      self,
+      policy: tf_policy.TFPolicy,
+      temperature: types.FloatOrReturningFloat = 1.0,
+      name: Optional[Text] = None,
+  ):
     """Builds a BoltzmannPolicy wrapping the given policy.
 
     Args:
-      policy: A policy implementing the tf_policy.TFPolicy interface, using
-        a distribution parameterized by logits.
+      policy: A policy implementing the tf_policy.TFPolicy interface, using a
+        distribution parameterized by logits.
       temperature: Tensor or function that returns the temperature for sampling
         when `action` is called. This parameter applies when the action spec is
         discrete. If the temperature is close to 0.0 this is equivalent to
@@ -58,7 +59,8 @@ class BoltzmannPolicy(tf_policy.TFPolicy):
         policy.info_spec,
         emit_log_probability=policy.emit_log_probability,
         clip=False,
-        name=name)
+        name=name,
+    )
     self._temperature = temperature
     self._wrapped_policy = policy
 
@@ -77,10 +79,12 @@ class BoltzmannPolicy(tf_policy.TFPolicy):
 
   def _distribution(self, time_step, policy_state):
     distribution_step = self._wrapped_policy.distribution(
-        time_step, policy_state)
+        time_step, policy_state
+    )
     if self._temperature is None:
       return distribution_step
 
-    action_dist = tf.nest.map_structure(self._apply_temperature,
-                                        distribution_step.action)
+    action_dist = tf.nest.map_structure(
+        self._apply_temperature, distribution_step.action
+    )
     return distribution_step._replace(action=action_dist)

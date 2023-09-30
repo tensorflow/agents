@@ -19,7 +19,6 @@ from __future__ import division
 from __future__ import print_function
 
 import gin
-
 from tf_agents.bandits.agents import mixture_agent
 
 

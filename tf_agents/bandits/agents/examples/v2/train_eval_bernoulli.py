@@ -28,8 +28,11 @@ from tf_agents.bandits.environments import bernoulli_py_environment as bern_env
 from tf_agents.bandits.metrics import tf_metrics as tf_bandit_metrics
 from tf_agents.environments import tf_py_environment
 
-flags.DEFINE_string('root_dir', os.getenv('TEST_UNDECLARED_OUTPUTS_DIR'),
-                    'Root directory for writing logs/summaries/checkpoints.')
+flags.DEFINE_string(
+    'root_dir',
+    os.getenv('TEST_UNDECLARED_OUTPUTS_DIR'),
+    'Root directory for writing logs/summaries/checkpoints.',
+)
 flags.DEFINE_enum('agent', 'BernTS', ['BernTS'], 'Which agent to use.')
 
 FLAGS = flags.FLAGS
@@ -43,9 +46,7 @@ def main(unused_argv):
   tf.compat.v1.enable_v2_behavior()  # The trainer only runs with V2 enabled.
 
   means = [0.1, 0.2, 0.3, 0.45, 0.5]
-  env = bern_env.BernoulliPyEnvironment(
-      means=means,
-      batch_size=BATCH_SIZE)
+  env = bern_env.BernoulliPyEnvironment(means=means, batch_size=BATCH_SIZE)
   environment = tf_py_environment.TFPyEnvironment(env)
 
   def optimal_reward_fn(unused_observation):
@@ -59,13 +60,15 @@ def main(unused_argv):
         time_step_spec=environment.time_step_spec(),
         action_spec=environment.action_spec(),
         dtype=tf.float64,
-        batch_size=BATCH_SIZE)
+        batch_size=BATCH_SIZE,
+    )
   else:
     raise ValueError('Only BernoulliTS is supported for now.')
 
   regret_metric = tf_bandit_metrics.RegretMetric(optimal_reward_fn)
   suboptimal_arms_metric = tf_bandit_metrics.SuboptimalArmsMetric(
-      optimal_action_fn)
+      optimal_action_fn
+  )
 
   trainer.train(
       root_dir=FLAGS.root_dir,
@@ -74,7 +77,8 @@ def main(unused_argv):
       training_loops=TRAINING_LOOPS,
       steps_per_loop=STEPS_PER_LOOP,
       additional_metrics=[regret_metric, suboptimal_arms_metric],
-      save_policy=False)
+      save_policy=False,
+  )
 
 
 if __name__ == '__main__':

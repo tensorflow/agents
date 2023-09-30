@@ -18,11 +18,10 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-from typing import Sequence, Tuple, Optional
+from typing import Optional, Sequence, Tuple
+
 from absl import logging
-
 import numpy as np
-
 from tf_agents.policies import py_policy
 from tf_agents.specs import array_spec
 from tf_agents.trajectories import policy_step
@@ -35,9 +34,12 @@ from tensorflow.python.util import nest  # pylint:disable=g-direct-tensorflow-im
 class ScriptedPyPolicy(py_policy.PyPolicy):
   """Returns actions from the given configuration."""
 
-  def __init__(self, time_step_spec: ts.TimeStep,
-               action_spec: types.NestedArraySpec,
-               action_script: Sequence[Tuple[int, types.NestedArray]]):
+  def __init__(
+      self,
+      time_step_spec: ts.TimeStep,
+      action_spec: types.NestedArraySpec,
+      action_script: Sequence[Tuple[int, types.NestedArray]],
+  ):
     """Instantiates the scripted policy.
 
     The Action  script can be configured through gin. e.g:
@@ -56,8 +58,7 @@ class ScriptedPyPolicy(py_policy.PyPolicy):
     steps.
 
     Args:
-      time_step_spec: A time_step_spec for the policy will interact
-        with.
+      time_step_spec: A time_step_spec for the policy will interact with.
       action_spec: An action_spec for the environment the policy will interact
         with.
       action_script: A list of 2-tuples of the form (n, nest) where the nest of
@@ -67,7 +68,8 @@ class ScriptedPyPolicy(py_policy.PyPolicy):
     if time_step_spec is None:
       time_step_spec = ts.time_step_spec()
     super(ScriptedPyPolicy, self).__init__(
-        time_step_spec=time_step_spec, action_spec=action_spec)
+        time_step_spec=time_step_spec, action_spec=action_spec
+    )
 
     self._action_script = action_script
 
@@ -83,14 +85,17 @@ class ScriptedPyPolicy(py_policy.PyPolicy):
     if policy_state is None:
       policy_state = [0, 0]
 
-    action_index, num_repeats = policy_state  #  pylint: disable=unpacking-non-sequence
+    action_index, num_repeats = (
+        policy_state  #  pylint: disable=unpacking-non-sequence
+    )
 
     def _check_episode_length():
       if action_index >= len(self._action_script):
         raise ValueError(
             "Episode is longer than the provided scripted policy. Consider "
             "setting a TimeLimit wrapper that stops episodes within the length"
-            " of your scripted policy.")
+            " of your scripted policy."
+        )
 
     _check_episode_length()
     n, current_action = self._action_script[action_index]
@@ -113,13 +118,16 @@ class ScriptedPyPolicy(py_policy.PyPolicy):
       return np.asarray(action, dtype=action_spec.dtype)
 
     current_action = nest.map_structure_up_to(
-        self._action_spec, actions_as_array, self._action_spec, current_action)
+        self._action_spec, actions_as_array, self._action_spec, current_action
+    )
 
     if not array_spec.check_arrays_nest(current_action, self._action_spec):
       raise ValueError(
           "Action at index {} does not match the environment's action_spec. "
-          "Got: {}. Expected {}.".format(action_index, current_action,
-                                         self._action_spec))
+          "Got: {}. Expected {}.".format(
+              action_index, current_action, self._action_spec
+          )
+      )
 
     logging.info("Policy_state: %r", policy_state)
     return policy_step.PolicyStep(current_action, [action_index, num_repeats])

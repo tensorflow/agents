@@ -21,7 +21,6 @@ from __future__ import print_function
 
 import numpy as np
 import tensorflow as tf
-
 from tf_agents.keras_layers import inner_reshape
 from tf_agents.utils import test_utils
 
@@ -31,20 +30,16 @@ class InnerReshapeTest(test_utils.TestCase):
   def testInnerReshapeSimple(self):
     layer = inner_reshape.InnerReshape([3, 4], [12])
     out = layer(np.arange(2 * 12).reshape(2, 3, 4))
-    self.assertAllEqual(
-        self.evaluate(out), np.arange(2 * 12).reshape(2, 12))
+    self.assertAllEqual(self.evaluate(out), np.arange(2 * 12).reshape(2, 12))
     out = layer(np.arange(4 * 12).reshape(2, 2, 3, 4))
-    self.assertAllEqual(
-        self.evaluate(out), np.arange(4 * 12).reshape(2, 2, 12))
+    self.assertAllEqual(self.evaluate(out), np.arange(4 * 12).reshape(2, 2, 12))
 
   def testInnerReshapeUnknowns(self):
     layer = inner_reshape.InnerReshape([None, None], [-1])
     out = layer(np.arange(3 * 20).reshape(3, 4, 5))
-    self.assertAllEqual(
-        self.evaluate(out), np.arange(3 * 20).reshape(3, 20))
+    self.assertAllEqual(self.evaluate(out), np.arange(3 * 20).reshape(3, 20))
     out = layer(np.arange(6 * 20).reshape(2, 3, 4, 5))
-    self.assertAllEqual(
-        self.evaluate(out), np.arange(6 * 20).reshape(2, 3, 20))
+    self.assertAllEqual(self.evaluate(out), np.arange(6 * 20).reshape(2, 3, 20))
 
   def testIncompatibleShapes(self):
     with self.assertRaisesRegex(ValueError, 'must have known rank'):

@@ -21,10 +21,10 @@ from __future__ import print_function
 
 import numpy as np
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
-
 from tf_agents.agents.ddpg import actor_rnn_network
 from tf_agents.specs import tensor_spec
 from tf_agents.trajectories import time_step as ts
+
 from tensorflow.python.framework import test_util  # TF internal
 
 
@@ -32,14 +32,15 @@ class ActorRnnNetworkTest(tf.test.TestCase):
 
   @test_util.run_in_graph_and_eager_modes()
   def testBuilds(self):
-    observation_spec = tensor_spec.BoundedTensorSpec((8, 8, 3), tf.float32, 0,
-                                                     1)
+    observation_spec = tensor_spec.BoundedTensorSpec(
+        (8, 8, 3), tf.float32, 0, 1
+    )
     time_step_spec = ts.time_step_spec(observation_spec)
     time_step = tensor_spec.sample_spec_nest(time_step_spec, outer_dims=(1,))
 
     action_spec = [
         tensor_spec.BoundedTensorSpec((2,), tf.float32, 2, 3),
-        tensor_spec.BoundedTensorSpec((3,), tf.float32, 0, 3)
+        tensor_spec.BoundedTensorSpec((3,), tf.float32, 0, 3),
     ]
     net = actor_rnn_network.ActorRnnNetwork(
         observation_spec,
@@ -47,10 +48,14 @@ class ActorRnnNetworkTest(tf.test.TestCase):
         conv_layer_params=[(4, 2, 2)],
         input_fc_layer_params=(5,),
         lstm_size=(3,),
-        output_fc_layer_params=(5,))
+        output_fc_layer_params=(5,),
+    )
 
-    actions, network_state = net(time_step.observation, time_step.step_type,
-                                 net.get_initial_state(batch_size=1))
+    actions, network_state = net(
+        time_step.observation,
+        time_step.step_type,
+        net.get_initial_state(batch_size=1),
+    )
     self.evaluate(tf.compat.v1.global_variables_initializer())
     self.assertEqual([1, 2], actions[0].shape.as_list())
     self.assertEqual([1, 3], actions[1].shape.as_list())
@@ -90,13 +95,14 @@ class ActorRnnNetworkTest(tf.test.TestCase):
   @test_util.run_in_graph_and_eager_modes()
   def testActionsWithinRange(self):
     observation_spec = tensor_spec.BoundedTensorSpec(
-        (8, 8, 3), tf.float32, 0, 1)
+        (8, 8, 3), tf.float32, 0, 1
+    )
     time_step_spec = ts.time_step_spec(observation_spec)
     time_step = tensor_spec.sample_spec_nest(time_step_spec, outer_dims=(1,))
 
     action_spec = [
         tensor_spec.BoundedTensorSpec((2,), tf.float32, 2, 3),
-        tensor_spec.BoundedTensorSpec((3,), tf.float32, 0, 3)
+        tensor_spec.BoundedTensorSpec((3,), tf.float32, 0, 3),
     ]
     net = actor_rnn_network.ActorRnnNetwork(
         observation_spec,
@@ -104,13 +110,17 @@ class ActorRnnNetworkTest(tf.test.TestCase):
         conv_layer_params=[(4, 2, 2)],
         input_fc_layer_params=(5,),
         output_fc_layer_params=(5,),
-        lstm_size=(3,))
+        lstm_size=(3,),
+    )
 
-    actions, _ = net(time_step.observation, time_step.step_type,
-                     net.get_initial_state(batch_size=1))
+    actions, _ = net(
+        time_step.observation,
+        time_step.step_type,
+        net.get_initial_state(batch_size=1),
+    )
     self.evaluate(tf.compat.v1.global_variables_initializer())
 
-    for (action, spec) in zip(actions, action_spec):
+    for action, spec in zip(actions, action_spec):
       action_ = self.evaluate(action)
       self.assertTrue(np.all(action_ >= spec.minimum))
       self.assertTrue(np.all(action_ <= spec.maximum))

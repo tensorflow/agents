@@ -30,15 +30,20 @@ from tf_agents.utils import composite
 def check_single_floating_network_output(
     output_spec: types.NestedSpec,
     expected_output_shape: typing.Tuple[int, ...],
-    label: typing.Text):
+    label: typing.Text,
+):
   expected_output_shape = tuple(int(x) for x in expected_output_shape)
-  if not (isinstance(output_spec, tf.TensorSpec)
-          and output_spec.shape == expected_output_shape
-          and output_spec.dtype.is_floating):
+  if not (
+      isinstance(output_spec, tf.TensorSpec)
+      and output_spec.shape == expected_output_shape
+      and output_spec.dtype.is_floating
+  ):
     raise ValueError(
         'Expected {} to emit a floating point tensor with inner dims '
-        '{}; but saw network output spec: {}'
-        .format(label, expected_output_shape, output_spec))
+        '{}; but saw network output spec: {}'.format(
+            label, expected_output_shape, output_spec
+        )
+    )
 
 
 class BatchSquash(object):
@@ -72,13 +77,16 @@ class BatchSquash(object):
 
       self._original_tensor_shape = composite.shape(tensor)
 
-      if tensor.shape[self._batch_dims:].is_fully_defined():
+      if tensor.shape[self._batch_dims :].is_fully_defined():
         return composite.reshape(
-            tensor, [-1] + tensor.shape[self._batch_dims:].as_list())
+            tensor, [-1] + tensor.shape[self._batch_dims :].as_list()
+        )
 
       reshaped = composite.reshape(
           tensor,
-          tf.concat([[-1], composite.shape(tensor)[self._batch_dims:]], axis=0),
+          tf.concat(
+              [[-1], composite.shape(tensor)[self._batch_dims :]], axis=0
+          ),
       )
       # If the batch dimensions are all defined but the rest are undefined,
       # `reshaped` will have None as the first squashed dim since we are calling
@@ -86,12 +94,15 @@ class BatchSquash(object):
       # if all the elements we want to squash are defined, allowing us to
       # call ensure_shape to set the shape of the squashed dim. Note that this
       # is only implemented for tf.Tensor and not SparseTensors.
-      if (isinstance(tensor, tf.Tensor) and
-          tensor.shape[:self._batch_dims].is_fully_defined()):
+      if (
+          isinstance(tensor, tf.Tensor)
+          and tensor.shape[: self._batch_dims].is_fully_defined()
+      ):
         return tf.ensure_shape(
             reshaped,
-            [np.prod(tensor.shape[:self._batch_dims], dtype=np.int64)] +
-            tensor.shape[self._batch_dims:])
+            [np.prod(tensor.shape[: self._batch_dims], dtype=np.int64)]
+            + tensor.shape[self._batch_dims :],
+        )
       return reshaped
 
   def unflatten(self, tensor):
@@ -113,13 +124,15 @@ class BatchSquash(object):
       # pyformat: enable
 
 
-def mlp_layers(conv_layer_params=None,
-               fc_layer_params=None,
-               dropout_layer_params=None,
-               activation_fn=tf.keras.activations.relu,
-               kernel_initializer=None,
-               weight_decay_params=None,
-               name=None):
+def mlp_layers(
+    conv_layer_params=None,
+    fc_layer_params=None,
+    dropout_layer_params=None,
+    activation_fn=tf.keras.activations.relu,
+    kernel_initializer=None,
+    weight_decay_params=None,
+    name=None,
+):
   """Generates conv and fc layers to encode into a hidden state.
 
   Args:
@@ -137,9 +150,9 @@ def mlp_layers(conv_layer_params=None,
       connected layer, except if the entry in the list is None. This list must
       have the same length of fc_layer_params, or be None.
     activation_fn: Activation function, e.g. tf.keras.activations.relu,.
-    kernel_initializer: Initializer to use for the kernels of the conv and
-      dense layers. If none is provided a default variance_scaling_initializer
-      is used.
+    kernel_initializer: Initializer to use for the kernels of the conv and dense
+      layers. If none is provided a default variance_scaling_initializer is
+      used.
     weight_decay_params: Optional list of weight decay params for the fully
       connected layer.
     name: Name for the mlp layers.
@@ -153,21 +166,25 @@ def mlp_layers(conv_layer_params=None,
   """
   if kernel_initializer is None:
     kernel_initializer = tf.compat.v1.variance_scaling_initializer(
-        scale=2.0, mode='fan_in', distribution='truncated_normal')
+        scale=2.0, mode='fan_in', distribution='truncated_normal'
+    )
 
   layers = []
 
   if conv_layer_params is not None:
-    layers.extend([
-        tf.keras.layers.Conv2D(
-            filters=filters,
-            kernel_size=kernel_size,
-            strides=strides,
-            activation=activation_fn,
-            kernel_initializer=clone_initializer(kernel_initializer),
-            name='/'.join([name, 'conv2d']) if name else None)
-        for (filters, kernel_size, strides) in conv_layer_params
-    ])
+    layers.extend(
+        [
+            tf.keras.layers.Conv2D(
+                filters=filters,
+                kernel_size=kernel_size,
+                strides=strides,
+                activation=activation_fn,
+                kernel_initializer=clone_initializer(kernel_initializer),
+                name='/'.join([name, 'conv2d']) if name else None,
+            )
+            for (filters, kernel_size, strides) in conv_layer_params
+        ]
+    )
   layers.append(tf.keras.layers.Flatten())
 
   if fc_layer_params is not None:
@@ -175,36 +192,46 @@ def mlp_layers(conv_layer_params=None,
       dropout_layer_params = [None] * len(fc_layer_params)
     else:
       if len(dropout_layer_params) != len(fc_layer_params):
-        raise ValueError('Dropout and full connected layer parameter lists have'
-                         ' different lengths (%d vs. %d.)' %
-                         (len(dropout_layer_params), len(fc_layer_params)))
+        raise ValueError(
+            'Dropout and full connected layer parameter lists have'
+            ' different lengths (%d vs. %d.)'
+            % (len(dropout_layer_params), len(fc_layer_params))
+        )
 
     if weight_decay_params is None:
       weight_decay_params = [None] * len(fc_layer_params)
     else:
       if len(weight_decay_params) != len(fc_layer_params):
-        raise ValueError('Weight decay and fully connected layer parameter '
-                         'lists have different lengths (%d vs. %d.)' %
-                         (len(weight_decay_params), len(fc_layer_params)))
+        raise ValueError(
+            'Weight decay and fully connected layer parameter '
+            'lists have different lengths (%d vs. %d.)'
+            % (len(weight_decay_params), len(fc_layer_params))
+        )
 
-    for num_units, dropout_params, weight_decay in zip(
-        fc_layer_params, dropout_layer_params, weight_decay_params):
+    for i, (num_units, dropout_params, weight_decay) in enumerate(
+        zip(fc_layer_params, dropout_layer_params, weight_decay_params)
+    ):
       kernel_regularizer = None
       if weight_decay is not None:
         kernel_regularizer = tf.keras.regularizers.l2(weight_decay)
-      layers.append(tf.keras.layers.Dense(
-          num_units,
-          activation=activation_fn,
-          kernel_initializer=clone_initializer(kernel_initializer),
-          kernel_regularizer=kernel_regularizer,
-          name='/'.join([name, 'dense']) if name else None))
+      layers.append(
+          tf.keras.layers.Dense(
+              num_units,
+              activation=activation_fn,
+              kernel_initializer=clone_initializer(kernel_initializer),
+              kernel_regularizer=kernel_regularizer,
+              name='/'.join([name, 'dense%d' % i]) if name else None,
+          )
+      )
       if not isinstance(dropout_params, dict):
         dropout_params = {'rate': dropout_params} if dropout_params else None
 
       if dropout_params is not None:
         layers.append(
             permanent_variable_rate_dropout.PermanentVariableRateDropout(
-                **dropout_params))
+                **dropout_params
+            )
+        )
 
   return layers
 

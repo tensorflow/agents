@@ -20,7 +20,6 @@ from __future__ import division
 from __future__ import print_function
 
 import gin
-
 from tf_agents.environments import py_environment
 from tf_agents.environments import suite_pybullet
 from tf_agents.environments import wrappers

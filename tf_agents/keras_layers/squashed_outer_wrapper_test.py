@@ -20,7 +20,6 @@ from __future__ import division
 from __future__ import print_function
 
 import tensorflow as tf
-
 from tf_agents.keras_layers import squashed_outer_wrapper
 from tf_agents.utils import common
 from tf_agents.utils import test_utils
@@ -30,9 +29,11 @@ class SquashedOuterWrapperTest(test_utils.TestCase):
 
   def testFromConfigBatchNorm(self):
     l1 = squashed_outer_wrapper.SquashedOuterWrapper(
-        tf.keras.layers.BatchNormalization(axis=-1), inner_rank=3)
+        tf.keras.layers.BatchNormalization(axis=-1), inner_rank=3
+    )
     l2 = squashed_outer_wrapper.SquashedOuterWrapper.from_config(
-        l1.get_config())
+        l1.get_config()
+    )
     self.assertEqual(l1.get_config(), l2.get_config())
 
   def testSquashedOuterWrapperSimple(self):
@@ -49,7 +50,8 @@ class SquashedOuterWrapperTest(test_utils.TestCase):
 
     self.evaluate(tf.compat.v1.global_variables_initializer())
     self.assertAllClose(
-        self.evaluate(outputs_2_batch), self.evaluate(outputs_1_batch_reshaped))
+        self.evaluate(outputs_2_batch), self.evaluate(outputs_1_batch_reshaped)
+    )
 
   def testIncompatibleShapes(self):
     bn = tf.keras.layers.BatchNormalization(axis=-1)

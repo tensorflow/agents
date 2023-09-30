@@ -21,7 +21,6 @@ from __future__ import print_function
 
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 import tensorflow_probability as tfp
-
 from tf_agents.specs import distribution_spec
 from tf_agents.specs import tensor_spec
 
@@ -39,10 +38,13 @@ class DistributionSpecTest(tf.test.TestCase):
         tfd.Categorical,
         input_param_spec,
         sample_spec=sample_spec,
-        **expected_distribution.parameters)
+        **expected_distribution.parameters
+    )
 
-    self.assertEqual(expected_distribution.parameters['logits'],
-                     spec.distribution_parameters['logits'])
+    self.assertEqual(
+        expected_distribution.parameters['logits'],
+        spec.distribution_parameters['logits'],
+    )
 
     distribution = spec.build_distribution(logits=[0.1, 0.4, 0.5])
 

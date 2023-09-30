@@ -27,10 +27,14 @@ from tf_agents.typing import types
 from tf_agents.utils import example_encoding_dataset
 
 
-def create_trajectory(state: types.Array, action: types.Array,
-                      discount: types.Array, reward: types.Array,
-                      step_type: types.Array,
-                      next_step_type: types.Array) -> trajectory.Trajectory:
+def create_trajectory(
+    state: types.Array,
+    action: types.Array,
+    discount: types.Array,
+    reward: types.Array,
+    step_type: types.Array,
+    next_step_type: types.Array,
+) -> trajectory.Trajectory:
   """Creates a Trajectory from current and next state information."""
   return trajectory.Trajectory(
       step_type=step_type,
@@ -39,7 +43,8 @@ def create_trajectory(state: types.Array, action: types.Array,
       policy_info=(),
       next_step_type=next_step_type,
       reward=reward,
-      discount=discount)
+      discount=discount,
+  )
 
 
 def create_transition(
@@ -49,35 +54,41 @@ def create_transition(
     discount: types.Array,
     reward: types.Array,
     step_type: types.Array,
-    next_step_type: types.Array
+    next_step_type: types.Array,
 ) -> trajectory.Transition:
   """Creates a Transition from current and next state information."""
   tfagents_time_step = ts.TimeStep(
       step_type=step_type,
       reward=np.zeros_like(reward),  # unknown
       discount=np.zeros_like(discount),  # unknown
-      observation=state)
+      observation=state,
+  )
   action_step = policy_step.PolicyStep(action=action, state=(), info=())
   tfagents_next_time_step = ts.TimeStep(
       step_type=next_step_type,
       reward=reward,
       discount=discount,
-      observation=next_state)
+      observation=next_state,
+  )
   return trajectory.Transition(
       time_step=tfagents_time_step,
       action_step=action_step,
-      next_time_step=tfagents_next_time_step)
+      next_time_step=tfagents_next_time_step,
+  )
 
 
-def write_samples_to_tfrecord(dataset_dict: Dict[str, types.Array],
-                              collect_data_spec: trajectory.Transition,
-                              dataset_path: str,
-                              start_episode: int,
-                              end_episode: int,
-                              use_trajectories: bool = True) -> None:
+def write_samples_to_tfrecord(
+    dataset_dict: Dict[str, types.Array],
+    collect_data_spec: trajectory.Transition,
+    dataset_path: str,
+    start_episode: int,
+    end_episode: int,
+    use_trajectories: bool = True,
+) -> None:
   """Creates and writes samples to a TFRecord file."""
   tfrecord_observer = example_encoding_dataset.TFRecordObserver(
-      dataset_path, collect_data_spec, py_mode=True)
+      dataset_path, collect_data_spec, py_mode=True
+  )
   states = dataset_dict['states']
   actions = dataset_dict['actions']
   discounts = dataset_dict['discounts']
@@ -110,8 +121,10 @@ def write_samples_to_tfrecord(dataset_dict: Dict[str, types.Array],
       else:
         next_state = states[step_i + 1]
         next_step_type = (
-            ts.StepType.LAST if step_i == episode_end_index -
-            2 else ts.StepType.MID)
+            ts.StepType.LAST
+            if step_i == episode_end_index - 2
+            else ts.StepType.MID
+        )
 
       if use_trajectories:
         sample = create_trajectory(
@@ -120,7 +133,8 @@ def write_samples_to_tfrecord(dataset_dict: Dict[str, types.Array],
             discount=discounts[step_i],
             reward=rewards[step_i],
             step_type=step_type,
-            next_step_type=next_step_type)
+            next_step_type=next_step_type,
+        )
       else:
         sample = create_transition(
             state=states[step_i],
@@ -129,9 +143,11 @@ def write_samples_to_tfrecord(dataset_dict: Dict[str, types.Array],
             discount=discounts[step_i],
             reward=rewards[step_i],
             step_type=step_type,
-            next_step_type=next_step_type)
+            next_step_type=next_step_type,
+        )
       tfrecord_observer(sample)
 
   tfrecord_observer.close()
-  logging.info('Wrote episodes [%d-%d] to %s', start_episode, end_episode,
-               dataset_path)
+  logging.info(
+      'Wrote episodes [%d-%d] to %s', start_episode, end_episode, dataset_path
+  )

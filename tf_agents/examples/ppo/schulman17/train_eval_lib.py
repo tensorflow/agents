@@ -32,11 +32,9 @@ https://arxiv.org/abs/1707.06347.pdf
 import os
 
 from absl import logging
-
 import gin
 import reverb
 import tensorflow.compat.v2 as tf
-
 from tf_agents.agents.ppo import ppo_actor_network
 from tf_agents.agents.ppo import ppo_clip_agent
 from tf_agents.environments import suite_mujoco
@@ -54,7 +52,8 @@ from tf_agents.train.utils import train_utils
 
 
 class ReverbFixedLengthSequenceObserver(
-    reverb_utils.ReverbAddTrajectoryObserver):
+    reverb_utils.ReverbAddTrajectoryObserver
+):
   """Reverb fixed length sequence observer.
 
   This is a specialized observer similar to ReverbAddTrajectoryObserver but each
@@ -98,7 +97,7 @@ def train_eval(
     importance_ratio_clipping=0.2,
     lambda_value=0.95,
     discount_factor=0.99,
-    entropy_regularization=0.,
+    entropy_regularization=0.0,
     value_pred_loss_coef=0.5,
     use_gae=True,
     use_td_lambda_return=True,
@@ -113,7 +112,8 @@ def train_eval(
     eval_interval=10000,
     eval_episodes=100,
     debug_summaries=False,
-    summarize_grads_and_vars=False):
+    summarize_grads_and_vars=False,
+):
   """Trains and evaluates PPO (Importance Ratio Clipping).
 
   Args:
@@ -150,14 +150,13 @@ def train_eval(
       from empirical return.
     use_td_lambda_return: If True (default False), uses td_lambda_return for
       training value function; here: `td_lambda_return = gae_advantage +
-        value_predictions`. `use_gae` must be set to `True` as well to enable TD
-        -lambda returns. If `use_td_lambda_return` is set to True while
-        `use_gae` is False, the empirical return will be used and a warning will
-        be logged.
+      value_predictions`. `use_gae` must be set to `True` as well to enable TD
+      -lambda returns. If `use_td_lambda_return` is set to True while `use_gae`
+      is False, the empirical return will be used and a warning will be logged.
     gradient_clipping: Norm length to clip gradients.
     value_clipping: Difference between new and old value predictions are clipped
-      to this threshold. Value clipping could be helpful when training
-      very deep networks. Default: no clipping.
+      to this threshold. Value clipping could be helpful when training very deep
+      networks. Default: no clipping.
     reverb_port: Port for reverb server, if None, use a randomly chosen unused
       port.
     replay_capacity: The maximum number of elements for the replay buffer. Items
@@ -174,19 +173,23 @@ def train_eval(
   num_environments = 1
 
   observation_tensor_spec, action_tensor_spec, time_step_tensor_spec = (
-      spec_utils.get_tensor_specs(collect_env))
+      spec_utils.get_tensor_specs(collect_env)
+  )
 
   train_step = train_utils.create_train_step()
 
   actor_net_builder = ppo_actor_network.PPOActorNetwork()
   actor_net = actor_net_builder.create_sequential_actor_net(
-      actor_fc_layers, action_tensor_spec)
+      actor_fc_layers, action_tensor_spec
+  )
   value_net = value_network.ValueNetwork(
       observation_tensor_spec,
       fc_layer_params=value_fc_layers,
-      kernel_initializer=tf.keras.initializers.Orthogonal())
+      kernel_initializer=tf.keras.initializers.Orthogonal(),
+  )
 
   current_iteration = tf.Variable(0, dtype=tf.int64)
+
   def learning_rate_fn():
     # Linearly decay the learning rate.
     return learning_rate * (1 - current_iteration / num_iterations)
@@ -195,7 +198,8 @@ def train_eval(
       time_step_tensor_spec,
       action_tensor_spec,
       optimizer=tf.compat.v1.train.AdamOptimizer(
-          learning_rate=learning_rate_fn, epsilon=1e-5),
+          learning_rate=learning_rate_fn, epsilon=1e-5
+      ),
       actor_net=actor_net,
       value_net=value_net,
       importance_ratio_clipping=importance_ratio_clipping,
@@ -218,7 +222,8 @@ def train_eval(
       update_normalizers_in_train=False,
       debug_summaries=debug_summaries,
       summarize_grads_and_vars=summarize_grads_and_vars,
-      train_step_counter=train_step)
+      train_step_counter=train_step,
+  )
   agent.initialize()
 
   reverb_server = reverb.Server(
@@ -238,9 +243,10 @@ def train_eval(
               rate_limiter=reverb.rate_limiters.MinSize(1),
               max_size=replay_capacity,
               max_times_sampled=1,
-          )
+          ),
       ],
-      port=reverb_port)
+      port=reverb_port,
+  )
 
   # Create the replay buffer.
   reverb_replay_train = reverb_replay_buffer.ReverbReplayBuffer(
@@ -250,7 +256,8 @@ def train_eval(
       server_address='localhost:{}'.format(reverb_server.port),
       # The only collected sequence is used to populate the batches.
       max_cycle_length=1,
-      rate_limiter_timeout_ms=1000)
+      rate_limiter_timeout_ms=1000,
+  )
   reverb_replay_normalization = reverb_replay_buffer.ReverbReplayBuffer(
       agent.collect_data_spec,
       sequence_length=collect_sequence_length,
@@ -258,12 +265,15 @@ def train_eval(
       server_address='localhost:{}'.format(reverb_server.port),
       # The only collected sequence is used to populate the batches.
       max_cycle_length=1,
-      rate_limiter_timeout_ms=1000)
+      rate_limiter_timeout_ms=1000,
+  )
 
   rb_observer = ReverbFixedLengthSequenceObserver(
-      reverb_replay_train.py_client, ['training_table', 'normalization_table'],
+      reverb_replay_train.py_client,
+      ['training_table', 'normalization_table'],
       sequence_length=collect_sequence_length,
-      stride_length=collect_sequence_length)
+      stride_length=collect_sequence_length,
+  )
 
   saved_model_dir = os.path.join(root_dir, learner.POLICY_SAVED_MODEL_DIR)
   collect_env_step_metric = py_metrics.EnvironmentSteps()
@@ -275,19 +285,22 @@ def train_eval(
           interval=policy_save_interval,
           metadata_metrics={
               triggers.ENV_STEP_METADATA_KEY: collect_env_step_metric
-          }),
+          },
+      ),
       triggers.StepPerSecondLogTrigger(train_step, interval=summary_interval),
   ]
 
   def training_dataset_fn():
     return reverb_replay_train.as_dataset(
         sample_batch_size=num_environments,
-        sequence_preprocess_fn=agent.preprocess_sequence)
+        sequence_preprocess_fn=agent.preprocess_sequence,
+    )
 
   def normalization_dataset_fn():
     return reverb_replay_normalization.as_dataset(
         sample_batch_size=num_environments,
-        sequence_preprocess_fn=agent.preprocess_sequence)
+        sequence_preprocess_fn=agent.preprocess_sequence,
+    )
 
   agent_learner = ppo_learner.PPOLearner(
       root_dir,
@@ -299,11 +312,13 @@ def train_eval(
       num_epochs=num_epochs,
       minibatch_size=minibatch_size,
       shuffle_buffer_size=collect_sequence_length,
-      triggers=learning_triggers)
+      triggers=learning_triggers,
+  )
 
   tf_collect_policy = agent.collect_policy
   collect_policy = py_tf_eager_policy.PyTFEagerPolicy(
-      tf_collect_policy, use_tf_function=True)
+      tf_collect_policy, use_tf_function=True
+  )
 
   collect_actor = actor.Actor(
       collect_env,
@@ -314,10 +329,12 @@ def train_eval(
       metrics=actor.collect_metrics(buffer_size=10) + [collect_env_step_metric],
       reference_metrics=[collect_env_step_metric],
       summary_dir=os.path.join(root_dir, learner.TRAIN_DIR),
-      summary_interval=summary_interval)
+      summary_interval=summary_interval,
+  )
 
   eval_greedy_policy = py_tf_eager_policy.PyTFEagerPolicy(
-      agent.policy, use_tf_function=True)
+      agent.policy, use_tf_function=True
+  )
 
   if eval_interval:
     logging.info('Intial evaluation.')
@@ -328,7 +345,8 @@ def train_eval(
         metrics=actor.eval_metrics(eval_episodes),
         reference_metrics=[collect_env_step_metric],
         summary_dir=os.path.join(root_dir, 'eval'),
-        episodes_per_run=eval_episodes)
+        episodes_per_run=eval_episodes,
+    )
 
     eval_actor.run_and_log()
 
@@ -354,9 +372,10 @@ def train_eval(
     # step is equal or greater than the `last_eval_step` + `eval_interval` or if
     # this is the last iteration. This logic exists because agent_learner.run()
     # does not return after every train step.
-    if (eval_interval and
-        (agent_learner.train_step_numpy >= eval_interval + last_eval_step
-         or i == num_iterations - 1)):
+    if eval_interval and (
+        agent_learner.train_step_numpy >= eval_interval + last_eval_step
+        or i == num_iterations - 1
+    ):
       logging.info('Evaluating.')
       eval_actor.run_and_log()
       last_eval_step = agent_learner.train_step_numpy

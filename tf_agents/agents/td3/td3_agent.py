@@ -34,7 +34,6 @@ from typing import Optional, Text
 import gin
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 import tensorflow_probability as tfp
-
 from tf_agents.agents import data_converter
 from tf_agents.agents import tf_agent
 from tf_agents.networks import network
@@ -48,8 +47,7 @@ from tf_agents.utils import nest_utils
 from tf_agents.utils import object_identity
 
 
-class Td3Info(collections.namedtuple(
-    'Td3Info', ('actor_loss', 'critic_loss'))):
+class Td3Info(collections.namedtuple('Td3Info', ('actor_loss', 'critic_loss'))):
   pass
 
 
@@ -57,31 +55,33 @@ class Td3Info(collections.namedtuple(
 class Td3Agent(tf_agent.TFAgent):
   """A TD3 Agent."""
 
-  def __init__(self,
-               time_step_spec: ts.TimeStep,
-               action_spec: types.NestedTensor,
-               actor_network: network.Network,
-               critic_network: network.Network,
-               actor_optimizer: types.Optimizer,
-               critic_optimizer: types.Optimizer,
-               exploration_noise_std: types.Float = 0.1,
-               critic_network_2: Optional[network.Network] = None,
-               target_actor_network: Optional[network.Network] = None,
-               target_critic_network: Optional[network.Network] = None,
-               target_critic_network_2: Optional[network.Network] = None,
-               target_update_tau: types.Float = 1.0,
-               target_update_period: types.Int = 1,
-               actor_update_period: types.Int = 1,
-               td_errors_loss_fn: Optional[types.LossFn] = None,
-               gamma: types.Float = 1.0,
-               reward_scale_factor: types.Float = 1.0,
-               target_policy_noise: types.Float = 0.2,
-               target_policy_noise_clip: types.Float = 0.5,
-               gradient_clipping: Optional[types.Float] = None,
-               debug_summaries: bool = False,
-               summarize_grads_and_vars: bool = False,
-               train_step_counter: Optional[tf.Variable] = None,
-               name: Optional[Text] = None):
+  def __init__(
+      self,
+      time_step_spec: ts.TimeStep,
+      action_spec: types.NestedTensor,
+      actor_network: network.Network,
+      critic_network: network.Network,
+      actor_optimizer: types.Optimizer,
+      critic_optimizer: types.Optimizer,
+      exploration_noise_std: types.Float = 0.1,
+      critic_network_2: Optional[network.Network] = None,
+      target_actor_network: Optional[network.Network] = None,
+      target_critic_network: Optional[network.Network] = None,
+      target_critic_network_2: Optional[network.Network] = None,
+      target_update_tau: types.Float = 1.0,
+      target_update_period: types.Int = 1,
+      actor_update_period: types.Int = 1,
+      td_errors_loss_fn: Optional[types.LossFn] = None,
+      gamma: types.Float = 1.0,
+      reward_scale_factor: types.Float = 1.0,
+      target_policy_noise: types.Float = 0.2,
+      target_policy_noise_clip: types.Float = 0.5,
+      gradient_clipping: Optional[types.Float] = None,
+      debug_summaries: bool = False,
+      summarize_grads_and_vars: bool = False,
+      train_step_counter: Optional[tf.Variable] = None,
+      name: Optional[Text] = None,
+  ):
     """Creates a Td3Agent Agent.
 
     Args:
@@ -132,8 +132,8 @@ class Td3Agent(tf_agent.TFAgent):
         will be written during training.
       train_step_counter: An optional counter to increment every time the train
         op is run.  Defaults to the global_step.
-      name: The name of this agent. All variables in this module will fall
-        under that name. Defaults to the class name.
+      name: The name of this agent. All variables in this module will fall under
+        that name. Defaults to the class name.
     """
     tf.Module.__init__(self, name=name)
     self._actor_network = actor_network
@@ -141,16 +141,20 @@ class Td3Agent(tf_agent.TFAgent):
     if target_actor_network:
       target_actor_network.create_variables()
     self._target_actor_network = common.maybe_copy_target_network_with_checks(
-        self._actor_network, target_actor_network, 'TargetActorNetwork')
+        self._actor_network, target_actor_network, 'TargetActorNetwork'
+    )
 
     self._critic_network_1 = critic_network
     critic_network.create_variables()
     if target_critic_network:
       target_critic_network.create_variables()
     self._target_critic_network_1 = (
-        common.maybe_copy_target_network_with_checks(self._critic_network_1,
-                                                     target_critic_network,
-                                                     'TargetCriticNetwork1'))
+        common.maybe_copy_target_network_with_checks(
+            self._critic_network_1,
+            target_critic_network,
+            'TargetCriticNetwork1',
+        )
+    )
 
     if critic_network_2 is not None:
       self._critic_network_2 = critic_network_2
@@ -162,9 +166,12 @@ class Td3Agent(tf_agent.TFAgent):
     if target_critic_network_2:
       target_critic_network_2.create_variables()
     self._target_critic_network_2 = (
-        common.maybe_copy_target_network_with_checks(self._critic_network_2,
-                                                     target_critic_network_2,
-                                                     'TargetCriticNetwork2'))
+        common.maybe_copy_target_network_with_checks(
+            self._critic_network_2,
+            target_critic_network_2,
+            'TargetCriticNetwork2',
+        )
+    )
 
     self._actor_optimizer = actor_optimizer
     self._critic_optimizer = critic_optimizer
@@ -174,7 +181,8 @@ class Td3Agent(tf_agent.TFAgent):
     self._target_update_period = target_update_period
     self._actor_update_period = actor_update_period
     self._td_errors_loss_fn = (
-        td_errors_loss_fn or common.element_wise_huber_loss)
+        td_errors_loss_fn or common.element_wise_huber_loss
+    )
     self._gamma = gamma
     self._reward_scale_factor = reward_scale_factor
     self._target_policy_noise = target_policy_noise
@@ -182,18 +190,24 @@ class Td3Agent(tf_agent.TFAgent):
     self._gradient_clipping = gradient_clipping
 
     self._update_target = self._get_target_updater(
-        target_update_tau, target_update_period)
+        target_update_tau, target_update_period
+    )
 
     policy = actor_policy.ActorPolicy(
-        time_step_spec=time_step_spec, action_spec=action_spec,
-        actor_network=self._actor_network, clip=True)
+        time_step_spec=time_step_spec,
+        action_spec=action_spec,
+        actor_network=self._actor_network,
+        clip=True,
+    )
     collect_policy = actor_policy.ActorPolicy(
-        time_step_spec=time_step_spec, action_spec=action_spec,
-        actor_network=self._actor_network, clip=False)
+        time_step_spec=time_step_spec,
+        action_spec=action_spec,
+        actor_network=self._actor_network,
+        clip=False,
+    )
     collect_policy = gaussian_policy.GaussianPolicy(
-        collect_policy,
-        scale=self._exploration_noise_std,
-        clip=True)
+        collect_policy, scale=self._exploration_noise_std, clip=True
+    )
 
     train_sequence_length = 2 if not self._actor_network.state_spec else None
     super(Td3Agent, self).__init__(
@@ -208,7 +222,8 @@ class Td3Agent(tf_agent.TFAgent):
     )
 
     self._as_transition = data_converter.AsTransition(
-        self.data_context, squeeze_time_dim=(train_sequence_length == 2))
+        self.data_context, squeeze_time_dim=(train_sequence_length == 2)
+    )
 
   def _initialize(self):
     """Initialize the agent.
@@ -219,15 +234,18 @@ class Td3Agent(tf_agent.TFAgent):
     common.soft_variables_update(
         self._critic_network_1.variables,
         self._target_critic_network_1.variables,
-        tau=1.0)
+        tau=1.0,
+    )
     common.soft_variables_update(
         self._critic_network_2.variables,
         self._target_critic_network_2.variables,
-        tau=1.0)
+        tau=1.0,
+    )
     common.soft_variables_update(
         self._actor_network.variables,
         self._target_actor_network.variables,
-        tau=1.0)
+        tau=1.0,
+    )
 
   def _get_target_updater(self, tau=1.0, period=1):
     """Performs a soft update of the target network parameters.
@@ -250,30 +268,38 @@ class Td3Agent(tf_agent.TFAgent):
             self._critic_network_1.variables,
             self._target_critic_network_1.variables,
             tau,
-            tau_non_trainable=1.0)
+            tau_non_trainable=1.0,
+        )
 
         critic_2_update_vars = common.deduped_network_variables(
-            self._critic_network_2, self._critic_network_1)
+            self._critic_network_2, self._critic_network_1
+        )
         target_critic_2_update_vars = common.deduped_network_variables(
-            self._target_critic_network_2, self._target_critic_network_1)
+            self._target_critic_network_2, self._target_critic_network_1
+        )
 
         critic_update_2 = common.soft_variables_update(
             critic_2_update_vars,
             target_critic_2_update_vars,
             tau,
-            tau_non_trainable=1.0)
+            tau_non_trainable=1.0,
+        )
 
         actor_update_vars = common.deduped_network_variables(
-            self._actor_network, self._critic_network_1, self._critic_network_2)
+            self._actor_network, self._critic_network_1, self._critic_network_2
+        )
         target_actor_update_vars = common.deduped_network_variables(
-            self._target_actor_network, self._target_critic_network_1,
-            self._target_critic_network_2)
+            self._target_actor_network,
+            self._target_critic_network_1,
+            self._target_critic_network_2,
+        )
 
         actor_update = common.soft_variables_update(
             actor_update_vars,
             target_actor_update_vars,
             tau,
-            tau_non_trainable=1.0)
+            tau_non_trainable=1.0,
+        )
         return tf.group(critic_update_1, critic_update_2, actor_update)
 
       return common.Periodically(update, period, 'update_targets')
@@ -283,24 +309,31 @@ class Td3Agent(tf_agent.TFAgent):
     time_steps, policy_steps, next_time_steps = transition
     actions = policy_steps.action
 
-    trainable_critic_variables = list(object_identity.ObjectIdentitySet(
-        self._critic_network_1.trainable_variables +
-        self._critic_network_2.trainable_variables))
+    trainable_critic_variables = list(
+        object_identity.ObjectIdentitySet(
+            self._critic_network_1.trainable_variables
+            + self._critic_network_2.trainable_variables
+        )
+    )
     with tf.GradientTape(watch_accessed_variables=False) as tape:
-      assert trainable_critic_variables, ('No trainable critic variables to '
-                                          'optimize.')
+      assert (
+          trainable_critic_variables
+      ), 'No trainable critic variables to optimize.'
       tape.watch(trainable_critic_variables)
-      critic_loss = self.critic_loss(time_steps, actions, next_time_steps,
-                                     weights=weights, training=True)
+      critic_loss = self.critic_loss(
+          time_steps, actions, next_time_steps, weights=weights, training=True
+      )
     tf.debugging.check_numerics(critic_loss, 'Critic loss is inf or nan.')
     critic_grads = tape.gradient(critic_loss, trainable_critic_variables)
-    self._apply_gradients(critic_grads, trainable_critic_variables,
-                          self._critic_optimizer)
+    self._apply_gradients(
+        critic_grads, trainable_critic_variables, self._critic_optimizer
+    )
 
     trainable_actor_variables = self._actor_network.trainable_variables
     with tf.GradientTape(watch_accessed_variables=False) as tape:
-      assert trainable_actor_variables, ('No trainable actor variables to '
-                                         'optimize.')
+      assert (
+          trainable_actor_variables
+      ), 'No trainable actor variables to optimize.'
       tape.watch(trainable_actor_variables)
       actor_loss = self.actor_loss(time_steps, weights=weights, training=True)
     tf.debugging.check_numerics(actor_loss, 'Actor loss is inf or nan.')
@@ -308,13 +341,15 @@ class Td3Agent(tf_agent.TFAgent):
     # We only optimize the actor every actor_update_period training steps.
     def optimize_actor():
       actor_grads = tape.gradient(actor_loss, trainable_actor_variables)
-      self._apply_gradients(actor_grads, trainable_actor_variables,
-                            self._actor_optimizer)
+      self._apply_gradients(
+          actor_grads, trainable_actor_variables, self._actor_optimizer
+      )
       return tf.no_op()
 
     remainder = tf.math.mod(self.train_step_counter, self._actor_update_period)
     tf.cond(
-        pred=tf.equal(remainder, 0), true_fn=optimize_actor, false_fn=tf.no_op)
+        pred=tf.equal(remainder, 0), true_fn=optimize_actor, false_fn=tf.no_op
+    )
 
     self.train_step_counter.assign_add(1)
     self._update_target()
@@ -322,30 +357,34 @@ class Td3Agent(tf_agent.TFAgent):
     # TODO(b/124382360): Compute per element TD loss and return in loss_info.
     total_loss = actor_loss + critic_loss
 
-    return tf_agent.LossInfo(total_loss,
-                             Td3Info(actor_loss, critic_loss))
+    return tf_agent.LossInfo(total_loss, Td3Info(actor_loss, critic_loss))
 
   def _apply_gradients(self, gradients, variables, optimizer):
     # Tuple is used for py3, where zip is a generator producing values once.
     grads_and_vars = tuple(zip(gradients, variables))
     if self._gradient_clipping is not None:
       grads_and_vars = eager_utils.clip_gradient_norms(
-          grads_and_vars, self._gradient_clipping)
+          grads_and_vars, self._gradient_clipping
+      )
 
     if self._summarize_grads_and_vars:
-      eager_utils.add_variables_summaries(grads_and_vars,
-                                          self.train_step_counter)
-      eager_utils.add_gradients_summaries(grads_and_vars,
-                                          self.train_step_counter)
+      eager_utils.add_variables_summaries(
+          grads_and_vars, self.train_step_counter
+      )
+      eager_utils.add_gradients_summaries(
+          grads_and_vars, self.train_step_counter
+      )
 
     return optimizer.apply_gradients(grads_and_vars)
 
-  def critic_loss(self,
-                  time_steps: ts.TimeStep,
-                  actions: types.Tensor,
-                  next_time_steps: ts.TimeStep,
-                  weights: Optional[types.Tensor] = None,
-                  training: bool = False) -> types.Tensor:
+  def critic_loss(
+      self,
+      time_steps: ts.TimeStep,
+      actions: types.Tensor,
+      next_time_steps: ts.TimeStep,
+      weights: Optional[types.Tensor] = None,
+      training: bool = False,
+  ) -> types.Tensor:
     """Computes the critic loss for TD3 training.
 
     Args:
@@ -361,122 +400,148 @@ class Td3Agent(tf_agent.TFAgent):
     """
     with tf.name_scope('critic_loss'):
       target_actions, _ = self._target_actor_network(
-          next_time_steps.observation, next_time_steps.step_type,
-          training=training)
+          next_time_steps.observation,
+          next_time_steps.step_type,
+          training=training,
+      )
 
       # Add gaussian noise to each action before computing target q values
       def add_noise_to_action(action):  # pylint: disable=missing-docstring
-        dist = tfp.distributions.Normal(loc=tf.zeros_like(action),
-                                        scale=self._target_policy_noise * \
-                                        tf.ones_like(action))
+        dist = tfp.distributions.Normal(
+            loc=tf.zeros_like(action),
+            scale=self._target_policy_noise * tf.ones_like(action),
+        )
         noise = dist.sample()
-        noise = tf.clip_by_value(noise, -self._target_policy_noise_clip,
-                                 self._target_policy_noise_clip)
+        noise = tf.clip_by_value(
+            noise,
+            -self._target_policy_noise_clip,
+            self._target_policy_noise_clip,
+        )
         return action + noise
 
-      noisy_target_actions = tf.nest.map_structure(add_noise_to_action,
-                                                   target_actions)
+      noisy_target_actions = tf.nest.map_structure(
+          add_noise_to_action, target_actions
+      )
 
       # Target q-values are the min of the two networks
       target_q_input_1 = (next_time_steps.observation, noisy_target_actions)
       target_q_values_1, _ = self._target_critic_network_1(
-          target_q_input_1,
-          next_time_steps.step_type,
-          training=False)
+          target_q_input_1, next_time_steps.step_type, training=False
+      )
       target_q_input_2 = (next_time_steps.observation, noisy_target_actions)
       target_q_values_2, _ = self._target_critic_network_2(
-          target_q_input_2,
-          next_time_steps.step_type,
-          training=False)
+          target_q_input_2, next_time_steps.step_type, training=False
+      )
       target_q_values = tf.minimum(target_q_values_1, target_q_values_2)
 
       td_targets = tf.stop_gradient(
-          self._reward_scale_factor * next_time_steps.reward +
-          self._gamma * next_time_steps.discount * target_q_values)
+          self._reward_scale_factor * next_time_steps.reward
+          + self._gamma * next_time_steps.discount * target_q_values
+      )
 
       pred_input_1 = (time_steps.observation, actions)
       pred_td_targets_1, _ = self._critic_network_1(
-          pred_input_1, time_steps.step_type, training=training)
+          pred_input_1, time_steps.step_type, training=training
+      )
       pred_input_2 = (time_steps.observation, actions)
       pred_td_targets_2, _ = self._critic_network_2(
-          pred_input_2, time_steps.step_type, training=training)
+          pred_input_2, time_steps.step_type, training=training
+      )
       pred_td_targets_all = [pred_td_targets_1, pred_td_targets_2]
 
       if self._debug_summaries:
         tf.compat.v2.summary.histogram(
-            name='td_targets', data=td_targets, step=self.train_step_counter)
+            name='td_targets', data=td_targets, step=self.train_step_counter
+        )
         with tf.name_scope('td_targets'):
           tf.compat.v2.summary.scalar(
               name='mean',
               data=tf.reduce_mean(input_tensor=td_targets),
-              step=self.train_step_counter)
+              step=self.train_step_counter,
+          )
           tf.compat.v2.summary.scalar(
               name='max',
               data=tf.reduce_max(input_tensor=td_targets),
-              step=self.train_step_counter)
+              step=self.train_step_counter,
+          )
           tf.compat.v2.summary.scalar(
               name='min',
               data=tf.reduce_min(input_tensor=td_targets),
-              step=self.train_step_counter)
+              step=self.train_step_counter,
+          )
 
         for td_target_idx in range(2):
           pred_td_targets = pred_td_targets_all[td_target_idx]
           td_errors = td_targets - pred_td_targets
           with tf.name_scope('critic_net_%d' % (td_target_idx + 1)):
             tf.compat.v2.summary.histogram(
-                name='td_errors', data=td_errors, step=self.train_step_counter)
+                name='td_errors', data=td_errors, step=self.train_step_counter
+            )
             tf.compat.v2.summary.histogram(
                 name='pred_td_targets',
                 data=pred_td_targets,
-                step=self.train_step_counter)
+                step=self.train_step_counter,
+            )
             with tf.name_scope('td_errors'):
               tf.compat.v2.summary.scalar(
                   name='mean',
                   data=tf.reduce_mean(input_tensor=td_errors),
-                  step=self.train_step_counter)
+                  step=self.train_step_counter,
+              )
               tf.compat.v2.summary.scalar(
                   name='mean_abs',
                   data=tf.reduce_mean(input_tensor=tf.abs(td_errors)),
-                  step=self.train_step_counter)
+                  step=self.train_step_counter,
+              )
               tf.compat.v2.summary.scalar(
                   name='max',
                   data=tf.reduce_max(input_tensor=td_errors),
-                  step=self.train_step_counter)
+                  step=self.train_step_counter,
+              )
               tf.compat.v2.summary.scalar(
                   name='min',
                   data=tf.reduce_min(input_tensor=td_errors),
-                  step=self.train_step_counter)
+                  step=self.train_step_counter,
+              )
             with tf.name_scope('pred_td_targets'):
               tf.compat.v2.summary.scalar(
                   name='mean',
                   data=tf.reduce_mean(input_tensor=pred_td_targets),
-                  step=self.train_step_counter)
+                  step=self.train_step_counter,
+              )
               tf.compat.v2.summary.scalar(
                   name='max',
                   data=tf.reduce_max(input_tensor=pred_td_targets),
-                  step=self.train_step_counter)
+                  step=self.train_step_counter,
+              )
               tf.compat.v2.summary.scalar(
                   name='min',
                   data=tf.reduce_min(input_tensor=pred_td_targets),
-                  step=self.train_step_counter)
+                  step=self.train_step_counter,
+              )
 
-      critic_loss = (self._td_errors_loss_fn(td_targets, pred_td_targets_1)
-                     + self._td_errors_loss_fn(td_targets, pred_td_targets_2))
+      critic_loss = self._td_errors_loss_fn(
+          td_targets, pred_td_targets_1
+      ) + self._td_errors_loss_fn(td_targets, pred_td_targets_2)
       if nest_utils.is_batched_nested_tensors(
-          time_steps, self.time_step_spec, num_outer_dims=2):
+          time_steps, self.time_step_spec, num_outer_dims=2
+      ):
         # Sum over the time dimension.
         critic_loss = tf.reduce_sum(
-            input_tensor=critic_loss, axis=range(1, critic_loss.shape.rank))
+            input_tensor=critic_loss, axis=range(1, critic_loss.shape.rank)
+        )
 
       if weights is not None:
         critic_loss *= weights
 
       return tf.reduce_mean(input_tensor=critic_loss)
 
-  def actor_loss(self,
-                 time_steps: ts.TimeStep,
-                 weights: Optional[types.Tensor] = None,
-                 training: bool = False) -> types.Tensor:
+  def actor_loss(
+      self,
+      time_steps: ts.TimeStep,
+      weights: Optional[types.Tensor] = None,
+      training: bool = False,
+  ) -> types.Tensor:
     """Computes the actor_loss for TD3 training.
 
     Args:
@@ -484,28 +549,34 @@ class Td3Agent(tf_agent.TFAgent):
       weights: Optional scalar or element-wise (per-batch-entry) importance
         weights.
       training: Whether this loss is being used for training.
-      # TODO(b/124383618): Add an action norm regularizer.
+
     Returns:
       actor_loss: A scalar actor loss.
     """
+    # TODO(b/124383618): Add an action norm regularizer.
     with tf.name_scope('actor_loss'):
-      actions, _ = self._actor_network(time_steps.observation,
-                                       time_steps.step_type,
-                                       training=training)
+      actions, _ = self._actor_network(
+          time_steps.observation, time_steps.step_type, training=training
+      )
 
-      q_values, _ = self._critic_network_1((time_steps.observation, actions),
-                                           time_steps.step_type,
-                                           training=False)
+      q_values, _ = self._critic_network_1(
+          (time_steps.observation, actions),
+          time_steps.step_type,
+          training=False,
+      )
       actor_loss = -q_values
       # Sum over the time dimension.
       if actor_loss.shape.rank > 1:
         actor_loss = tf.reduce_sum(
-            actor_loss, axis=range(1, actor_loss.shape.rank))
+            actor_loss, axis=range(1, actor_loss.shape.rank)
+        )
       actor_loss = common.aggregate_losses(
-          per_example_loss=actor_loss, sample_weight=weights).total_loss
+          per_example_loss=actor_loss, sample_weight=weights
+      ).total_loss
 
       with tf.name_scope('Losses/'):
         tf.compat.v2.summary.scalar(
-            name='actor_loss', data=actor_loss, step=self.train_step_counter)
+            name='actor_loss', data=actor_loss, step=self.train_step_counter
+        )
 
     return actor_loss

@@ -20,12 +20,12 @@ from __future__ import division
 from __future__ import print_function
 
 import abc
-import tensorflow as tf
 
+import tensorflow as tf
 from tf_agents.utils import common
 
 from tensorflow.python.data.util import nest as data_nest  # pylint:disable=g-direct-tensorflow-import  # TF internal
-from tensorflow.python.util import deprecation   # pylint:disable=g-direct-tensorflow-import  # TF internal
+from tensorflow.python.util import deprecation  # pylint:disable=g-direct-tensorflow-import  # TF internal
 
 
 class ReplayBuffer(tf.Module):
@@ -86,7 +86,8 @@ class ReplayBuffer(tf.Module):
       date=None,
       instructions=(
           'Use `as_dataset(..., single_deterministic_pass=False) instead.'
-      ))
+      ),
+  )
   def get_next(self, sample_batch_size=None, num_steps=None, time_stacked=True):
     """Returns an item or batch of items from the buffer.
 
@@ -110,20 +111,18 @@ class ReplayBuffer(tf.Module):
         of this class. See examples below.
       time_stacked: (Optional.) Boolean, when true and num_steps > 1 it returns
         the items stacked on the time dimension. See examples below for details.
-      Examples of tensor shapes returned: (B = batch size, T = timestep, D =
+        Examples of tensor shapes returned: (B = batch size, T = timestep, D =
         data spec)  get_next(sample_batch_size=None, num_steps=None,
-        time_stacked=True)
-          return shape (non-episodic): [D]
-          return shape (episodic): [T, D] (T = full length of the episode)
-            get_next(sample_batch_size=B, num_steps=None, time_stacked=True)
-          return shape (non-episodic): [B, D]
-          return shape (episodic): Not supported get_next(sample_batch_size=B,
-            num_steps=T, time_stacked=True)
-          return shape: [B, T, D] get_next(sample_batch_size=None, num_steps=T,
-            time_stacked=False)
-          return shape: ([D], [D], ..) T tensors in the tuple
-            get_next(sample_batch_size=B, num_steps=T, time_stacked=False)
-          return shape: ([B, D], [B, D], ..) T tensors in the tuple
+        time_stacked=True) return shape (non-episodic): [D] return shape
+        (episodic): [T, D] (T = full length of the episode)
+        get_next(sample_batch_size=B, num_steps=None, time_stacked=True) return
+        shape (non-episodic): [B, D] return shape (episodic): Not supported
+          get_next(sample_batch_size=B, num_steps=T, time_stacked=True) return
+        shape: [B, T, D] get_next(sample_batch_size=None, num_steps=T,
+          time_stacked=False) return shape: ([D], [D], ..) T tensors in the
+          tuple get_next(sample_batch_size=B, num_steps=T, time_stacked=False)
+          return
+        shape: ([B, D], [B, D], ..) T tensors in the tuple
 
     Returns:
       A 2-tuple containing:
@@ -132,12 +131,14 @@ class ReplayBuffer(tf.Module):
     """
     return self._get_next(sample_batch_size, num_steps, time_stacked)
 
-  def as_dataset(self,
-                 sample_batch_size=None,
-                 num_steps=None,
-                 num_parallel_calls=None,
-                 sequence_preprocess_fn=None,
-                 single_deterministic_pass=False):
+  def as_dataset(
+      self,
+      sample_batch_size=None,
+      num_steps=None,
+      num_parallel_calls=None,
+      sequence_preprocess_fn=None,
+      single_deterministic_pass=False,
+  ):
     """Creates and returns a dataset that returns entries from the buffer.
 
     A single entry from the dataset is the result of the following pipeline:
@@ -188,12 +189,11 @@ class ReplayBuffer(tf.Module):
       num_parallel_calls: (Optional.) A `tf.int32` scalar `tf.Tensor`,
         representing the number elements to process in parallel. If not
         specified, elements will be processed sequentially.
-      sequence_preprocess_fn: (Optional) fn for preprocessing the collected
-        data before it is split into subsequences of length `num_steps`.
-        Defined in `TFAgent.preprocess_sequence`.  Defaults to pass through.
+      sequence_preprocess_fn: (Optional) fn for preprocessing the collected data
+        before it is split into subsequences of length `num_steps`. Defined in
+        `TFAgent.preprocess_sequence`.  Defaults to pass through.
       single_deterministic_pass: Python boolean.  If `True`, the dataset will
         return a single deterministic pass through its underlying data.
-
         **NOTE**: If the buffer is modified while a Dataset iterator is
         iterating over this data, the iterator may miss any new data or
         otherwise have subtly invalid data.
@@ -216,20 +216,24 @@ class ReplayBuffer(tf.Module):
           'with gathering operator.  Convert any lists to tuples.  '
           'For example, if your spec looks like [a, b, c], '
           'change it to (a, b, c).  Spec structure is:\n  {}'.format(
-              tf.nest.map_structure(lambda spec: spec.dtype, self._data_spec)))
+              tf.nest.map_structure(lambda spec: spec.dtype, self._data_spec)
+          )
+      )
 
     if single_deterministic_pass:
       ds = self._single_deterministic_pass_dataset(
           sample_batch_size=sample_batch_size,
           num_steps=num_steps,
           sequence_preprocess_fn=sequence_preprocess_fn,
-          num_parallel_calls=num_parallel_calls)
+          num_parallel_calls=num_parallel_calls,
+      )
     else:
       ds = self._as_dataset(
           sample_batch_size=sample_batch_size,
           num_steps=num_steps,
           sequence_preprocess_fn=sequence_preprocess_fn,
-          num_parallel_calls=num_parallel_calls)
+          num_parallel_calls=num_parallel_calls,
+      )
 
     if self._stateful_dataset:
       options = tf.data.Options()
@@ -242,7 +246,8 @@ class ReplayBuffer(tf.Module):
       date=None,
       instructions=(
           'Use `as_dataset(..., single_deterministic_pass=True)` instead.'
-      ))
+      ),
+  )
   def gather_all(self):
     """Returns all the items in buffer.
 
@@ -278,20 +283,24 @@ class ReplayBuffer(tf.Module):
     raise NotImplementedError
 
   @abc.abstractmethod
-  def _as_dataset(self,
-                  sample_batch_size,
-                  num_steps,
-                  sequence_preprocess_fn,
-                  num_parallel_calls):
+  def _as_dataset(
+      self,
+      sample_batch_size,
+      num_steps,
+      sequence_preprocess_fn,
+      num_parallel_calls,
+  ):
     """Creates and returns a dataset that returns entries from the buffer."""
     raise NotImplementedError
 
   @abc.abstractmethod
-  def _single_deterministic_pass_dataset(self,
-                                         sample_batch_size,
-                                         num_steps,
-                                         sequence_preprocess_fn,
-                                         num_parallel_calls):
+  def _single_deterministic_pass_dataset(
+      self,
+      sample_batch_size,
+      num_steps,
+      sequence_preprocess_fn,
+      num_parallel_calls,
+  ):
     """Creates and returns a dataset that returns entries from the buffer."""
     raise NotImplementedError
 

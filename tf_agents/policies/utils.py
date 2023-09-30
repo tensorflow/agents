@@ -23,7 +23,6 @@ import collections
 from typing import Optional, Sequence, Text, Union
 
 import tensorflow as tf
-
 from tf_agents.specs import bandit_spec_utils
 from tf_agents.specs import tensor_spec
 from tf_agents.trajectories import policy_step
@@ -32,7 +31,8 @@ from tf_agents.utils import common
 
 
 def get_num_actions_from_tensor_spec(
-    action_spec: types.BoundedTensorSpec) -> int:
+    action_spec: types.BoundedTensorSpec,
+) -> int:
   """Validates `action_spec` and returns number of actions.
 
   `action_spec` must specify a scalar int32 or int64 with minimum zero.
@@ -48,22 +48,31 @@ def get_num_actions_from_tensor_spec(
       with minimum 0.
   """
   if not isinstance(action_spec, tensor_spec.BoundedTensorSpec):
-    raise ValueError('Action spec must be a `BoundedTensorSpec`; '
-                     'got {}'.format(type(action_spec)))
+    raise ValueError(
+        'Action spec must be a `BoundedTensorSpec`; got {}'.format(
+            type(action_spec)
+        )
+    )
   if action_spec.shape.rank != 0:
-    raise ValueError('Action spec must be a scalar; '
-                     'got shape{}'.format(action_spec.shape))
+    raise ValueError(
+        'Action spec must be a scalar; got shape{}'.format(action_spec.shape)
+    )
   if action_spec.dtype not in (tf.int32, tf.int64):
-    raise ValueError('Action spec must be have dtype int32 or int64; '
-                     'got {}'.format(action_spec.dtype))
+    raise ValueError(
+        'Action spec must be have dtype int32 or int64; got {}'.format(
+            action_spec.dtype
+        )
+    )
   if action_spec.minimum != 0:
-    raise ValueError('Action spec must have minimum 0; '
-                     'got {}'.format(action_spec.minimum))
+    raise ValueError(
+        'Action spec must have minimum 0; got {}'.format(action_spec.minimum)
+    )
   return action_spec.maximum + 1
 
 
 class InfoFields(object):
   """Strings which can be used in the policy info fields."""
+
   LOG_PROBABILITY = policy_step.CommonFields.LOG_PROBABILITY
   # Mean of predicted rewards (per arm).
   PREDICTED_REWARDS_MEAN = 'predicted_rewards_mean'
@@ -72,7 +81,8 @@ class InfoFields(object):
   # `PREDICTED_REWARDS_MEAN` stores the predicted mean rewards for all
   # objectives.
   MULTIOBJECTIVE_SCALARIZED_PREDICTED_REWARDS_MEAN = (
-      'multiobjective_scalarized_predicted_rewards_mean')
+      'multiobjective_scalarized_predicted_rewards_mean'
+  )
   # Optimistic estimates of predicted rewards (per arm).
   PREDICTED_REWARDS_OPTIMISTIC = 'predicted_rewards_optimistic'
   # Samples of predicted rewards (per arm).
@@ -85,31 +95,43 @@ class InfoFields(object):
 
 PolicyInfo = collections.namedtuple(  # pylint: disable=invalid-name
     'PolicyInfo',
-    (InfoFields.LOG_PROBABILITY, InfoFields.PREDICTED_REWARDS_MEAN,
-     InfoFields.MULTIOBJECTIVE_SCALARIZED_PREDICTED_REWARDS_MEAN,
-     InfoFields.PREDICTED_REWARDS_OPTIMISTIC,
-     InfoFields.PREDICTED_REWARDS_SAMPLED, InfoFields.BANDIT_POLICY_TYPE))
+    (
+        InfoFields.LOG_PROBABILITY,
+        InfoFields.PREDICTED_REWARDS_MEAN,
+        InfoFields.MULTIOBJECTIVE_SCALARIZED_PREDICTED_REWARDS_MEAN,
+        InfoFields.PREDICTED_REWARDS_OPTIMISTIC,
+        InfoFields.PREDICTED_REWARDS_SAMPLED,
+        InfoFields.BANDIT_POLICY_TYPE,
+    ),
+)
 # Set default empty tuple for all fields.
 PolicyInfo.__new__.__defaults__ = ((),) * len(PolicyInfo._fields)
 
 
 PerArmPolicyInfo = collections.namedtuple(  # pylint: disable=invalid-name
     'PerArmPolicyInfo',
-    (InfoFields.LOG_PROBABILITY, InfoFields.PREDICTED_REWARDS_MEAN,
-     InfoFields.MULTIOBJECTIVE_SCALARIZED_PREDICTED_REWARDS_MEAN,
-     InfoFields.PREDICTED_REWARDS_OPTIMISTIC,
-     InfoFields.PREDICTED_REWARDS_SAMPLED, InfoFields.BANDIT_POLICY_TYPE,
-     InfoFields.CHOSEN_ARM_FEATURES))
+    (
+        InfoFields.LOG_PROBABILITY,
+        InfoFields.PREDICTED_REWARDS_MEAN,
+        InfoFields.MULTIOBJECTIVE_SCALARIZED_PREDICTED_REWARDS_MEAN,
+        InfoFields.PREDICTED_REWARDS_OPTIMISTIC,
+        InfoFields.PREDICTED_REWARDS_SAMPLED,
+        InfoFields.BANDIT_POLICY_TYPE,
+        InfoFields.CHOSEN_ARM_FEATURES,
+    ),
+)
 # Set default empty tuple for all fields.
 PerArmPolicyInfo.__new__.__defaults__ = ((),) * len(PerArmPolicyInfo._fields)
 
 
-def populate_policy_info(arm_observations: types.Tensor,
-                         chosen_actions: types.Tensor,
-                         rewards_for_argmax: types.Tensor,
-                         est_rewards: types.Tensor,
-                         emit_policy_info: Sequence[Text],
-                         accepts_per_arm_features: bool) -> PolicyInfo:
+def populate_policy_info(
+    arm_observations: types.Tensor,
+    chosen_actions: types.Tensor,
+    rewards_for_argmax: types.Tensor,
+    est_rewards: types.Tensor,
+    emit_policy_info: Sequence[Text],
+    accepts_per_arm_features: bool,
+) -> PolicyInfo:
   """Populates policy info given all needed input.
 
   Args:
@@ -131,36 +153,50 @@ def populate_policy_info(arm_observations: types.Tensor,
     # Saving the features for the chosen action to the policy_info.
     chosen_arm_features = tf.nest.map_structure(
         lambda t: tf.gather(params=t, indices=chosen_actions, batch_dims=1),
-        arm_observations)
+        arm_observations,
+    )
     policy_info = PerArmPolicyInfo(
         predicted_rewards_optimistic=(
             rewards_for_argmax
-            if InfoFields.PREDICTED_REWARDS_OPTIMISTIC in emit_policy_info else
-            ()),
+            if InfoFields.PREDICTED_REWARDS_OPTIMISTIC in emit_policy_info
+            else ()
+        ),
         predicted_rewards_sampled=(
-            rewards_for_argmax if
-            InfoFields.PREDICTED_REWARDS_SAMPLED in emit_policy_info else ()),
+            rewards_for_argmax
+            if InfoFields.PREDICTED_REWARDS_SAMPLED in emit_policy_info
+            else ()
+        ),
         predicted_rewards_mean=(
             est_rewards
-            if InfoFields.PREDICTED_REWARDS_MEAN in emit_policy_info else ()),
-        chosen_arm_features=chosen_arm_features)
+            if InfoFields.PREDICTED_REWARDS_MEAN in emit_policy_info
+            else ()
+        ),
+        chosen_arm_features=chosen_arm_features,
+    )
   else:
     policy_info = PolicyInfo(
         predicted_rewards_optimistic=(
             rewards_for_argmax
-            if InfoFields.PREDICTED_REWARDS_OPTIMISTIC in emit_policy_info else
-            ()),
+            if InfoFields.PREDICTED_REWARDS_OPTIMISTIC in emit_policy_info
+            else ()
+        ),
         predicted_rewards_sampled=(
-            rewards_for_argmax if
-            InfoFields.PREDICTED_REWARDS_SAMPLED in emit_policy_info else ()),
+            rewards_for_argmax
+            if InfoFields.PREDICTED_REWARDS_SAMPLED in emit_policy_info
+            else ()
+        ),
         predicted_rewards_mean=(
             est_rewards
-            if InfoFields.PREDICTED_REWARDS_MEAN in emit_policy_info else ()))
+            if InfoFields.PREDICTED_REWARDS_MEAN in emit_policy_info
+            else ()
+        ),
+    )
   return policy_info
 
 
 class BanditPolicyType(object):
   """Enumeration of bandit policy types."""
+
   # No bandit policy type specified.
   UNKNOWN = 0
   # Greedy decision made by bandit agent.
@@ -175,19 +211,23 @@ class BanditPolicyType(object):
 
 
 def create_bandit_policy_type_tensor_spec(
-    shape: types.Shape) -> types.BoundedTensorSpec:
+    shape: types.Shape,
+) -> types.BoundedTensorSpec:
   """Create tensor spec for bandit policy type."""
   return tensor_spec.BoundedTensorSpec(
       shape=shape,
       dtype=tf.int32,
       minimum=BanditPolicyType.UNKNOWN,
-      maximum=BanditPolicyType.FALCON)
+      maximum=BanditPolicyType.FALCON,
+  )
 
 
 @common.function
-def masked_argmax(input_tensor: types.Tensor,
-                  mask: types.Tensor,
-                  output_type: tf.DType = tf.int32) -> types.Tensor:
+def masked_argmax(
+    input_tensor: types.Tensor,
+    mask: types.Tensor,
+    output_type: tf.DType = tf.int32,
+) -> types.Tensor:
   """Computes the argmax where the allowed elements are given by a mask.
 
   If a row of `mask` contains all zeros, then this method will return -1 for the
@@ -205,7 +245,8 @@ def masked_argmax(input_tensor: types.Tensor,
   input_tensor.shape.assert_is_compatible_with(mask.shape)
   neg_inf = tf.constant(-float('Inf'), input_tensor.dtype)
   modified_input = tf.compat.v2.where(
-      tf.cast(mask, tf.bool), input_tensor, neg_inf)
+      tf.cast(mask, tf.bool), input_tensor, neg_inf
+  )
   argmax_tensor = tf.argmax(modified_input, axis=-1, output_type=output_type)
   # Replace results for invalid mask rows with -1.
   reduce_mask = tf.cast(tf.reduce_max(mask, axis=1), tf.bool)
@@ -213,8 +254,10 @@ def masked_argmax(input_tensor: types.Tensor,
   return tf.compat.v2.where(reduce_mask, argmax_tensor, neg_one)
 
 
-def has_bandit_policy_type(info: Optional[Union[PolicyInfo, PerArmPolicyInfo]],
-                           check_for_tensor: bool = False) -> bool:
+def has_bandit_policy_type(
+    info: Optional[Union[PolicyInfo, PerArmPolicyInfo]],
+    check_for_tensor: bool = False,
+) -> bool:
   """Check if policy info has `bandit_policy_type` field/tensor."""
   if not info:
     return False
@@ -226,8 +269,10 @@ def has_bandit_policy_type(info: Optional[Union[PolicyInfo, PerArmPolicyInfo]],
     return has_field
 
 
-def has_chosen_arm_features(info: Optional[Union[PolicyInfo, PerArmPolicyInfo]],
-                            check_for_tensor: bool = False) -> bool:
+def has_chosen_arm_features(
+    info: Optional[Union[PolicyInfo, PerArmPolicyInfo]],
+    check_for_tensor: bool = False,
+) -> bool:
   """Check if policy info has `chosen_arm_features` field/tensor."""
   if not info:
     return False
@@ -241,7 +286,8 @@ def has_chosen_arm_features(info: Optional[Union[PolicyInfo, PerArmPolicyInfo]],
 
 def set_bandit_policy_type(
     info: Optional[Union[PolicyInfo, PerArmPolicyInfo]],
-    bandit_policy_type: types.Tensor) -> Union[PolicyInfo, PerArmPolicyInfo]:
+    bandit_policy_type: types.Tensor,
+) -> Union[PolicyInfo, PerArmPolicyInfo]:
   """Sets the InfoFields.BANDIT_POLICY_TYPE on info to bandit_policy_type.
 
   If policy `info` does not support InfoFields.BANDIT_POLICY_TYPE, this method
@@ -268,8 +314,9 @@ def set_bandit_policy_type(
 
 
 @common.function
-def bandit_policy_uniform_mask(values: types.Tensor,
-                               mask: types.Tensor) -> types.Tensor:
+def bandit_policy_uniform_mask(
+    values: types.Tensor, mask: types.Tensor
+) -> types.Tensor:
   """Set bandit policy type tensor to BanditPolicyType.UNIFORM based on mask.
 
   Set bandit policy type `values` to BanditPolicyType.UNIFORM; returns tensor
@@ -285,7 +332,8 @@ def bandit_policy_uniform_mask(values: types.Tensor,
     Tensor containing `BanditPolicyType` enumerations with masked values.
   """
   return tf.where(
-      mask, tf.fill(tf.shape(values), BanditPolicyType.UNIFORM), values)
+      mask, tf.fill(tf.shape(values), BanditPolicyType.UNIFORM), values
+  )
 
 
 def get_model_index(arm_index: int, accepts_per_arm_features: bool) -> int:
@@ -307,7 +355,8 @@ def get_model_index(arm_index: int, accepts_per_arm_features: bool) -> int:
 
 
 def create_chosen_arm_features_info_spec(
-    observation_spec: types.NestedTensorSpec) -> types.NestedTensorSpec:
+    observation_spec: types.NestedTensorSpec,
+) -> types.NestedTensorSpec:
   """Creates the chosen arm features info spec from the arm observation spec."""
   arm_spec = observation_spec[bandit_spec_utils.PER_ARM_FEATURE_KEY]
   return tensor_spec.remove_outer_dims_nest(arm_spec, 1)
@@ -315,11 +364,15 @@ def create_chosen_arm_features_info_spec(
 
 def check_no_mask_with_arm_features(
     accepts_per_arm_features: bool,
-    observation_and_action_constraint_splitter: types.Splitter):
-  if accepts_per_arm_features and (observation_and_action_constraint_splitter is
-                                   not None):
+    observation_and_action_constraint_splitter: types.Splitter,
+):
+  if accepts_per_arm_features and (
+      observation_and_action_constraint_splitter is not None
+  ):
     raise NotImplementedError(
         'Action masking is not allowed for Bandit problems with arm features. '
         'To implement a policy that handles variable number of actions, please '
         'use the `{}` feature key.'.format(
-            bandit_spec_utils.NUM_ACTIONS_FEATURE_KEY))
+            bandit_spec_utils.NUM_ACTIONS_FEATURE_KEY
+        )
+    )

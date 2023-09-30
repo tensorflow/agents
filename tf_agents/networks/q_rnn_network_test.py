@@ -20,7 +20,6 @@ from __future__ import division
 from __future__ import print_function
 
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
-
 from tf_agents.environments import suite_gym
 from tf_agents.environments import tf_py_environment
 from tf_agents.networks import expand_dims_layer
@@ -40,12 +39,14 @@ class QRnnNetworkTest(tf.test.TestCase):
     env = suite_gym.load('CartPole-v0')
     tf_env = tf_py_environment.TFPyEnvironment(env)
     rnn_network = q_rnn_network.QRnnNetwork(
-        tf_env.observation_spec(), tf_env.action_spec(), lstm_size=(40,))
+        tf_env.observation_spec(), tf_env.action_spec(), lstm_size=(40,)
+    )
 
     first_time_step = tf_env.current_time_step()
     q_values, state = rnn_network(
-        first_time_step.observation, first_time_step.step_type,
-        network_state=rnn_network.get_initial_state(batch_size=1)
+        first_time_step.observation,
+        first_time_step.step_type,
+        network_state=rnn_network.get_initial_state(batch_size=1),
     )
     self.assertEqual((1, 2), q_values.shape)
     self.assertEqual((1, 40), state[0].shape)
@@ -56,28 +57,40 @@ class QRnnNetworkTest(tf.test.TestCase):
     frames = 5
     num_actions = 2
     lstm_size = 6
-    states = (tf.random.uniform([batch_size, frames, 1]),
-              tf.random.uniform([batch_size, frames]))
+    states = (
+        tf.random.uniform([batch_size, frames, 1]),
+        tf.random.uniform([batch_size, frames]),
+    )
     preprocessing_layers = (
         tf.keras.layers.Dense(4),
         tf.keras.Sequential([
             expand_dims_layer.ExpandDims(-1),  # Convert to vec size (1,).
-            tf.keras.layers.Dense(4)]))
+            tf.keras.layers.Dense(4),
+        ]),
+    )
     network = q_rnn_network.QRnnNetwork(
         input_tensor_spec=(
             tensor_spec.TensorSpec([1], tf.float32),
-            tensor_spec.TensorSpec([], tf.float32)),
+            tensor_spec.TensorSpec([], tf.float32),
+        ),
         preprocessing_layers=preprocessing_layers,
         preprocessing_combiner=tf.keras.layers.Add(),
         lstm_size=(lstm_size,),
         action_spec=tensor_spec.BoundedTensorSpec(
-            [1], tf.int32, 0, num_actions - 1))
+            [1], tf.int32, 0, num_actions - 1
+        ),
+    )
     empty_step_type = tf.constant(
-        [[time_step.StepType.FIRST] * frames] * batch_size)
-    q_values, _ = network(states, empty_step_type,
-                          network_state=network.get_initial_state(batch_size))
+        [[time_step.StepType.FIRST] * frames] * batch_size
+    )
+    q_values, _ = network(
+        states,
+        empty_step_type,
+        network_state=network.get_initial_state(batch_size),
+    )
     self.assertAllEqual(
-        q_values.shape.as_list(), [batch_size, frames, num_actions])
+        q_values.shape.as_list(), [batch_size, frames, num_actions]
+    )
     # At least 2 variables each for the preprocessing layers.
     self.assertGreater(len(network.trainable_variables), 4)
 
@@ -85,30 +98,38 @@ class QRnnNetworkTest(tf.test.TestCase):
     batch_size = 3
     num_actions = 2
     lstm_size = 5
-    states = (tf.random.uniform([batch_size, 1]),
-              tf.random.uniform([batch_size]))
+    states = (
+        tf.random.uniform([batch_size, 1]),
+        tf.random.uniform([batch_size]),
+    )
     preprocessing_layers = (
         tf.keras.layers.Dense(4),
         tf.keras.Sequential([
             expand_dims_layer.ExpandDims(-1),  # Convert to vec size (1,).
-            tf.keras.layers.Dense(4)]))
+            tf.keras.layers.Dense(4),
+        ]),
+    )
     network = q_rnn_network.QRnnNetwork(
         input_tensor_spec=(
             tensor_spec.TensorSpec([1], tf.float32),
-            tensor_spec.TensorSpec([], tf.float32)),
+            tensor_spec.TensorSpec([], tf.float32),
+        ),
         preprocessing_layers=preprocessing_layers,
         preprocessing_combiner=tf.keras.layers.Add(),
         lstm_size=(lstm_size,),
         action_spec=tensor_spec.BoundedTensorSpec(
-            [1], tf.int32, 0, num_actions - 1))
+            [1], tf.int32, 0, num_actions - 1
+        ),
+    )
     empty_step_type = tf.constant([time_step.StepType.FIRST] * batch_size)
     q_values, _ = network(
-        states, empty_step_type,
-        network_state=network.get_initial_state(batch_size=batch_size))
+        states,
+        empty_step_type,
+        network_state=network.get_initial_state(batch_size=batch_size),
+    )
 
     # Processed 1 time step and the time axis was squeezed back.
-    self.assertAllEqual(
-        q_values.shape.as_list(), [batch_size, num_actions])
+    self.assertAllEqual(q_values.shape.as_list(), [batch_size, num_actions])
 
     # At least 2 variables each for the preprocessing layers.
     self.assertGreater(len(network.trainable_variables), 4)
@@ -117,12 +138,14 @@ class QRnnNetworkTest(tf.test.TestCase):
     env = suite_gym.load('CartPole-v0')
     tf_env = tf_py_environment.TFPyEnvironment(env)
     rnn_network = q_rnn_network.QRnnNetwork(
-        tf_env.observation_spec(), tf_env.action_spec(), lstm_size=(10, 5))
+        tf_env.observation_spec(), tf_env.action_spec(), lstm_size=(10, 5)
+    )
 
     first_time_step = tf_env.current_time_step()
     q_values, state = rnn_network(
-        first_time_step.observation, first_time_step.step_type,
-        network_state=rnn_network.get_initial_state(batch_size=1)
+        first_time_step.observation,
+        first_time_step.step_type,
+        network_state=rnn_network.get_initial_state(batch_size=1),
     )
     tf.nest.assert_same_structure(rnn_network.state_spec, state)
     self.assertEqual(2, len(state))
@@ -140,7 +163,8 @@ class QRnnNetworkTest(tf.test.TestCase):
         tf_env.observation_spec(),
         tf_env.action_spec(),
         rnn_construction_fn=rnn_keras_fn,
-        rnn_construction_kwargs={'lstm_size': 3})
+        rnn_construction_kwargs={'lstm_size': 3},
+    )
 
     first_time_step = tf_env.current_time_step()
     q_values, state = rnn_network(

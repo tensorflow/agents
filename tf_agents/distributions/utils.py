@@ -20,12 +20,11 @@ from __future__ import division
 from __future__ import print_function
 
 import inspect
-from typing import Any, Mapping, Type, Text
+from typing import Any, Mapping, Text, Type
 
 import numpy as np
 import tensorflow as tf
 import tensorflow_probability as tfp
-
 from tf_agents.distributions import tanh_bijector_stable
 from tf_agents.specs import tensor_spec
 from tf_agents.typing import types
@@ -38,7 +37,7 @@ def scale_distribution_to_spec(distribution, spec):
   return SquashToSpecNormal(distribution, spec)
 
 
-class SquashToSpecNormal(tfp.distributions.Distribution):
+class SquashToSpecNormal(tfp.distributions.AutoCompositeTensorDistribution):
   """Scales an input normalized action distribution to match spec bounds.
 
   Unlike the normal distribution computed when NormalProjectionNetwork
@@ -63,11 +62,9 @@ class SquashToSpecNormal(tfp.distributions.Distribution):
   X = tan((Y - b) / a), where Y in (b - a, b + a)
   """
 
-  def __init__(self,
-               distribution,
-               spec,
-               validate_args=False,
-               name="SquashToSpecNormal"):
+  def __init__(
+      self, distribution, spec, validate_args=False, name="SquashToSpecNormal"
+  ):
     """Constructs a SquashToSpecNormal distribution.
 
     Args:
@@ -79,31 +76,32 @@ class SquashToSpecNormal(tfp.distributions.Distribution):
         outputs.
       name: Python `str` name prefixed to Ops created by this class.
     """
-
+    parameters = dict(locals())
     if not isinstance(
         distribution,
-        (tfp.distributions.Normal, tfp.distributions.MultivariateNormalDiag)):
-      raise ValueError("Input distribution must be a normal distribution, "
-                       "got {} instead".format(distribution))
-    self.action_means, self.action_magnitudes = common.spec_means_and_magnitudes(
-        spec)
-    # Parameters here describe the actor network's output, which is a normalized
-    # distribution prior to squashing to the action spec.
-    # This is necessary (and sufficient) in order for policy info to compare an
-    # old policy to a new policy.
-    parameters = {"loc": distribution.loc, "scale": distribution.scale}
-    # The raw action distribution
-    self.input_distribution = distribution
+        (tfp.distributions.Normal, tfp.distributions.MultivariateNormalDiag),
+    ):
+      raise ValueError(
+          "Input distribution must be a normal distribution, "
+          "got {} instead".format(distribution)
+      )
+    self.action_means, self.action_magnitudes = (
+        common.spec_means_and_magnitudes(spec)
+    )
+    self._distribution = distribution
+    self._spec = spec
 
     bijectors = [
         tfp.bijectors.Shift(self.action_means)(
-            tfp.bijectors.Scale(self.action_magnitudes)),
-        tanh_bijector_stable.Tanh()
+            tfp.bijectors.Scale(self.action_magnitudes)
+        ),
+        tanh_bijector_stable.Tanh(),
     ]
     bijector_chain = tfp.bijectors.Chain(bijectors)
     self._squashed_distribution = tfp.distributions.TransformedDistribution(
-        distribution=distribution, bijector=bijector_chain)
-    super(SquashToSpecNormal, self).__init__(
+        distribution=distribution, bijector=bijector_chain
+    )
+    super().__init__(
         dtype=distribution.dtype,
         reparameterization_type=distribution.reparameterization_type,
         validate_args=validate_args,
@@ -112,22 +110,40 @@ class SquashToSpecNormal(tfp.distributions.Distribution):
         # We let TransformedDistribution access _graph_parents since this class
         # is more like a baseclass than derived.
         graph_parents=(
-            distribution._graph_parents +  # pylint: disable=protected-access
-            bijector_chain.graph_parents),
-        name=name)
+            distribution._graph_parents + bijector_chain.graph_parents  # pylint: disable=protected-access
+        ),
+        name=name,
+    )
+
+  @classmethod
+  def _parameter_properties(cls, dtype, num_classes=None):
+    return dict(distribution=tfp.util.BatchedComponentProperties())
+
+  @property
+  def input_distribution(self):
+    """The raw action distribution."""
+    return self._distribution
 
   def kl_divergence(self, other, name="kl_divergence"):
     """Computes the KL Divergence between two SquashToSpecNormal distributions."""
     if not isinstance(other, SquashToSpecNormal):
-      raise ValueError("other distribution should be of type "
-                       "SquashToSpecNormal, got {}".format(other))
-    if (np.any(self.action_means != other.action_means) or
-        np.any(self.action_magnitudes != other.action_magnitudes)):
-      raise ValueError("Other distribution does not have same action mean "
-                       "and magnitude. This mean {}, this magnitude {}, "
-                       "other mean {}, other magnitude {}.".format(
-                           self.action_means, self.action_magnitudes,
-                           other.action_means, other.action_magnitudes))
+      raise ValueError(
+          "other distribution should be of type "
+          "SquashToSpecNormal, got {}".format(other)
+      )
+    if np.any(self.action_means != other.action_means) or np.any(
+        self.action_magnitudes != other.action_magnitudes
+    ):
+      raise ValueError(
+          "Other distribution does not have same action mean "
+          "and magnitude. This mean {}, this magnitude {}, "
+          "other mean {}, other magnitude {}.".format(
+              self.action_means,
+              self.action_magnitudes,
+              other.action_means,
+              other.action_magnitudes,
+          )
+      )
     return self.input_distribution.kl_divergence(other.input_distribution, name)
 
   def sample(self, sample_shape=(), seed=None, name="sample"):
@@ -149,8 +165,10 @@ class SquashToSpecNormal(tfp.distributions.Distribution):
 
   def mode(self, name="mode"):
     """Compute mean of the SquashToSpecNormal distribution."""
-    mean = self.action_magnitudes * tf.tanh(self.input_distribution.mode()) + \
-        self.action_means
+    mean = (
+        self.action_magnitudes * tf.tanh(self.input_distribution.mode())
+        + self.action_means
+    )
     return mean
 
   def mean(self, name="mean", **kwargs):
@@ -230,6 +248,7 @@ class Params(object):
   new_b_d = utils.make_from_parameters(p)
   ```
   """
+
   type_: Type[Any]  # Any class that has a .parameters.
   params: Mapping[Text, Any]
 
@@ -240,9 +259,11 @@ class Params(object):
     return str(self)
 
   def __eq__(self, other):
-    return (isinstance(self, type(other))
-            and self.type_ == other.type_
-            and self.params == other.params)
+    return (
+        isinstance(self, type(other))
+        and self.type_ == other.type_
+        and self.params == other.params
+    )
 
   def __init__(self, type_, params):
     self.type_ = type_
@@ -271,7 +292,8 @@ def get_parameters(value: Any) -> Params:
   if not isinstance(parameters, Mapping):
     raise TypeError(
         "value.parameters is not available or is not a dict; "
-        "value: {}; parameters: {}".format(value, parameters))
+        "value: {}; parameters: {}".format(value, parameters)
+    )
   type_ = type(value)
   params = {}
 
@@ -330,8 +352,8 @@ def make_from_parameters(value: Params) -> Any:
   ```
 
   Args:
-    value: A `Params` object; the output of `get_parameters` (or a
-      modified version thereof).
+    value: A `Params` object; the output of `get_parameters` (or a modified
+      version thereof).
 
   Returns:
     An instance of `value.type_`.
@@ -343,6 +365,7 @@ def make_from_parameters(value: Params) -> Any:
       properly set `self._parameters` or `self.parameters` to match the
       arguments it expects.
   """
+
   def make_from_params_or_identity(v_):
     return make_from_parameters(v_) if isinstance(v_, Params) else v_
 
@@ -354,8 +377,8 @@ def make_from_parameters(value: Params) -> Any:
 
 
 def parameters_to_dict(
-    value: Params,
-    tensors_only: bool = False) -> Mapping[Text, Any]:
+    value: Params, tensors_only: bool = False
+) -> Mapping[Text, Any]:
   """Converts `value` to a nested `dict` (excluding all `type_` info).
 
   Sub-dicts represent `Params` objects; keys represent flattened nest structures
@@ -405,9 +428,9 @@ def parameters_to_dict(
 
   Args:
     value: The (possibly recursively defined) `Params`.
-    tensors_only: Whether to include all parameters or only
-      tensors and TypeSpecs.  If `True`, then only
-      `tf.Tensor` and `tf.TypeSpec` leaf parameters are emitted.
+    tensors_only: Whether to include all parameters or only tensors and
+      TypeSpecs.  If `True`, then only `tf.Tensor` and `tf.TypeSpec` leaf
+      parameters are emitted.
 
   Returns:
     A `dict` mapping `value.params` to flattened key/value pairs.  Any
@@ -416,8 +439,7 @@ def parameters_to_dict(
   output_entries = {}
 
   # All tensors and TensorSpecs will be included for purposes of this test.
-  is_tensor_or_spec = (
-      lambda p: tf.is_tensor(p) or isinstance(p, tf.TypeSpec))
+  is_tensor_or_spec = lambda p: tf.is_tensor(p) or isinstance(p, tf.TypeSpec)
 
   def convert(key, p):
     if isinstance(p, Params):
@@ -428,7 +450,7 @@ def parameters_to_dict(
   for k, v in value.params.items():
     if tf.nest.is_nested(v):
       flattened_params = nest_utils.flatten_with_joined_paths(v)
-      for (param_k, param_v) in flattened_params:
+      for param_k, param_v in flattened_params:
         key = "{}:{}".format(k, param_k)
         convert(key, param_v)
     else:
@@ -438,7 +460,8 @@ def parameters_to_dict(
 
 
 def merge_to_parameters_from_dict(
-    value: Params, params_dict: Mapping[Text, Any]) -> Params:
+    value: Params, params_dict: Mapping[Text, Any]
+) -> Params:
   """Merges dict matching data of `parameters_to_dict(value)` to a new `Params`.
 
   For more details, see the example below and the documentation of
@@ -508,6 +531,7 @@ def merge_to_parameters_from_dict(
         return merge_to_parameters_from_dict(p, params_dict_value)
       else:
         return params_dict_value if params_dict_value is not None else p
+
     # pylint: enable=cell-var-from-loop
 
     if tf.nest.is_nested(v):
@@ -516,8 +540,8 @@ def merge_to_parameters_from_dict(
         raise KeyError(
             "Only saw partial information from the dictionary for nested "
             "key '{}' in params_dict.  Entries provided: {}.  "
-            "Entries required: {}"
-            .format(k, sorted(converted), sorted(visited)))
+            "Entries required: {}".format(k, sorted(converted), sorted(visited))
+        )
     else:
       new_params[k] = convert(None, v)
 
@@ -526,7 +550,9 @@ def merge_to_parameters_from_dict(
     raise ValueError(
         "params_dict had keys that were not part of value.params.  "
         "params_dict keys: {}, value.params processed keys: {}".format(
-            sorted(params_dict.keys()), sorted(processed_params)))
+            sorted(params_dict.keys()), sorted(processed_params)
+        )
+    )
 
   return Params(type_=value.type_, params=new_params)
 
@@ -538,16 +564,16 @@ def _check_no_tensors(parameters: Params):
       _check_no_tensors(p)
     if tf.is_tensor(p):
       raise TypeError(
-          "Saw a `Tensor` value in parameters:\n  {}".format(parameters))
+          "Saw a `Tensor` value in parameters:\n  {}".format(parameters)
+      )
 
 
 class DistributionSpecV2(object):
   """Describes a tfp.distribution.Distribution using nested parameters."""
 
-  def __init__(self,
-               event_shape: tf.TensorShape,
-               dtype: tf.DType,
-               parameters: Params):
+  def __init__(
+      self, event_shape: tf.TensorShape, dtype: tf.DType, parameters: Params
+  ):
     """Construct a `DistributionSpecV2` from a Distribution's properties.
 
     Note that the `parameters` used to create the spec should contain
@@ -558,8 +584,8 @@ class DistributionSpecV2(object):
         `distribution.sample()` returns.  `distribution.sample(sample_shape)`
         returns tensors of shape `sample_shape + event_shape`.
       dtype: The distribution's `dtype`.
-      parameters: The recursive parameters of the distribution, with
-        tensors having directly been converted to `tf.TypeSpec` objects.
+      parameters: The recursive parameters of the distribution, with tensors
+        having directly been converted to `tf.TypeSpec` objects.
 
     Raises:
       TypeError: If for any entry `x` in `parameters`: `tf.is_tensor(x)`.
@@ -587,14 +613,19 @@ class DistributionSpecV2(object):
     return self._parameters
 
   def __eq__(self, other):
-    return (isinstance(self, type(other))
-            and self._event_shape == other._event_shape
-            and self._dtype == other._dtype
-            and self._parameters == other._parameters)
+    return (
+        isinstance(self, type(other))
+        and self._event_shape == other._event_shape
+        and self._dtype == other._dtype
+        and self._parameters == other._parameters
+    )
 
   def __str__(self):
-    return ("<DistributionSpecV2: event_shape={}, dtype={}, parameters={}>"
-            .format(self.event_shape, self.dtype, self.parameters))
+    return (
+        "<DistributionSpecV2: event_shape={}, dtype={}, parameters={}>".format(
+            self.event_shape, self.dtype, self.parameters
+        )
+    )
 
   def __repr__(self):
     return str(self)
@@ -603,7 +634,8 @@ class DistributionSpecV2(object):
 def assert_specs_are_compatible(
     network_output_spec: types.NestedTensorSpec,
     spec: types.NestedTensorSpec,
-    message_prefix: str):
+    message_prefix: str,
+):
   """Checks that the output of `network.create_variables` matches a spec.
 
   Args:
@@ -615,20 +647,26 @@ def assert_specs_are_compatible(
   Raises:
     ValueError: If the specs don't match.
   """
+
   def to_event(s):
-    return (s.event_spec if isinstance(s, DistributionSpecV2)
-            else tensor_spec.from_spec(s))
+    return (
+        s.event_spec
+        if isinstance(s, DistributionSpecV2)
+        else tensor_spec.from_spec(s)
+    )
 
   event_spec = tf.nest.map_structure(to_event, network_output_spec)
 
   nest_utils.assert_same_structure(
       event_spec,
       spec,
-      message=("{}:\n{}\nvs.\n{}".format(message_prefix, event_spec, spec)))
+      message="{}:\n{}\nvs.\n{}".format(message_prefix, event_spec, spec),
+  )
 
   def compare_output_to_spec(s1, s2):
     if not s1.is_compatible_with(s2):
-      raise ValueError("{}:\n{}\nvs.\n{}".format(message_prefix, event_spec,
-                                                 spec))
+      raise ValueError(
+          "{}:\n{}\nvs.\n{}".format(message_prefix, event_spec, spec)
+      )
 
   tf.nest.map_structure(compare_output_to_spec, event_spec, spec)

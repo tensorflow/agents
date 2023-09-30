@@ -19,16 +19,17 @@ from __future__ import division
 from __future__ import print_function
 
 from typing import Callable, Optional, Sequence, Text
-import numpy as np
 
+import numpy as np
 from tf_agents.environments import py_environment
 from tf_agents.specs import array_spec
 from tf_agents.trajectories import time_step as ts
 from tf_agents.typing import types
 from tf_agents.utils import nest_utils
 
-RewardFn = Callable[[np.ndarray, types.NestedArray, types.NestedArray],
-                    types.NestedArray]
+RewardFn = Callable[
+    [np.ndarray, types.NestedArray, types.NestedArray], types.NestedArray
+]
 
 
 class RandomPyEnvironment(py_environment.PyEnvironment):
@@ -38,18 +39,20 @@ class RandomPyEnvironment(py_environment.PyEnvironment):
   environment fall within the defined spec.
   """
 
-  def __init__(self,
-               observation_spec: types.NestedArray,
-               action_spec: Optional[types.NestedArray] = None,
-               episode_end_probability: types.Float = 0.1,
-               discount: types.Float = 1.0,
-               reward_fn: Optional[RewardFn] = None,
-               batch_size: Optional[types.Int] = None,
-               auto_reset: bool = True,
-               seed: types.Seed = 42,
-               render_size: Sequence[int] = (2, 2, 3),
-               min_duration: types.Int = 0,
-               max_duration: Optional[types.Int] = None):
+  def __init__(
+      self,
+      observation_spec: types.NestedArray,
+      action_spec: Optional[types.NestedArray] = None,
+      episode_end_probability: types.Float = 0.1,
+      discount: types.Float = 1.0,
+      reward_fn: Optional[RewardFn] = None,
+      batch_size: Optional[types.Int] = None,
+      auto_reset: bool = True,
+      seed: types.Seed = 42,
+      render_size: Sequence[int] = (2, 2, 3),
+      min_duration: types.Int = 0,
+      max_duration: Optional[types.Int] = None,
+  ):
     """Initializes the environment.
 
     Args:
@@ -62,19 +65,19 @@ class RandomPyEnvironment(py_environment.PyEnvironment):
       discount: Discount to set in time_steps.
       reward_fn: Callable that takes in step_type, action, an observation(s),
         and returns a numpy array of rewards.
-      batch_size: (Optional) Number of observations generated per call.
-        If this value is not `None`, then all actions are expected to
-        have an additional major axis of size `batch_size`, and all outputs
-        will have an additional major axis of size `batch_size`.
+      batch_size: (Optional) Number of observations generated per call. If this
+        value is not `None`, then all actions are expected to have an additional
+        major axis of size `batch_size`, and all outputs will have an additional
+        major axis of size `batch_size`.
       auto_reset: Bool, whether the random environment will auto reset when it
         reaches the end of the episode. By default it will.
       seed: Seed to use for rng used in observation generation.
       render_size: Size of the random render image to return when calling
         render.
-      min_duration: Number of steps at the beginning of the
-        episode during which the episode can not terminate.
-      max_duration: Optional number of steps after which the episode
-        terminates regarless of the termination probability.
+      min_duration: Number of steps at the beginning of the episode during which
+        the episode can not terminate.
+      max_duration: Optional number of steps after which the episode terminates
+        regarless of the termination probability.
 
     Raises:
       ValueError: If batch_size argument is not None and does not match the
@@ -99,8 +102,9 @@ class RandomPyEnvironment(py_environment.PyEnvironment):
       if self._batch_size is None:
         self._reward_fn = lambda *_: np.asarray(0.0, dtype=np.float32)
       else:
-        self._reward_fn = (
-            lambda *_: np.zeros(self._batch_size, dtype=np.float32))
+        self._reward_fn = lambda *_: np.zeros(
+            self._batch_size, dtype=np.float32
+        )
     else:
       self._reward_fn = reward_fn
 
@@ -128,8 +132,9 @@ class RandomPyEnvironment(py_environment.PyEnvironment):
 
   def _get_observation(self):
     batch_size = (self._batch_size,) if self._batch_size else ()
-    return array_spec.sample_spec_nest(self._observation_spec, self._rng,
-                                       batch_size)
+    return array_spec.sample_spec_nest(
+        self._observation_spec, self._rng, batch_size
+    )
 
   def _reset(self):
     self._done = False
@@ -138,8 +143,10 @@ class RandomPyEnvironment(py_environment.PyEnvironment):
   def _check_reward_shape(self, reward):
     expected_shape = () if self._batch_size is None else (self._batch_size,)
     if np.asarray(reward).shape != expected_shape:
-      raise ValueError('%r != %r. Size of reward must equal the batch size.' %
-                       (np.asarray(reward).shape, self._batch_size))
+      raise ValueError(
+          '%r != %r. Size of reward must equal the batch size.'
+          % (np.asarray(reward).shape, self._batch_size)
+      )
 
   def _step(self, action):
     if self._action_spec:
@@ -170,8 +177,9 @@ class RandomPyEnvironment(py_environment.PyEnvironment):
   def render(self, mode: Text = 'rgb_array') -> np.ndarray:
     if mode != 'rgb_array':
       raise ValueError(
-          "Only rendering mode supported is 'rgb_array', got {} instead.".
-          format(mode))
+          "Only rendering mode supported is 'rgb_array', got {} instead."
+          .format(mode)
+      )
 
     return self._rng.randint(0, 256, size=self._render_size, dtype=np.uint8)
 

@@ -21,7 +21,6 @@ from __future__ import print_function
 
 import collections
 import numbers
-
 from typing import Optional, Text
 
 from absl import logging
@@ -31,7 +30,6 @@ import tensorflow as tf
 from tf_agents.typing import types
 from tf_agents.utils import composite
 import wrapt
-
 
 # TODO(b/128613858): Update to a public facing API.
 from tensorflow.python.util import nest  # pylint:disable=g-direct-tensorflow-import  # TF internal
@@ -63,12 +61,14 @@ class _Dot(object):
 _DOT = _Dot()
 
 
-def assert_same_structure(nest1,
-                          nest2,
-                          check_types: bool = True,
-                          expand_composites: bool = False,
-                          allow_shallow_nest1: bool = False,
-                          message: Optional[Text] = None) -> None:
+def assert_same_structure(
+    nest1,
+    nest2,
+    check_types: bool = True,
+    expand_composites: bool = False,
+    allow_shallow_nest1: bool = False,
+    message: Optional[Text] = None,
+) -> None:
   """Same as tf.nest.assert_same_structure but with cleaner error messages.
 
   Args:
@@ -83,8 +83,8 @@ def assert_same_structure(nest1,
       "_ListWrapper" from trackable dependency tracking to compare equal).
     expand_composites: If true, then composite tensors such as `tf.SparseTensor`
       and `tf.RaggedTensor` are expanded into their component tensors.
-    allow_shallow_nest1: If `True`, `nest1` is allowed to be more shallow
-      than `nest2`.
+    allow_shallow_nest1: If `True`, `nest1` is allowed to be more shallow than
+      `nest2`.
     message: Optional error message to provide in case of failure.
 
   Raises:
@@ -95,10 +95,14 @@ def assert_same_structure(nest1,
   """
   if not isinstance(check_types, bool):
     raise TypeError(
-        'check_types must be a bool but saw: \'{}\''.format(check_types))
+        "check_types must be a bool but saw: '{}'".format(check_types)
+    )
   if not isinstance(expand_composites, bool):
-    raise TypeError('expand_composites must be a bool but saw: \'{}\''.format(
-        expand_composites))
+    raise TypeError(
+        "expand_composites must be a bool but saw: '{}'".format(
+            expand_composites
+        )
+    )
   message = message or 'The two structures do not match'
   exception = None
 
@@ -112,22 +116,29 @@ def assert_same_structure(nest1,
         nest1,
         nest2,
         check_types=check_types,
-        expand_composites=expand_composites)
+        expand_composites=expand_composites,
+    )
   except (TypeError, ValueError) as e:
     exception = type(e)
 
   if exception:
     str1 = tf.nest.map_structure(
-        lambda _: _DOT, nest1, expand_composites=expand_composites)
+        lambda _: _DOT, nest1, expand_composites=expand_composites
+    )
     str2 = tf.nest.map_structure(
-        lambda _: _DOT, nest2, expand_composites=expand_composites)
-    raise exception('{}:\n  {}\nvs.\n  {}\nValues:\n  {}\nvs.\n  {}.'
-                    .format(message, str1, str2, nest1, nest2))
+        lambda _: _DOT, nest2, expand_composites=expand_composites
+    )
+    raise exception(
+        '{}:\n  {}\nvs.\n  {}\nValues:\n  {}\nvs.\n  {}.'.format(
+            message, str1, str2, nest1, nest2
+        )
+    )
 
 
 def flatten_with_joined_paths(structure, expand_composites=False):
   flattened = flatten_with_tuple_paths(
-      structure, expand_composites=expand_composites)
+      structure, expand_composites=expand_composites
+  )
 
   def stringify_and_join(path_elements):
     return '/'.join(str(path_element) for path_element in path_elements)
@@ -139,8 +150,10 @@ def fast_map_structure_flatten(func, structure, *flat_structure, **kwargs):
   expand_composites = kwargs.get('expand_composites', False)
   entries = zip(*flat_structure)
   return tf.nest.pack_sequence_as(
-      structure, [func(*x) for x in entries],
-      expand_composites=expand_composites)
+      structure,
+      [func(*x) for x in entries],
+      expand_composites=expand_composites,
+  )
 
 
 def fast_map_structure(func, *structure, **kwargs):
@@ -151,18 +164,22 @@ def fast_map_structure(func, *structure, **kwargs):
   entries = zip(*flat_structure)
 
   return tf.nest.pack_sequence_as(
-      structure[0], [func(*x) for x in entries],
-      expand_composites=expand_composites)
+      structure[0],
+      [func(*x) for x in entries],
+      expand_composites=expand_composites,
+  )
 
 
 def has_tensors(*x):
   return np.any(
-      [tf.is_tensor(t) for t in tf.nest.flatten(x, expand_composites=True)])
+      [tf.is_tensor(t) for t in tf.nest.flatten(x, expand_composites=True)]
+  )
 
 
 def _is_namedtuple(x):
-  return (isinstance(x, tuple)
-          and isinstance(getattr(x, '_fields', None), collections_abc.Sequence))
+  return isinstance(x, tuple) and isinstance(
+      getattr(x, '_fields', None), collections_abc.Sequence
+  )
 
 
 def _is_attrs(x):
@@ -225,8 +242,9 @@ def prune_extra_keys(narrow, wide):
   #  here because the emtpy tuple is a singleton in cpython and
   #  because using "x is ()" or "x == ()" gives syntax warnings for
   #  numpy arrays.
-  narrow_raw = (narrow.__wrapped__ if isinstance(narrow, wrapt.ObjectProxy)
-                else narrow)
+  narrow_raw = (
+      narrow.__wrapped__ if isinstance(narrow, wrapt.ObjectProxy) else narrow
+  )
 
   if id(narrow_raw) == id(()):
     return narrow
@@ -234,12 +252,16 @@ def prune_extra_keys(narrow, wide):
   if isinstance(wide, wrapt.ObjectProxy):
     return type(wide)(prune_extra_keys(narrow, wide.__wrapped__))
 
-  wide_raw = (wide.__wrapped__ if isinstance(wide, wrapt.ObjectProxy) else wide)
+  wide_raw = wide.__wrapped__ if isinstance(wide, wrapt.ObjectProxy) else wide
 
-  if ((type(narrow_raw) != type(wide_raw))  # pylint: disable=unidiomatic-typecheck
+  if (
+      (type(narrow_raw) != type(wide_raw))  # pylint: disable=unidiomatic-typecheck
       and not (isinstance(narrow_raw, list) and isinstance(wide_raw, list))
-      and not (isinstance(narrow_raw, collections_abc.Mapping)
-               and isinstance(wide_raw, collections_abc.Mapping))):
+      and not (
+          isinstance(narrow_raw, collections_abc.Mapping)
+          and isinstance(wide_raw, collections_abc.Mapping)
+      )
+  ):
     # We return early if the types are different; but we make some exceptions:
     #  list subtypes are considered the same (e.g. ListWrapper and list())
     #  Mapping subtypes are considered the same (e.g. DictWrapper and dict())
@@ -257,18 +279,20 @@ def prune_extra_keys(narrow, wide):
       # wide lacks a required key from narrow; return early.
       return wide
     ordered_items = [
-        (k, prune_extra_keys(v, wide[k]))
-        for k, v in narrow.items()]
+        (k, prune_extra_keys(v, wide[k])) for k, v in narrow.items()
+    ]
     if isinstance(wide, collections.defaultdict):
       subset = type(wide)(wide.default_factory, ordered_items)
     else:
       subset = type(wide)(ordered_items)
     return subset
 
-  if nest.is_sequence(narrow):
+  if nest.is_nested(narrow):
     if _is_attrs(wide):
-      items = [prune_extra_keys(n, w)
-               for n, w in zip(_attr_items(narrow), _attr_items(wide))]
+      items = [
+          prune_extra_keys(n, w)
+          for n, w in zip(_attr_items(narrow), _attr_items(wide))
+      ]
       return type(wide)(*items)
 
     # Not an attrs, so can treat as lists or tuples from here on.
@@ -287,8 +311,9 @@ def prune_extra_keys(narrow, wide):
   return wide
 
 
-def assert_tensors_matching_dtypes_and_shapes(tensors_1, tensors_2, caller,
-                                              tensors_1_name, tensors_2_name):
+def assert_tensors_matching_dtypes_and_shapes(
+    tensors_1, tensors_2, caller, tensors_1_name, tensors_2_name
+):
   """Checks if tensors have matching dtypes and shapes.
 
   Args:
@@ -304,8 +329,12 @@ def assert_tensors_matching_dtypes_and_shapes(tensors_1, tensors_2, caller,
   assert_same_structure(
       tensors_1,
       tensors_2,
-      message=('{}: {} and {} do not have matching structures'.format(
-          caller, tensors_1_name, tensors_2_name)))
+      message=(
+          '{}: {} and {} do not have matching structures'.format(
+              caller, tensors_1_name, tensors_2_name
+          )
+      ),
+  )
 
   def convert_to_tensor(t):
     return tf.convert_to_tensor(t) if not tf.is_tensor(t) else t
@@ -321,7 +350,8 @@ def assert_tensors_matching_dtypes_and_shapes(tensors_1, tensors_2, caller,
   compatible = True
 
   if any(
-      t1_dtype != t2_dtype for t1_dtype, t2_dtype in zip(t1_dtypes, t2_dtypes)):
+      t1_dtype != t2_dtype for t1_dtype, t2_dtype in zip(t1_dtypes, t2_dtypes)
+  ):
     compatible = False
   else:
     for t1_shape, t2_shape in zip(t1_shapes, t2_shapes):
@@ -332,22 +362,29 @@ def assert_tensors_matching_dtypes_and_shapes(tensors_1, tensors_2, caller,
   if not compatible:
     get_dtypes = lambda v: tf.nest.map_structure(lambda x: x.dtype, v)
     get_shapes = lambda v: tf.nest.map_structure(lambda x: x.shape, v)
-    raise ValueError('{}: Inconsistent dtypes or shapes between {} and {}.\n'
-                     'dtypes:\n{}\nvs.\n{}.\n'
-                     'shapes:\n{}\nvs.\n{}.'.format(caller, tensors_1_name,
-                                                    tensors_2_name,
-                                                    get_dtypes(tensors_1),
-                                                    get_dtypes(tensors_2),
-                                                    get_shapes(tensors_1),
-                                                    get_shapes(tensors_2)))
+    raise ValueError(
+        '{}: Inconsistent dtypes or shapes between {} and {}.\n'
+        'dtypes:\n{}\nvs.\n{}.\n'
+        'shapes:\n{}\nvs.\n{}.'.format(
+            caller,
+            tensors_1_name,
+            tensors_2_name,
+            get_dtypes(tensors_1),
+            get_dtypes(tensors_2),
+            get_shapes(tensors_1),
+            get_shapes(tensors_2),
+        )
+    )
 
 
-def assert_matching_dtypes_and_inner_shapes(tensors_or_specs,
-                                            specs,
-                                            caller,
-                                            tensors_name,
-                                            specs_name,
-                                            allow_extra_fields=False):
+def assert_matching_dtypes_and_inner_shapes(
+    tensors_or_specs,
+    specs,
+    caller,
+    tensors_name,
+    specs_name,
+    allow_extra_fields=False,
+):
   """Returns `True` if tensors and specs have matching dtypes and inner shapes.
 
   Args:
@@ -368,11 +405,16 @@ def assert_matching_dtypes_and_inner_shapes(tensors_or_specs,
   assert_same_structure(
       tensors_or_specs,
       specs,
-      message=('{}: {} and {} do not have matching structures'.format(
-          caller, tensors_name, specs_name)))
+      message=(
+          '{}: {} and {} do not have matching structures'.format(
+              caller, tensors_name, specs_name
+          )
+      ),
+  )
 
   flat_tensors = nest.flatten(tensors_or_specs)
   flat_specs = tf.nest.flatten(specs)
+
   def _convert(t, s):
     if not isinstance(t, tf.TypeSpec) and not tf.is_tensor(t):
       t = tf.convert_to_tensor(t, dtype_hint=s.dtype)
@@ -387,8 +429,9 @@ def assert_matching_dtypes_and_inner_shapes(tensors_or_specs,
 
   compatible = True
 
-  if any(s_dtype != t_dtype
-         for s_dtype, t_dtype in zip(spec_dtypes, tensor_dtypes)):
+  if any(
+      s_dtype != t_dtype for s_dtype, t_dtype in zip(spec_dtypes, tensor_dtypes)
+  ):
     compatible = False
   else:
     for s_shape, t_shape in zip(spec_shapes, tensor_shapes):
@@ -397,30 +440,35 @@ def assert_matching_dtypes_and_inner_shapes(tensors_or_specs,
       if s_shape.ndims > t_shape.ndims:
         compatible = False
         break
-      if not s_shape.is_compatible_with(t_shape[-s_shape.ndims:]):
+      if not s_shape.is_compatible_with(t_shape[-s_shape.ndims :]):
         compatible = False
         break
 
   if not compatible:
     get_dtypes = lambda v: tf.nest.map_structure(lambda x: x.dtype, v)
     get_shapes = lambda v: tf.nest.map_structure(spec_shape, v)
-    raise ValueError('{}: Inconsistent dtypes or shapes between {} and {}.\n'
-                     'dtypes:\n{}\nvs.\n{}.\n'
-                     'shapes:\n{}\nvs.\n{}.'.format(
-                         caller,
-                         tensors_name,
-                         specs_name,
-                         get_dtypes(tensors_or_specs),
-                         get_dtypes(specs),
-                         get_shapes(tensors_or_specs),
-                         get_shapes(specs)))
+    raise ValueError(
+        '{}: Inconsistent dtypes or shapes between {} and {}.\n'
+        'dtypes:\n{}\nvs.\n{}.\n'
+        'shapes:\n{}\nvs.\n{}.'.format(
+            caller,
+            tensors_name,
+            specs_name,
+            get_dtypes(tensors_or_specs),
+            get_dtypes(specs),
+            get_shapes(tensors_or_specs),
+            get_shapes(specs),
+        )
+    )
 
 
-def is_batched_nested_tensors(tensors,
-                              specs,
-                              num_outer_dims=1,
-                              allow_extra_fields=False,
-                              check_dtypes=True):
+def is_batched_nested_tensors(
+    tensors,
+    specs,
+    num_outer_dims=1,
+    allow_extra_fields=False,
+    check_dtypes=True,
+):
   """Compares tensors to specs to determine if all tensors are batched or not.
 
   For each tensor, it checks the dimensions and dtypes with respect to specs.
@@ -440,14 +488,12 @@ def is_batched_nested_tensors(tensors,
     num_outer_dims: The integer number of dimensions that are considered batch
       dimensions.  Default 1.
     allow_extra_fields: If `True`, then `tensors` may have extra subfields which
-      are not in specs.  In this case, the extra subfields
-      will not be checked.  For example:  ```python
-      tensors = {"a": tf.zeros((3, 4), dtype=tf.float32),
-                 "b": tf.zeros((5, 6), dtype=tf.float32)}
-      specs = {"a": tf.TensorSpec(shape=(4,), dtype=tf.float32)} assert
-        is_batched_nested_tensors(tensors, specs, allow_extra_fields=True) ```
-        The above example would raise a ValueError if `allow_extra_fields` was
-        False.
+      are not in specs.  In this case, the extra subfields will not be checked.
+      For example:  ```python tensors = {"a": tf.zeros((3, 4),
+      dtype=tf.float32), "b": tf.zeros((5, 6), dtype=tf.float32)} specs = {"a":
+      tf.TensorSpec(shape=(4,), dtype=tf.float32)} assert
+      is_batched_nested_tensors(tensors, specs, allow_extra_fields=True) ``` The
+      above example would raise a ValueError if `allow_extra_fields` was False.
     check_dtypes: If `True` will validate that tensors and specs have the same
       dtypes.
 
@@ -468,7 +514,8 @@ def is_batched_nested_tensors(tensors,
   assert_same_structure(
       tensors,
       specs,
-      message='Tensors and specs do not have matching structures')
+      message='Tensors and specs do not have matching structures',
+  )
   flat_tensors = nest.flatten(tensors)
   flat_specs = tf.nest.flatten(specs)
 
@@ -478,19 +525,41 @@ def is_batched_nested_tensors(tensors,
   spec_dtypes = [t.dtype for t in flat_specs]
 
   if any(s_shape.rank is None for s_shape in spec_shapes):
-    raise ValueError('All specs should have ndims defined.  Saw shapes: %s' %
-                     (tf.nest.pack_sequence_as(specs, spec_shapes),))
+    raise ValueError(
+        'All specs should have ndims defined.  Saw shapes: %s'
+        % (tf.nest.pack_sequence_as(specs, spec_shapes),)
+    )
 
   if any(t_shape.rank is None for t_shape in tensor_shapes):
-    raise ValueError('All tensors should have ndims defined.  Saw shapes: %s' %
-                     (tf.nest.pack_sequence_as(specs, tensor_shapes),))
+    raise ValueError(
+        'All tensors should have ndims defined.  Saw shapes: %s'
+        % (tf.nest.pack_sequence_as(specs, tensor_shapes),)
+    )
 
-  if (check_dtypes and
-      any(s_dtype != t_dtype
-          for s_dtype, t_dtype in zip(spec_dtypes, tensor_dtypes))):
-    raise TypeError('Tensor dtypes do not match spec dtypes:\n{}\nvs.\n{}'
-                    .format(tf.nest.pack_sequence_as(specs, tensor_dtypes),
-                            tf.nest.pack_sequence_as(specs, spec_dtypes)))
+  if check_dtypes and any(
+      s_dtype != t_dtype for s_dtype, t_dtype in zip(spec_dtypes, tensor_dtypes)
+  ):
+    packed_tensor_dtypes = tf.nest.pack_sequence_as(specs, tensor_dtypes)
+    packed_spec_dtypes = tf.nest.pack_sequence_as(specs, spec_dtypes)
+
+    mismatched = tf.nest.map_structure(
+        lambda t, s: t != s, packed_tensor_dtypes, packed_spec_dtypes
+    )
+
+    num_mismatched = tf.math.count_nonzero(
+        tf.nest.flatten(mismatched), dtype=tf.int32
+    )
+
+    raise TypeError(
+        'Tensor dtypes do not match spec dtypes:\n{}\nvs.\n{}\nNumber of'
+        ' mismatched entries: {}\nMismatch:\n{}'.format(
+            tf.nest.pack_sequence_as(specs, tensor_dtypes),
+            tf.nest.pack_sequence_as(specs, spec_dtypes),
+            num_mismatched,
+            mismatched,
+        )
+    )
+
   is_unbatched = [
       s_shape.is_compatible_with(t_shape)
       for s_shape, t_shape in zip(spec_shapes, tensor_shapes)
@@ -507,14 +576,14 @@ def is_batched_nested_tensors(tensors,
   tensor_matches_spec = [
       s_shape.is_compatible_with(t_shape[discrepancy:])
       for discrepancy, s_shape, t_shape in zip(
-          tensor_ndims_discrepancy, spec_shapes, tensor_shapes)
+          tensor_ndims_discrepancy, spec_shapes, tensor_shapes
+      )
   ]
 
   # Check if all tensors match and have correct number of outer_dims.
-  is_batched = (
-      all(discrepancy == num_outer_dims
-          for discrepancy in tensor_ndims_discrepancy) and
-      all(tensor_matches_spec))
+  is_batched = all(
+      discrepancy == num_outer_dims for discrepancy in tensor_ndims_discrepancy
+  ) and all(tensor_matches_spec)
 
   if is_batched:
     return True
@@ -522,16 +591,21 @@ def is_batched_nested_tensors(tensors,
   # Check if tensors match but have incorrect number of batch dimensions.
   if all(
       discrepancy == tensor_ndims_discrepancy[0]
-      for discrepancy in tensor_ndims_discrepancy) and all(tensor_matches_spec):
+      for discrepancy in tensor_ndims_discrepancy
+  ) and all(tensor_matches_spec):
     return False
 
   raise ValueError(
       'Received a mix of batched and unbatched Tensors, or Tensors'
       ' are not compatible with Specs.  num_outer_dims: %d.\n'
       'Saw tensor_shapes:\n   %s\n'
-      'And spec_shapes:\n   %s' %
-      (num_outer_dims, tf.nest.pack_sequence_as(specs, tensor_shapes),
-       tf.nest.pack_sequence_as(specs, spec_shapes)))
+      'And spec_shapes:\n   %s'
+      % (
+          num_outer_dims,
+          tf.nest.pack_sequence_as(specs, tensor_shapes),
+          tf.nest.pack_sequence_as(specs, spec_shapes),
+      )
+  )
 
 
 def spec_shape(t):
@@ -568,7 +642,8 @@ def batch_nested_tensors(tensors, specs=None):
   assert_same_structure(
       tensors,
       specs,
-      message='Tensors and specs do not have matching structures')
+      message='Tensors and specs do not have matching structures',
+  )
 
   flat_tensors = tf.nest.flatten(tensors)
   flat_shapes = [spec_shape(s) for s in tf.nest.flatten(specs)]
@@ -582,9 +657,10 @@ def batch_nested_tensors(tensors, specs=None):
     elif tensor_rank(tensor) == shape.rank + 1:
       tensor.shape[1:].assert_is_compatible_with(shape)
     else:
-      raise ValueError('Tensor does not have the correct dimensions. '
-                       'tensor.shape {} expected shape {}'.format(
-                           tensor.shape, shape))
+      raise ValueError(
+          'Tensor does not have the correct dimensions. '
+          'tensor.shape {} expected shape {}'.format(tensor.shape, shape)
+      )
     batched_tensors.append(tensor)
   return tf.nest.pack_sequence_as(tensors, batched_tensors)
 
@@ -594,7 +670,8 @@ def _flatten_and_check_shape_nested_tensors(tensors, specs, num_outer_dims=1):
   assert_same_structure(
       tensors,
       specs,
-      message='Tensors and specs do not have matching structures')
+      message='Tensors and specs do not have matching structures',
+  )
   flat_tensors = tf.nest.flatten(tensors)
   flat_shapes = [spec_shape(s) for s in tf.nest.flatten(specs)]
   for tensor, shape in zip(flat_tensors, flat_shapes):
@@ -603,9 +680,12 @@ def _flatten_and_check_shape_nested_tensors(tensors, specs, num_outer_dims=1):
     elif tensor.shape.rank == shape.rank + num_outer_dims:
       tensor.shape[num_outer_dims:].assert_is_compatible_with(shape)
     else:
-      raise ValueError('Tensor does not have the correct dimensions. '
-                       'tensor.shape {} expected shape {}'.format(
-                           tensor.shape, [None] + shape.as_list()))
+      raise ValueError(
+          'Tensor does not have the correct dimensions. '
+          'tensor.shape {} expected shape {}'.format(
+              tensor.shape, [None] + shape.as_list()
+          )
+      )
   return flat_tensors, flat_shapes
 
 
@@ -613,11 +693,13 @@ def flatten_and_check_shape_nested_specs(specs, reference_specs):
   """Flatten nested specs and check their shape for use in other functions."""
   try:
     flat_specs, flat_shapes = _flatten_and_check_shape_nested_tensors(
-        specs, reference_specs, num_outer_dims=0)
+        specs, reference_specs, num_outer_dims=0
+    )
   except ValueError as exc:
-    raise ValueError('specs must be compatible with reference_specs'
-                     '; instead got specs=%s, reference_specs=%s' %
-                     (specs, reference_specs)) from exc
+    raise ValueError(
+        'specs must be compatible with reference_specs'
+        '; instead got specs=%s, reference_specs=%s' % (specs, reference_specs)
+    ) from exc
   return flat_specs, flat_shapes
 
 
@@ -643,7 +725,8 @@ def unbatch_nested_tensors(tensors, specs=None):
 
   unbatched_tensors = []
   flat_tensors, flat_shapes = _flatten_and_check_shape_nested_tensors(
-      tensors, specs)
+      tensors, specs
+  )
   for tensor, shape in zip(flat_tensors, flat_shapes):
     if tensor.shape.rank == shape.rank + 1:
       tensor = composite.squeeze(tensor, 0)
@@ -676,7 +759,8 @@ def split_nested_tensors(tensors, specs, num_or_size_splits):
   """
   split_tensor_lists = []
   flat_tensors, flat_shapes = _flatten_and_check_shape_nested_tensors(
-      tensors, specs)
+      tensors, specs
+  )
   for tensor, shape in zip(flat_tensors, flat_shapes):
     if tensor.shape.rank == shape.rank:
       raise ValueError('Can only split tensors with a batch dimension.')
@@ -685,9 +769,11 @@ def split_nested_tensors(tensors, specs, num_or_size_splits):
         if not isinstance(num_or_size_splits, numbers.Number):
           raise ValueError(
               'Saw a SparseTensor, for which num_or_size_splits must be a '
-              'scalar.  But it is not: {}'.format(num_or_size_splits))
+              'scalar.  But it is not: {}'.format(num_or_size_splits)
+          )
         split_tensors = tf.sparse.split(
-            sp_input=tensor, num_split=num_or_size_splits, axis=0)
+            sp_input=tensor, num_split=num_or_size_splits, axis=0
+        )
       else:
         split_tensors = tf.split(tensor, num_or_size_splits)
     split_tensor_lists.append(split_tensors)
@@ -712,7 +798,8 @@ def unstack_nested_tensors(tensors, specs):
   """
   unstacked_tensor_lists = []
   flat_tensors, flat_shapes = _flatten_and_check_shape_nested_tensors(
-      tensors, specs)
+      tensors, specs
+  )
   for tensor, shape in zip(flat_tensors, flat_shapes):
     if tensor.shape.rank == shape.rank:
       raise ValueError('Can only unstack tensors with a batch dimension.')
@@ -736,8 +823,9 @@ def stack_nested_tensors(tensors, axis=0):
   Returns:
     A stacked nested tensor.
   """
-  return tf.nest.map_structure(lambda *tensors: tf.stack(tensors, axis=axis),
-                               *tensors)
+  return tf.nest.map_structure(
+      lambda *tensors: tf.stack(tensors, axis=axis), *tensors
+  )
 
 
 def flatten_multi_batched_nested_tensors(tensors, specs):
@@ -761,25 +849,26 @@ def flatten_multi_batched_nested_tensors(tensors, specs):
   assert_same_structure(
       tensors,
       specs,
-      message='Tensors and specs do not have matching structures')
+      message='Tensors and specs do not have matching structures',
+  )
   flat_tensors = tf.nest.flatten(tensors)
   flat_spec_shapes = [spec_shape(s) for s in tf.nest.flatten(specs)]
   out_tensors = []
   batch_dims = []
   for i, (tensor, sp_shape) in enumerate(zip(flat_tensors, flat_spec_shapes)):
     if i == 0:  # Set batch_dims based on first tensor.
-      batch_dims = tensor.shape[:tensor.shape.rank - sp_shape.rank]
+      batch_dims = tensor.shape[: tensor.shape.rank - sp_shape.rank]
       if batch_dims.is_fully_defined():
         batch_dims = batch_dims.as_list()
         batch_prod = np.prod(batch_dims)
         batch_dims = tf.constant(batch_dims, dtype=tf.int64)
       else:
-        batch_dims = tf.shape(tensor)[:tensor.shape.rank - sp_shape.rank]
+        batch_dims = tf.shape(tensor)[: tensor.shape.rank - sp_shape.rank]
         batch_prod = tf.reduce_prod(batch_dims)
     if not sp_shape.is_fully_defined():
       # When shape of spec is not fully defined, we do not rely on it to
       # reshape the tensor but retain the original non-batch dims of tensors.
-      non_batch_dims = tf.shape(tensor)[tensor.shape.rank - sp_shape.rank:]
+      non_batch_dims = tf.shape(tensor)[tensor.shape.rank - sp_shape.rank :]
       reshaped_dims = tf.concat([[batch_prod], non_batch_dims], 0)
     else:
       reshaped_dims = [batch_prod] + sp_shape.as_list()
@@ -804,14 +893,16 @@ def get_outer_shape(nested_tensor, spec):
   assert_same_structure(
       nested_tensor,
       spec,
-      message='Tensors and specs do not have matching structures')
+      message='Tensors and specs do not have matching structures',
+  )
   first_tensor = tf.nest.flatten(nested_tensor)[0]
   first_spec = tf.nest.flatten(spec)[0]
 
   # Check tensors have same batch shape.
-  num_outer_dims = (len(first_tensor.shape) - len(first_spec.shape))
+  num_outer_dims = len(first_tensor.shape) - len(first_spec.shape)
   if not is_batched_nested_tensors(
-      nested_tensor, spec, num_outer_dims=num_outer_dims, check_dtypes=False):
+      nested_tensor, spec, num_outer_dims=num_outer_dims, check_dtypes=False
+  ):
     return tf.constant([], dtype=tf.int32)
 
   return tf.shape(input=first_tensor)[:num_outer_dims]
@@ -842,17 +933,20 @@ def get_outer_rank(tensors, specs):
   assert_same_structure(
       tensors,
       specs,
-      message='Tensors and specs do not have matching structures')
+      message='Tensors and specs do not have matching structures',
+  )
   tensor_shapes = [t.shape for t in tf.nest.flatten(tensors)]
   spec_shapes = [spec_shape(s) for s in tf.nest.flatten(specs)]
 
   if any(s_shape.rank is None for s_shape in spec_shapes):
-    raise ValueError('All specs should have ndims defined.  Saw shapes: %s' %
-                     spec_shapes)
+    raise ValueError(
+        'All specs should have ndims defined.  Saw shapes: %s' % spec_shapes
+    )
 
   if any(t_shape.rank is None for t_shape in tensor_shapes):
-    raise ValueError('All tensors should have ndims defined.  Saw shapes: %s' %
-                     tensor_shapes)
+    raise ValueError(
+        'All tensors should have ndims defined.  Saw shapes: %s' % tensor_shapes
+    )
 
   is_unbatched = [
       s_shape.is_compatible_with(t_shape)
@@ -869,38 +963,43 @@ def get_outer_rank(tensors, specs):
   tensor_matches_spec = [
       s_shape.is_compatible_with(t_shape[discrepancy:])
       for discrepancy, s_shape, t_shape in zip(
-          tensor_ndims_discrepancy, spec_shapes, tensor_shapes)
+          tensor_ndims_discrepancy, spec_shapes, tensor_shapes
+      )
   ]
 
   # At this point we are guaranteed to have at least one tensor/spec.
   num_outer_dims = tensor_ndims_discrepancy[0]
 
   # Check if all tensors match and have correct number of batch dimensions.
-  is_batched = (
-      all(discrepancy == num_outer_dims
-          for discrepancy in tensor_ndims_discrepancy) and
-      all(tensor_matches_spec))
+  is_batched = all(
+      discrepancy == num_outer_dims for discrepancy in tensor_ndims_discrepancy
+  ) and all(tensor_matches_spec)
 
   if is_batched:
     return num_outer_dims
 
   # Check if tensors match but have incorrect number of batch dimensions.
   incorrect_batch_dims = (
-      tensor_ndims_discrepancy and
-      all(discrepancy == tensor_ndims_discrepancy[0] and discrepancy >= 0
-          for discrepancy in tensor_ndims_discrepancy) and
-      all(tensor_matches_spec))
+      tensor_ndims_discrepancy
+      and all(
+          discrepancy == tensor_ndims_discrepancy[0] and discrepancy >= 0
+          for discrepancy in tensor_ndims_discrepancy
+      )
+      and all(tensor_matches_spec)
+  )
 
   if incorrect_batch_dims:
-    raise ValueError('Received tensors with %d outer dimensions. '
-                     'Expected %d.' %
-                     (tensor_ndims_discrepancy[0], num_outer_dims))
+    raise ValueError(
+        'Received tensors with %d outer dimensions. Expected %d.'
+        % (tensor_ndims_discrepancy[0], num_outer_dims)
+    )
 
-  raise ValueError('Received a mix of batched and unbatched Tensors, or Tensors'
-                   ' are not compatible with Specs.  num_outer_dims: %d.\n'
-                   'Saw tensor_shapes:\n   %s\n'
-                   'And spec_shapes:\n   %s' %
-                   (num_outer_dims, tensor_shapes, spec_shapes))
+  raise ValueError(
+      'Received a mix of batched and unbatched Tensors, or Tensors'
+      ' are not compatible with Specs.  num_outer_dims: %d.\n'
+      'Saw tensor_shapes:\n   %s\n'
+      'And spec_shapes:\n   %s' % (num_outer_dims, tensor_shapes, spec_shapes)
+  )
 
 
 def batch_nested_array(nested_array):
@@ -912,7 +1011,6 @@ def unbatch_nested_array(nested_array):
 
 
 def unbatch_nested_tensors_to_arrays(nested_tensors):
-
   def _to_unbatched_numpy(tensor):
     return np.squeeze(tensor.numpy(), 0)
 
@@ -920,7 +1018,6 @@ def unbatch_nested_tensors_to_arrays(nested_tensors):
 
 
 def _unstack_nested_arrays_into_flat_item_iterator(nested_array):
-
   def _unstack(array):
     # Use numpy views instead of np.split, it's 5x+ faster.
     return [array[i] for i in range(len(array))]
@@ -980,8 +1077,9 @@ def stack_nested_arrays(nested_arrays):
   batched_nested_array_flattened = [
       np.stack(a) for a in zip(*nested_arrays_flattened)
   ]
-  return tf.nest.pack_sequence_as(nested_arrays[0],
-                                  batched_nested_array_flattened)
+  return tf.nest.pack_sequence_as(
+      nested_arrays[0], batched_nested_array_flattened
+  )
 
 
 def get_outer_array_shape(nested_array, spec):
@@ -1018,29 +1116,35 @@ def where(condition, true_outputs, false_outputs):
   assert_same_structure(
       true_outputs,
       false_outputs,
-      message='"true_outputs" and "false_outputs" structures do not match')
+      message='"true_outputs" and "false_outputs" structures do not match',
+  )
 
   if tf.nest.flatten(true_outputs):
     condition_rank = tf.rank(condition)
+
     @tf.function  # allow-tf-function
     def per_field_where(t, f):
       tf.debugging.assert_rank_at_least(t, condition_rank)
       rank_difference = tf.rank(t) - condition_rank
       condition_shape = tf.concat(
-          [tf.shape(condition),
-           tf.ones(rank_difference, dtype=tf.int32)], axis=0)
+          [tf.shape(condition), tf.ones(rank_difference, dtype=tf.int32)],
+          axis=0,
+      )
       per_field_condition = tf.reshape(condition, condition_shape)
       return tf.compat.v2.where(per_field_condition, t, f)
 
     return tf.nest.map_structure(per_field_where, true_outputs, false_outputs)
   else:
     return tf.nest.map_structure(
-        lambda t, f: tf.compat.v2.where(condition, t, f), true_outputs,
-        false_outputs)
+        lambda t, f: tf.compat.v2.where(condition, t, f),
+        true_outputs,
+        false_outputs,
+    )
 
 
-def remove_singleton_batch_spec_dim(spec: tf.TypeSpec,
-                                    outer_ndim: int) -> tf.TypeSpec:
+def remove_singleton_batch_spec_dim(
+    spec: tf.TypeSpec, outer_ndim: int
+) -> tf.TypeSpec:
   """Look for `spec`'s shape, check that outer dim is 1, and remove it.
 
   If `spec.shape[i] != 1` for any `i in range(outer_ndim)`, we stop removing
@@ -1066,17 +1170,25 @@ def remove_singleton_batch_spec_dim(spec: tf.TypeSpec,
   if shape is None:
     raise ValueError(
         'Could not remove singleton batch dim from spec; it lacks a shape: {}'
-        .format(spec))
+        .format(spec)
+    )
   for i in range(outer_ndim):
     if len(shape) <= i:
       logging.error(
           'Could not remove singleton batch dim from spec; len(shape) < %d.  '
-          'Shape: %s.  Skipping.', i + 1, shape)
+          'Shape: %s.  Skipping.',
+          i + 1,
+          shape,
+      )
       break
     if tf.compat.dimension_value(shape[i]) != 1:
       logging.error(
           'Could not remove singleton batch dim from spec; shape[%d] != 1: %s '
-          '(shape: %s).  Skipping.', i, spec, shape)
+          '(shape: %s).  Skipping.',
+          i,
+          spec,
+          shape,
+      )
       break
     spec = spec._unbatch()  # pylint: disable=protected-access
   return spec
@@ -1092,15 +1204,18 @@ def _tile_batch(t, multiplier, ensure_shape=True):
   tiling[1] = multiplier
   num_batch_dims = tf.compat.dimension_value(t.shape.dims[0])
   tiled_static_batch_size = (
-      num_batch_dims * multiplier if num_batch_dims is not None else None)
+      num_batch_dims * multiplier if num_batch_dims is not None else None
+  )
   tiled = tf.tile(tf.expand_dims(t, 1), tiling)
-  tiled = tf.reshape(tiled,
-                     tf.concat(([shape_t[0] * multiplier], shape_t[1:]), 0))
+  tiled = tf.reshape(
+      tiled, tf.concat(([shape_t[0] * multiplier], shape_t[1:]), 0)
+  )
 
   if ensure_shape:
     tiled = tf.ensure_shape(
         tiled,
-        tf.TensorShape([tiled_static_batch_size]).concatenate(t.shape[1:]))
+        tf.TensorShape([tiled_static_batch_size]).concatenate(t.shape[1:]),
+    )
   return tiled
 
 
@@ -1131,12 +1246,11 @@ def tile_batch(tensors: types.NestedTensor, multiplier: types.Int):
   """
   ensure_shape = False if tf.is_tensor(multiplier) else True
   return tf.nest.map_structure(
-      lambda t: _tile_batch(t, multiplier, ensure_shape=ensure_shape), tensors)
+      lambda t: _tile_batch(t, multiplier, ensure_shape=ensure_shape), tensors
+  )
 
 
-def assert_value_spec(
-    output_spec: types.NestedTensorSpec,
-    network_name: str):
+def assert_value_spec(output_spec: types.NestedTensorSpec, network_name: str):
   """Checks that `output_spec` is a nest of "value" type values.
 
   "value" type values correspond to floating point tensors with spec shape
@@ -1149,18 +1263,23 @@ def assert_value_spec(
   Raises:
     ValueError: If `output_spec` is not a nest of value-type tensors.
   """
+
   def check_value_spec(v):
     if not isinstance(v, tf.TensorSpec):
       raise ValueError(
-          '{} emits outputs that are not tensors; spec: {}'
-          .format(network_name, output_spec))
+          '{} emits outputs that are not tensors; spec: {}'.format(
+              network_name, output_spec
+          )
+      )
     if v.shape not in ((), (1,)):
       raise ValueError(
-          '{} emits multiple values; spec: {}'
-          .format(network_name, output_spec))
+          '{} emits multiple values; spec: {}'.format(network_name, output_spec)
+      )
     if not v.dtype.is_floating:
       raise ValueError(
-          '{} emits outputs that are not real numbers; spec: {}'
-          .format(network_name, output_spec))
+          '{} emits outputs that are not real numbers; spec: {}'.format(
+              network_name, output_spec
+          )
+      )
 
   tf.nest.map_structure(check_value_spec, output_spec)

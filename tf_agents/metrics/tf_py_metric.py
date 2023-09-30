@@ -30,8 +30,7 @@ from tf_agents.metrics import tf_metric
 def _check_not_called_concurrently(lock):
   """Checks the returned context is not executed concurrently with any other."""
   if not lock.acquire(False):  # Non-blocking.
-    raise RuntimeError(
-        'Detected concurrent execution of TFPyMetric ops.')
+    raise RuntimeError('Detected concurrent execution of TFPyMetric ops.')
   try:
     yield
   finally:
@@ -67,19 +66,19 @@ class TFPyMetric(tf_metric.TFStepMetric):
     Returns:
       The arguments, for easy chaining.
     """
+
     def _call(*flattened_trajectories):
       with _check_not_called_concurrently(self._lock):
         flat_sequence = [x.numpy() for x in flattened_trajectories]
         packed_trajectories = tf.nest.pack_sequence_as(
-            structure=(trajectory), flat_sequence=flat_sequence)
+            structure=(trajectory), flat_sequence=flat_sequence
+        )
         return self._py_metric(packed_trajectories)
 
     flattened_trajectories = tf.nest.flatten(trajectory)
     metric_op = tf.py_function(
-        _call,
-        flattened_trajectories,
-        [],
-        name='metric_call_py_func')
+        _call, flattened_trajectories, [], name='metric_call_py_func'
+    )
 
     with tf.control_dependencies([metric_op]):
       return tf.nest.map_structure(tf.identity, trajectory)
@@ -90,10 +89,8 @@ class TFPyMetric(tf_metric.TFStepMetric):
         return self._py_metric.result()
 
     result_value = tf.py_function(
-        _result,
-        [],
-        self._dtype,
-        name='metric_result_py_func')
+        _result, [], self._dtype, name='metric_result_py_func'
+    )
     if not tf.executing_eagerly():
       result_value.set_shape(())
     return result_value
@@ -103,6 +100,4 @@ class TFPyMetric(tf_metric.TFStepMetric):
       with _check_not_called_concurrently(self._lock):
         return self._py_metric.reset()
 
-    return tf.py_function(
-        _reset, [], [],
-        name='metric_reset_py_func')
+    return tf.py_function(_reset, [], [], name='metric_reset_py_func')

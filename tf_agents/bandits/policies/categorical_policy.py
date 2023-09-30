@@ -35,7 +35,8 @@ tfd = tfp.distributions
 def _validate_weights(weights: types.Tensor):
   if len(weights.shape) != 1:
     raise ValueError(
-        'Expected a 1D `Tensor` of weights; got {}.'.format(weights))
+        'Expected a 1D `Tensor` of weights; got {}.'.format(weights)
+    )
 
 
 class CategoricalPolicy(tf_policy.TFPolicy):
@@ -50,13 +51,15 @@ class CategoricalPolicy(tf_policy.TFPolicy):
   That is, it is a non-contextual bandit policy.
   """
 
-  def __init__(self,
-               weights: types.Tensor,
-               time_step_spec: types.TimeStep,
-               action_spec: types.BoundedTensorSpec,
-               inverse_temperature: float = 1.,
-               emit_log_probability: bool = True,
-               name: Optional[Text] = None):
+  def __init__(
+      self,
+      weights: types.Tensor,
+      time_step_spec: types.TimeStep,
+      action_spec: types.BoundedTensorSpec,
+      inverse_temperature: float = 1.0,
+      emit_log_probability: bool = True,
+      name: Optional[Text] = None,
+  ):
     """Initializes `CategoricalPolicy`.
 
     The `weights` and `inverse_temperature` arguments may be either `Tensor`s or
@@ -91,17 +94,24 @@ class CategoricalPolicy(tf_policy.TFPolicy):
     if action_spec.maximum + 1 != tf.compat.dimension_value(weights.shape[0]):
       raise ValueError(
           'Number of actions ({}) does not match weights dimension ({}).'
-          .format(action_spec.maximum + 1,
-                  tf.compat.dimension_value(weights.shape[0])))
+          .format(
+              action_spec.maximum + 1,
+              tf.compat.dimension_value(weights.shape[0]),
+          )
+      )
     super(CategoricalPolicy, self).__init__(
         time_step_spec=time_step_spec,
         action_spec=action_spec,
         emit_log_probability=True,
-        name=name)
+        name=name,
+    )
 
   def _variables(self):
-    return [v for v in [self._weights, self._inverse_temperature]
-            if isinstance(v, tf.Variable)]
+    return [
+        v
+        for v in [self._weights, self._inverse_temperature]
+        if isinstance(v, tf.Variable)
+    ]
 
   def _distribution(self, time_step, policy_state):
     """Implementation of `distribution`. Returns a `Categorical` distribution.
@@ -121,10 +131,12 @@ class CategoricalPolicy(tf_policy.TFPolicy):
         `info`: Optional side information such as action log probabilities.
     """
     outer_shape = nest_utils.get_outer_shape(time_step, self._time_step_spec)
-    logits = (
-        self._inverse_temperature *
-        common.replicate(self._weights, outer_shape))
+    logits = self._inverse_temperature * common.replicate(
+        self._weights, outer_shape
+    )
     action_distribution = tfd.Independent(
         tfd.Categorical(
-            logits=logits, dtype=tf.nest.flatten(self.action_spec)[0].dtype))
+            logits=logits, dtype=tf.nest.flatten(self.action_spec)[0].dtype
+        )
+    )
     return policy_step.PolicyStep(action_distribution, policy_state)

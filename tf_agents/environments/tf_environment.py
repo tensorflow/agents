@@ -29,6 +29,7 @@ from __future__ import division
 from __future__ import print_function
 
 import abc
+
 import six
 
 
@@ -112,7 +113,6 @@ class TFEnvironment(object):
     final_time_step = tf.while_loop(c, body, [time_step])
 
     sess.run(final_time_step)
-
   """
 
   def __init__(self, time_step_spec=None, action_spec=None, batch_size=1):
@@ -121,9 +121,9 @@ class TFEnvironment(object):
     Meant to be called by subclass constructors.
 
     Args:
-      time_step_spec: A `TimeStep` namedtuple containing `TensorSpec`s
-        defining the Tensors returned by
-        `step()` (step_type, reward, discount, and observation).
+      time_step_spec: A `TimeStep` namedtuple containing `TensorSpec`s defining
+        the Tensors returned by `step()` (step_type, reward, discount, and
+        observation).
       action_spec: A nest of BoundedTensorSpec representing the actions of the
         environment.
       batch_size: The batch size expected for the actions and observations.
@@ -227,8 +227,8 @@ class TFEnvironment(object):
     The action should depend on the previous time_step for correctness.
 
     Args:
-      action: A Tensor, or a nested dict, list or tuple of Tensors
-        corresponding to `action_spec()`.
+      action: A Tensor, or a nested dict, list or tuple of Tensors corresponding
+        to `action_spec()`.
 
     Returns:
       A `TimeStep` namedtuple containing:

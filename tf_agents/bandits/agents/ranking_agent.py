@@ -42,7 +42,6 @@ import enum
 from typing import Optional, Text
 
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
-
 from tf_agents.agents import tf_agent
 from tf_agents.bandits.policies import ranking_policy
 from tf_agents.specs import bandit_spec_utils
@@ -62,7 +61,8 @@ def compute_score_tensor_for_cascading(
     chosen_index: types.Int,
     chosen_value: types.Float,
     num_slots: int,
-    non_click_score: float = -1.) -> types.Float:
+    non_click_score: float = -1.0,
+) -> types.Float:
   """Gives scores for all items in a batch.
 
   The score of items that are before the chosen index is `-1`, the score of
@@ -84,8 +84,7 @@ def compute_score_tensor_for_cascading(
     A tensor of shape `[batch_size, num_slots]`, with scores for every item in
     the recommendation.
   """
-  negatives = tf.sequence_mask(
-      chosen_index, maxlen=num_slots, dtype=tf.float32)
+  negatives = tf.sequence_mask(chosen_index, maxlen=num_slots, dtype=tf.float32)
 
   chosen_onehot = tf.one_hot(chosen_index, num_slots)
   diag_value = tf.linalg.diag(chosen_value)
@@ -95,6 +94,7 @@ def compute_score_tensor_for_cascading(
 
 class RankingPolicyType(enum.Enum):
   """Enumeration of ranking policy types."""
+
   # No policy type specified.
   UNKNOWN = 0
   # The policy is an instance of `PenalizeCosineDistanceRankingPolicy`.
@@ -107,6 +107,7 @@ class RankingPolicyType(enum.Enum):
 
 class FeedbackModel(enum.Enum):
   """Enumeration of feedback models."""
+
   # No feedback model specified.
   UNKNOWN = 0
   # Cascading feedback model: A tuple of the chosen index and its value.
@@ -128,12 +129,16 @@ class RankingAgent(tf_agent.TFAgent):
       error_loss_fn: types.LossFn = tf.compat.v1.losses.mean_squared_error,
       feedback_model: FeedbackModel = FeedbackModel.CASCADING,
       non_click_score: Optional[float] = None,
-      logits_temperature: float = 1.,
+      positional_bias_type: Optional[Text] = None,
+      positional_bias_severity: Optional[float] = None,
+      positional_bias_positive_only: bool = False,
+      logits_temperature: float = 1.0,
       summarize_grads_and_vars: bool = False,
       enable_summaries: bool = True,
       train_step_counter: Optional[tf.Variable] = None,
-      penalty_mixture_coefficient: float = 1.,
-      name: Optional[Text] = None):
+      penalty_mixture_coefficient: float = 1.0,
+      name: Optional[Text] = None,
+  ):
     """Initializes an instance of RankingAgent.
 
     Args:
@@ -148,15 +153,28 @@ class RankingAgent(tf_agent.TFAgent):
         `UNKNOWN`, falls back to `COSINE_DISTANCE`.
       error_loss_fn: The loss function used.
       feedback_model: The type of feedback model. Implemented models are:
-        -- CASCADING: the feedback is a tuple `(k, v)`, where `k` is the index
-          of the chosen item, and `v` is the value of the choice. If no item was
-          chosen, then `k=num_slots` is used and `v` is ignored.
-        -- SCORE_VECTOR: the feedback is a vector of length `num_slots`,
-          containing scores for every item in the recommendation. If set to
-          `UNKNOWN`, falls back to CASCADING`.
+        --CASCADING : the feedback is a tuple `(k, v)`, where `k` is the index
+        of the chosen item, and `v` is the value of the choice. If no item was
+        chosen, then `k=num_slots` is used and `v` is ignored. --SCORE_VECTOR :
+        the feedback is a vector of length `num_slots`, containing scores for
+        every item in the recommendation. If set to `UNKNOWN`, falls back to
+        CASCADING`.
       non_click_score: (float) For the cascading feedback model, this is the
         score value for items lying "before" the clicked item. If not set, -1 is
         used. It is recommended (but not enforced) to use a negative value.
+      positional_bias_type: (string) If not set (or set to `None`), the agent
+        does not apply bias adjustment. If set to either `base` or `exponent`,
+        it parameter determines what way the positional bias is accounted for.
+        `base`: The bias weight for each slot position is `k^s`, where `s` is
+        the bias severity (set in the next parameter), and `k` is the position.
+        `exponent`: The weights are `s^k`. These bias adjustment types are
+        inspired by Ovaisi et al. `Correcting for Selection Bias in
+        Learning-to-rank Systems` (WWW 2020).
+      positional_bias_severity: (float) The severity `s`, used as explained
+        above. If `positional_bias_type` is unset, this parameter has no effect.
+      positional_bias_positive_only: Whether to use the above defined bias
+        weights only for positives (that is, clicked items). If
+        `positional_bias_type` is unset, this parameter has no effect.
       logits_temperature: temperature parameter for non-deterministic policies.
         This value must be positive.
       summarize_grads_and_vars: A Python bool, default False. When True,
@@ -173,14 +191,18 @@ class RankingAgent(tf_agent.TFAgent):
     tf.Module.__init__(self, name=name)
     common.tf_agents_gauge.get_cell('TFABandit').set(True)
     self._num_items = time_step_spec.observation[
-        bandit_spec_utils.PER_ARM_FEATURE_KEY].shape[0]
+        bandit_spec_utils.PER_ARM_FEATURE_KEY
+    ].shape[0]
     self._num_slots = action_spec.shape[0]
     self._item_feature_dim = time_step_spec.observation[
-        bandit_spec_utils.PER_ARM_FEATURE_KEY].shape[-1]
+        bandit_spec_utils.PER_ARM_FEATURE_KEY
+    ].shape[-1]
     self._global_feature_dim = time_step_spec.observation[
-        bandit_spec_utils.GLOBAL_FEATURE_KEY].shape[-1]
+        bandit_spec_utils.GLOBAL_FEATURE_KEY
+    ].shape[-1]
     self._use_num_actions = (
-        bandit_spec_utils.NUM_ACTIONS_FEATURE_KEY in time_step_spec.observation)
+        bandit_spec_utils.NUM_ACTIONS_FEATURE_KEY in time_step_spec.observation
+    )
 
     scoring_network.create_variables()
     self._scoring_network = scoring_network
@@ -196,8 +218,13 @@ class RankingAgent(tf_agent.TFAgent):
         self._non_click_score = non_click_score
     else:
       if non_click_score is not None:
-        raise ValueError('Parameter `non_click_score` should only be used '
-                         'together with CASCADING feedback model.')
+        raise ValueError(
+            'Parameter `non_click_score` should only be used '
+            'together with CASCADING feedback model.'
+        )
+    self._positional_bias_type = positional_bias_type
+    self._positional_bias_severity = positional_bias_severity
+    self._positional_bias_positive_only = positional_bias_positive_only
     if policy_type == RankingPolicyType.UNKNOWN:
       policy_type = RankingPolicyType.COSINE_DISTANCE
     if policy_type == RankingPolicyType.COSINE_DISTANCE:
@@ -207,32 +234,42 @@ class RankingAgent(tf_agent.TFAgent):
           time_step_spec,
           scoring_network,
           penalty_mixture_coefficient=penalty_mixture_coefficient,
-          logits_temperature=logits_temperature)
+          logits_temperature=logits_temperature,
+      )
     elif policy_type == RankingPolicyType.NO_PENALTY:
       policy = ranking_policy.NoPenaltyRankingPolicy(
           self._num_items,
           self._num_slots,
           time_step_spec,
           scoring_network,
-          logits_temperature=logits_temperature)
+          logits_temperature=logits_temperature,
+      )
     elif policy_type == RankingPolicyType.DESCENDING_SCORES:
       policy = ranking_policy.DescendingScoreRankingPolicy(
-          self._num_items, self._num_slots, time_step_spec, scoring_network)
+          self._num_items, self._num_slots, time_step_spec, scoring_network
+      )
     else:
       raise NotImplementedError(
-          'Policy type {} is not implemented'.format(policy_type))
-    use_num_actions = isinstance(
-        time_step_spec.observation,
-        dict) and 'num_actions' in time_step_spec.observation
+          'Policy type {} is not implemented'.format(policy_type)
+      )
+    use_num_actions = (
+        isinstance(time_step_spec.observation, dict)
+        and 'num_actions' in time_step_spec.observation
+    )
     training_obs_spec = bandit_spec_utils.create_per_arm_observation_spec(
-        self._global_feature_dim, self._item_feature_dim, self._num_slots,
-        use_num_actions)
+        self._global_feature_dim,
+        self._item_feature_dim,
+        self._num_slots,
+        use_num_actions,
+    )
     training_time_step_spec = ts.time_step_spec(
-        training_obs_spec, reward_spec=time_step_spec.reward)
+        training_obs_spec, reward_spec=time_step_spec.reward
+    )
     training_data_spec = trajectory.from_transition(
         training_time_step_spec,
         policy_step.PolicyStep(),
-        training_time_step_spec)
+        training_time_step_spec,
+    )
     super(RankingAgent, self).__init__(
         time_step_spec=time_step_spec,
         action_spec=action_spec,
@@ -242,15 +279,18 @@ class RankingAgent(tf_agent.TFAgent):
         training_data_spec=training_data_spec,
         summarize_grads_and_vars=summarize_grads_and_vars,
         enable_summaries=enable_summaries,
-        train_step_counter=train_step_counter)
+        train_step_counter=train_step_counter,
+    )
 
   def _variables_to_train(self):
     return self._scoring_network.trainable_variables
 
-  def _loss(self,
-            experience: types.NestedTensor,
-            weights: Optional[types.Tensor] = None,
-            training: bool = False) -> tf_agent.LossInfo:
+  def _loss(
+      self,
+      experience: types.NestedTensor,
+      weights: Optional[types.Tensor] = None,
+      training: bool = False,
+  ) -> tf_agent.LossInfo:
     """Computes loss for training the reward and constraint networks.
 
     Args:
@@ -269,9 +309,11 @@ class RankingAgent(tf_agent.TFAgent):
         if the number of actions is greater than 1.
     """
     flat_obs, _ = nest_utils.flatten_multi_batched_nested_tensors(
-        experience.observation, self._training_data_spec.observation)
+        experience.observation, self._training_data_spec.observation
+    )
     flat_reward, _ = nest_utils.flatten_multi_batched_nested_tensors(
-        experience.reward, self._training_data_spec.reward)
+        experience.reward, self._training_data_spec.reward
+    )
     if self._feedback_model == FeedbackModel.CASCADING:
       chosen_index = flat_reward[CHOSEN_INDEX]
       chosen_value = flat_reward[CHOSEN_VALUE]
@@ -279,23 +321,27 @@ class RankingAgent(tf_agent.TFAgent):
           chosen_index,
           chosen_value,
           self._num_slots,
-          non_click_score=self._non_click_score)
+          non_click_score=self._non_click_score,
+      )
     elif self._feedback_model == FeedbackModel.SCORE_VECTOR:
       score = flat_reward
     weights = self._construct_sample_weights(flat_reward, flat_obs, weights)
+    if self._positional_bias_positive_only:
+      weights = tf.where(score > 0, weights, 1.0)
 
     est_reward = self._scoring_network(flat_obs, training)[0]
     loss_output = self._error_loss_fn(
-        est_reward, score, reduction=tf.compat.v1.losses.Reduction.NONE)
+        score, est_reward, reduction=tf.compat.v1.losses.Reduction.NONE
+    )
     if len(list(loss_output.shape)) == 1:
       # In case the loss is an aggregate over all slots, we only use one weight
       # per iteration.
       weights = weights[:, 0]
     return tf_agent.LossInfo(
-        tf.reduce_sum(
-            tf.multiply(loss_output, weights)) /
-        tf.reduce_sum(weights),
-        extra=())
+        tf.reduce_sum(tf.multiply(loss_output, weights))
+        / tf.reduce_sum(weights),
+        extra=(),
+    )
 
   def _train(self, experience, weights):
     with tf.GradientTape() as tape:
@@ -303,19 +349,38 @@ class RankingAgent(tf_agent.TFAgent):
     if self.summaries_enabled:
       with tf.name_scope('Losses/'):
         tf.compat.v2.summary.scalar(
-            name='loss', data=loss, step=self.train_step_counter)
+            name='loss', data=loss, step=self.train_step_counter
+        )
     gradients = tape.gradient(loss, self._variables_to_train())
     grads_and_vars = tuple(zip(gradients, self._variables_to_train()))
     if self._summarize_grads_and_vars:
-      eager_utils.add_variables_summaries(grads_and_vars,
-                                          self.train_step_counter)
-      eager_utils.add_gradients_summaries(grads_and_vars,
-                                          self.train_step_counter)
+      eager_utils.add_variables_summaries(
+          grads_and_vars, self.train_step_counter
+      )
+      eager_utils.add_gradients_summaries(
+          grads_and_vars, self.train_step_counter
+      )
     self._optimizer.apply_gradients(grads_and_vars)
     self.train_step_counter.assign_add(1)
     return tf_agent.LossInfo(loss, extra=())
 
   def _construct_sample_weights(self, reward, observation, weights):
+    """Returns the training weights based on all the necessary information.
+
+    The input weights might be `None` or of shape `[1]`, or [`batch_size`]. The
+    shape of the output shape is always `[batch_size, num_slots]`.
+
+    Args:
+      reward: The reward tensor or nest. Its structure depends on the feedback
+        model.
+      observation: The observation nest.
+      weights: The input weights, with structure explained above.
+
+    Returns:
+      A tensor of shape `[batch_size, num_slots]` containing the constructed
+        output weights, depending on the feedback model and the positional bias
+        model.
+    """
     batch_size = tf.shape(tf.nest.flatten(reward)[0])[0]
     if weights is None:
       weights = tf.ones([batch_size, self._num_slots])
@@ -328,12 +393,31 @@ class RankingAgent(tf_agent.TFAgent):
 
     if self._use_num_actions:
       num_slotted_items = observation[bandit_spec_utils.NUM_ACTIONS_FEATURE_KEY]
-      weights = tf.sequence_mask(
-          num_slotted_items, self._num_slots, dtype=tf.float32) * weights
+      weights = (
+          tf.sequence_mask(num_slotted_items, self._num_slots, dtype=tf.float32)
+          * weights
+      )
     if self._feedback_model == FeedbackModel.CASCADING:
       chosen_index = tf.reshape(reward[CHOSEN_INDEX], shape=[-1])
       multiplier = tf.sequence_mask(
-          chosen_index + 1, self._num_slots, dtype=tf.float32)
+          chosen_index + 1, self._num_slots, dtype=tf.float32
+      )
       weights = multiplier * weights
-
+    if self._positional_bias_type is not None:
+      batched_range = tf.broadcast_to(
+          tf.range(self._num_slots, dtype=tf.float32), tf.shape(weights)
+      )
+      if self._positional_bias_type == 'base':
+        position_bias_multipliers = tf.pow(
+            batched_range + 1, self._positional_bias_severity
+        )
+      elif self._positional_bias_type == 'exponent':
+        position_bias_multipliers = tf.pow(
+            self._positional_bias_severity, batched_range
+        )
+      else:
+        raise ValueError(
+            'non-existing bias type: ' + self._positional_bias_type
+        )
+      weights = position_bias_multipliers * weights
     return weights

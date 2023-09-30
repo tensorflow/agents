@@ -31,19 +31,29 @@ from tf_agents.system import system_multiprocessing as multiprocessing
 
 flags.DEFINE_string('root_dir', '/tmp/dataset/', 'Output dataset directory.')
 flags.DEFINE_string(
-    'env_name', 'hopper-medium-v0', 'Env name. '
-    'Should match one of keys in d4rl.infos.DATASET_URLS')
-flags.DEFINE_integer('replicas', None,
-                     'Number of parallel replicas generating evaluations.')
+    'env_name',
+    'hopper-medium-v0',
+    'Env name. Should match one of keys in d4rl.infos.DATASET_URLS',
+)
 flags.DEFINE_integer(
-    'replica_id', None,
-    'Replica id. If not None, only generate for this replica slice.')
+    'replicas', None, 'Number of parallel replicas generating evaluations.'
+)
+flags.DEFINE_integer(
+    'replica_id',
+    None,
+    'Replica id. If not None, only generate for this replica slice.',
+)
 flags.DEFINE_bool(
-    'use_trajectories', False,
-    'Whether to save samples as trajectories. If False, save as transitions.')
+    'use_trajectories',
+    False,
+    'Whether to save samples as trajectories. If False, save as transitions.',
+)
 flags.DEFINE_bool(
-    'exclude_timeouts', False, 'Whether to exclude the final episode step '
-    'if it from a timeout instead of a terminal.')
+    'exclude_timeouts',
+    False,
+    'Whether to exclude the final episode step '
+    'if it from a timeout instead of a terminal.',
+)
 
 FLAGS = flags.FLAGS
 
@@ -58,13 +68,18 @@ def main(_):
   dataset_dict = dataset_utils.create_episode_dataset(
       d4rl_dataset,
       FLAGS.exclude_timeouts,
-      observation_dtype=d4rl_env.observation_space.dtype)
+      observation_dtype=d4rl_env.observation_space.dtype,
+  )
   num_episodes = len(dataset_dict['episode_start_index'])
-  logging.info('Found %d episodes, %s total steps.', num_episodes,
-               len(dataset_dict['states']))
+  logging.info(
+      'Found %d episodes, %s total steps.',
+      num_episodes,
+      len(dataset_dict['states']),
+  )
 
   collect_data_spec = dataset_utils.create_collect_data_spec(
-      dataset_dict, use_trajectories=FLAGS.use_trajectories)
+      dataset_dict, use_trajectories=FLAGS.use_trajectories
+  )
   logging.info('Collect data spec %s', collect_data_spec)
 
   num_replicas = FLAGS.replicas or 1
@@ -82,7 +97,8 @@ def main(_):
         dataset_path=os.path.join(root_dir, file_name),
         start_episode=start_index,
         end_episode=end_index,
-        use_trajectories=FLAGS.use_trajectories)
+        use_trajectories=FLAGS.use_trajectories,
+    )
   else:
     # Otherwise, parallelize with tf_agents.system.multiprocessing.
     jobs = []
@@ -102,9 +118,11 @@ def main(_):
           dataset_path=dataset_path,
           start_episode=start_index,
           end_episode=end_index,
-          use_trajectories=FLAGS.use_trajectories)
-      job = context.Process(
-          target=file_utils.write_samples_to_tfrecord, kwargs=kwargs)
+          use_trajectories=FLAGS.use_trajectories,
+      )
+      job = context.Process(  # pytype: disable=attribute-error  # re-none
+          target=file_utils.write_samples_to_tfrecord, kwargs=kwargs
+      )
       job.start()
       jobs.append(job)
 

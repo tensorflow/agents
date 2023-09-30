@@ -20,9 +20,9 @@ from __future__ import division
 from __future__ import print_function
 
 import functools
+
 import numpy as np
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
-
 from tf_agents.environments import wrappers
 from tf_agents.specs import array_spec
 from tf_agents.trajectories import time_step as ts
@@ -73,10 +73,12 @@ class DmControlWrapper(wrappers.PyEnvironmentBaseWrapper):
     render_kwargs = render_kwargs or {}
     self._render_kwargs = render_kwargs
 
-    self._observation_spec = tf.nest.map_structure(convert_spec,
-                                                   self._env.observation_spec())
-    self._action_spec = tf.nest.map_structure(convert_spec,
-                                              self._env.action_spec())
+    self._observation_spec = tf.nest.map_structure(
+        convert_spec, self._env.observation_spec()
+    )
+    self._action_spec = tf.nest.map_structure(
+        convert_spec, self._env.action_spec()
+    )
 
   @property
   def physics(self):
@@ -86,8 +88,11 @@ class DmControlWrapper(wrappers.PyEnvironmentBaseWrapper):
     return convert_time_step(self._env.reset())
 
   def _step(self, action):
-    action = tf.nest.map_structure(lambda a, s: np.asarray(a, dtype=s.dtype),
-                                   action, self._env.action_spec())
+    action = tf.nest.map_structure(
+        lambda a, s: np.asarray(a, dtype=s.dtype),
+        action,
+        self._env.action_spec(),
+    )
     return convert_time_step(self._env.step(action))
 
   def observation_spec(self):
@@ -101,6 +106,7 @@ class DmControlWrapper(wrappers.PyEnvironmentBaseWrapper):
 
   def render(self, mode='rgb_array'):
     if mode != 'rgb_array':
-      raise ValueError('Only rgb_array rendering mode is supported. Got %s' %
-                       mode)
+      raise ValueError(
+          'Only rgb_array rendering mode is supported. Got %s' % mode
+      )
     return self._env.physics.render(**self._render_kwargs)

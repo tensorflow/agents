@@ -31,11 +31,9 @@ import os
 from absl import app
 from absl import flags
 from absl import logging
-
 import gin
 import reverb
 import tensorflow.compat.v2 as tf
-
 from tf_agents.agents.dqn import dqn_agent
 from tf_agents.environments import suite_gym
 from tf_agents.metrics import py_metrics
@@ -54,16 +52,24 @@ from tf_agents.utils import common
 
 FLAGS = flags.FLAGS
 
-flags.DEFINE_string('root_dir', os.getenv('TEST_UNDECLARED_OUTPUTS_DIR'),
-                    'Root directory for writing logs/summaries/checkpoints.')
+flags.DEFINE_string(
+    'root_dir',
+    os.getenv('TEST_UNDECLARED_OUTPUTS_DIR'),
+    'Root directory for writing logs/summaries/checkpoints.',
+)
 flags.DEFINE_integer(
-    'reverb_port', None,
-    'Port for reverb server, if None, use a randomly chosen unused port.')
-flags.DEFINE_integer('num_iterations', 100000,
-                     'Total number train/eval iterations to perform.')
+    'reverb_port',
+    None,
+    'Port for reverb server, if None, use a randomly chosen unused port.',
+)
 flags.DEFINE_integer(
-    'eval_interval', 1000,
-    'Number of train steps between evaluations. Set to 0 to skip.')
+    'num_iterations', 100000, 'Total number train/eval iterations to perform.'
+)
+flags.DEFINE_integer(
+    'eval_interval',
+    1000,
+    'Number of train steps between evaluations. Set to 0 to skip.',
+)
 flags.DEFINE_multi_string('gin_file', None, 'Paths to the gin-config files.')
 flags.DEFINE_multi_string('gin_bindings', None, 'Gin binding parameters.')
 
@@ -91,7 +97,8 @@ def train_eval(
     # Others
     policy_save_interval=1000,
     eval_interval=1000,
-    eval_episodes=10):
+    eval_episodes=10,
+):
   """Trains and evaluates DQN."""
   collect_env = suite_gym.load(env_name)
   eval_env = suite_gym.load(env_name)
@@ -109,7 +116,9 @@ def train_eval(
         num_units,
         activation=tf.keras.activations.relu,
         kernel_initializer=tf.keras.initializers.VarianceScaling(
-            scale=2.0, mode='fan_in', distribution='truncated_normal'))
+            scale=2.0, mode='fan_in', distribution='truncated_normal'
+        ),
+    )
 
   # QNetwork consists of a sequence of Dense layers followed by a dense layer
   # with `num_actions` units to generate one q_value per available action as
@@ -119,8 +128,10 @@ def train_eval(
       num_actions,
       activation=None,
       kernel_initializer=tf.keras.initializers.RandomUniform(
-          minval=-0.03, maxval=0.03),
-      bias_initializer=tf.keras.initializers.Constant(-0.2))
+          minval=-0.03, maxval=0.03
+      ),
+      bias_initializer=tf.keras.initializers.Constant(-0.2),
+  )
   q_net = sequential.Sequential(dense_layers + [q_values_layer])
 
   agent = dqn_agent.DqnAgent(
@@ -135,7 +146,8 @@ def train_eval(
       td_errors_loss_fn=common.element_wise_squared_loss,
       gamma=gamma,
       reward_scale_factor=reward_scale_factor,
-      train_step_counter=train_step)
+      train_step_counter=train_step,
+  )
 
   table_name = 'uniform_table'
   sequence_length = n_step_update + 1
@@ -144,21 +156,25 @@ def train_eval(
       max_size=replay_capacity,
       sampler=reverb.selectors.Uniform(),
       remover=reverb.selectors.Fifo(),
-      rate_limiter=reverb.rate_limiters.MinSize(1))
+      rate_limiter=reverb.rate_limiters.MinSize(1),
+  )
   reverb_server = reverb.Server([table], port=reverb_port)
   reverb_replay = reverb_replay_buffer.ReverbReplayBuffer(
       agent.collect_data_spec,
       sequence_length=sequence_length,
       table_name=table_name,
-      local_server=reverb_server)
+      local_server=reverb_server,
+  )
   rb_observer = reverb_utils.ReverbAddTrajectoryObserver(
-      reverb_replay.py_client, table_name,
+      reverb_replay.py_client,
+      table_name,
       sequence_length=sequence_length,
-      stride_length=1)
+      stride_length=1,
+  )
 
   dataset = reverb_replay.as_dataset(
-      num_parallel_calls=3, sample_batch_size=batch_size,
-      num_steps=2).prefetch(3)
+      num_parallel_calls=3, sample_batch_size=batch_size, num_steps=2
+  ).prefetch(3)
   experience_dataset_fn = lambda: dataset
 
   saved_model_dir = os.path.join(root_dir, learner.POLICY_SAVED_MODEL_DIR)
@@ -170,7 +186,8 @@ def train_eval(
           agent,
           train_step,
           interval=policy_save_interval,
-          metadata_metrics={triggers.ENV_STEP_METADATA_KEY: env_step_metric}),
+          metadata_metrics={triggers.ENV_STEP_METADATA_KEY: env_step_metric},
+      ),
       triggers.StepPerSecondLogTrigger(train_step, interval=100),
   ]
 
@@ -179,24 +196,28 @@ def train_eval(
       train_step,
       agent,
       experience_dataset_fn,
-      triggers=learning_triggers)
+      triggers=learning_triggers,
+  )
 
   # If we haven't trained yet make sure we collect some random samples first to
   # fill up the Replay Buffer with some experience.
-  random_policy = random_py_policy.RandomPyPolicy(collect_env.time_step_spec(),
-                                                  collect_env.action_spec())
+  random_policy = random_py_policy.RandomPyPolicy(
+      collect_env.time_step_spec(), collect_env.action_spec()
+  )
   initial_collect_actor = actor.Actor(
       collect_env,
       random_policy,
       train_step,
       steps_per_run=initial_collect_steps,
-      observers=[rb_observer])
+      observers=[rb_observer],
+  )
   logging.info('Doing initial collect.')
   initial_collect_actor.run()
 
   tf_collect_policy = agent.collect_policy
-  collect_policy = py_tf_eager_policy.PyTFEagerPolicy(tf_collect_policy,
-                                                      use_tf_function=True)
+  collect_policy = py_tf_eager_policy.PyTFEagerPolicy(
+      tf_collect_policy, use_tf_function=True
+  )
 
   collect_actor = actor.Actor(
       collect_env,
@@ -209,8 +230,9 @@ def train_eval(
   )
 
   tf_greedy_policy = agent.policy
-  greedy_policy = py_tf_eager_policy.PyTFEagerPolicy(tf_greedy_policy,
-                                                     use_tf_function=True)
+  greedy_policy = py_tf_eager_policy.PyTFEagerPolicy(
+      tf_greedy_policy, use_tf_function=True
+  )
 
   eval_actor = actor.Actor(
       eval_env,
@@ -248,7 +270,8 @@ def main(_):
       FLAGS.root_dir,
       num_iterations=FLAGS.num_iterations,
       reverb_port=FLAGS.reverb_port,
-      eval_interval=FLAGS.eval_interval)
+      eval_interval=FLAGS.eval_interval,
+  )
 
 
 if __name__ == '__main__':

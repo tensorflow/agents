@@ -95,8 +95,10 @@ class Test(TestCommandBase):
       # issue when we import multiprocessing.pool.dummy down the line because
       # the PYTHONPATH has changed.
       for module in [
-          'multiprocessing', 'multiprocessing.pool', 'multiprocessing.dummy',
-          'multiprocessing.pool.dummy'
+          'multiprocessing',
+          'multiprocessing.pool',
+          'multiprocessing.dummy',
+          'multiprocessing.pool.dummy',
       ]:
         if module in sys.modules:
           del sys.modules[module]
@@ -113,7 +115,8 @@ class Test(TestCommandBase):
       gpus = tf.config.experimental.list_physical_devices('GPU')
       for gpu in gpus:
         tf.config.set_logical_device_configuration(
-            gpu, [tf.config.LogicalDeviceConfiguration(memory_limit=1024)])
+            gpu, [tf.config.LogicalDeviceConfiguration(memory_limit=1024)]
+        )
 
       run_separately = load_test_list('test_individually.txt')
       broken_tests = load_test_list(FLAGS.broken_tests)
@@ -138,13 +141,11 @@ class Test(TestCommandBase):
       for failure in external_test_failures:
         stderr.writeln(str(failure))
 
-      final_output = (
-          'Tests run: {} grouped and {} external.  '.format(
-              result.testsRun, len(run_separately)) +
-          'Errors: {}  Failures: {}  External failures: {}.'.format(
-              len(result.errors),
-              len(result.failures),
-              len(external_test_failures)))
+      final_output = 'Tests run: {} grouped and {} external.  '.format(
+          result.testsRun, len(run_separately)
+      ) + 'Errors: {}  Failures: {}  External failures: {}.'.format(
+          len(result.errors), len(result.failures), len(external_test_failures)
+      )
 
       header = '=' * len(final_output)
       stderr.writeln(header)
@@ -158,6 +159,7 @@ class Test(TestCommandBase):
 
     # Run inside absl.app.run to ensure flags parsing is done.
     from tf_agents.system import system_multiprocessing as multiprocessing  # pylint: disable=g-import-not-at-top
+
     return multiprocessing.handle_test_main(lambda: app.run(main))
 
 
@@ -185,7 +187,7 @@ def get_required_packages():
       # Used by gym >= 0.22.0. Only installed as a dependency when gym[all] is
       # installed or if gym[*] (where * is an environment which lists pygame as
       # a dependency).
-      'pygame == 2.1.0',
+      'pygame == 2.1.3',
   ]
   add_additional_packages(required_packages)
   return required_packages
@@ -210,7 +212,6 @@ def get_test_packages():
       'opencv-python >= 3.4.1.15',
       'pybullet',
       'scipy >= 1.1.0',
-      'tensorflow_datasets'
   ]
   return test_packages
 
@@ -299,10 +300,10 @@ def run_setup():
           'Intended Audience :: Science/Research',
           'License :: OSI Approved :: Apache Software License',
           'Programming Language :: Python :: 3',
-          'Programming Language :: Python :: 3.7',
           'Programming Language :: Python :: 3.8',
           'Programming Language :: Python :: 3.9',
           'Programming Language :: Python :: 3.10',
+          'Programming Language :: Python :: 3.11',
           'Topic :: Scientific/Engineering',
           'Topic :: Scientific/Engineering :: Mathematics',
           'Topic :: Scientific/Engineering :: Artificial Intelligence',
@@ -322,35 +323,37 @@ if __name__ == '__main__':
   parser.add_argument(
       '--release',
       action='store_true',
-      help='Pass as true to do a release build')
+      help='Pass as true to do a release build',
+  )
   parser.add_argument(
       '--tf-version',
       type=str,
       default=None,
       help='Overrides TF version required when Reverb is installed, e.g.'
-      'tensorflow>=2.3.0')
+      'tensorflow~=2.13.0')
   parser.add_argument(
       '--reverb-version',
       type=str,
       default=None,
-      help='Overrides Reverb version required, e.g. dm-reverb>=0.1.0')
+      help='Overrides Reverb version required, e.g. dm-reverb~=0.12.0')
   parser.add_argument(
       '--tfp-version',
       type=str,
       default=None,
       help='Overrides tfp version required, e.g. '
-      'tensorflow-probability==0.11.0rc0')
+      'tensorflow-probability~=0.20.0')
   parser.add_argument(
       '--rlds-version',
       type=str,
       default=None,
       help='Overrides rlds version required, e.g. '
-      'rlds==0.1.4')
+      'rlds==0.1.8')
   parser.add_argument(
       '--broken_tests',
       type=str,
       default='broken_tests.txt',
-      help='Broken tests file to use.')
+      help='Broken tests file to use.',
+  )
   FLAGS, unparsed = parser.parse_known_args()
   # Go forward with only non-custom flags.
   sys.argv.clear()

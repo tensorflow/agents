@@ -21,7 +21,6 @@ from __future__ import print_function
 import numpy as np
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 import tensorflow_probability as tfp
-
 from tf_agents.networks import normal_projection_network
 from tf_agents.specs import tensor_spec
 from tf_agents.utils import common
@@ -36,37 +35,43 @@ class NormalProjectionNetworkTest(tf.test.TestCase):
   def testBuild(self):
     output_spec = tensor_spec.BoundedTensorSpec([2], tf.float32, 0, 1)
     network = normal_projection_network.NormalProjectionNetwork(
-        output_spec, scale_distribution=False)
+        output_spec, scale_distribution=False
+    )
 
     inputs = _get_inputs(batch_size=3, num_input_dims=5)
 
     distribution, _ = network(inputs, outer_rank=1)
     self.evaluate(tf.compat.v1.global_variables_initializer())
     self.assertIsInstance(
-        distribution, tfp.distributions.MultivariateNormalDiag)
+        distribution, tfp.distributions.MultivariateNormalDiag
+    )
 
     means, stds = distribution.mean(), distribution.stddev()
 
-    self.assertAllEqual(means.shape.as_list(),
-                        [3] + output_spec.shape.as_list())
+    self.assertAllEqual(
+        means.shape.as_list(), [3] + output_spec.shape.as_list()
+    )
     self.assertAllEqual(stds.shape.as_list(), [3] + output_spec.shape.as_list())
 
   def testBuildStateDepStddev(self):
     output_spec = tensor_spec.BoundedTensorSpec([2], tf.float32, 0, 1)
     network = normal_projection_network.NormalProjectionNetwork(
-        output_spec, state_dependent_std=True, scale_distribution=False)
+        output_spec, state_dependent_std=True, scale_distribution=False
+    )
 
     inputs = _get_inputs(batch_size=3, num_input_dims=5)
 
     distribution, _ = network(inputs, outer_rank=1)
     self.evaluate(tf.compat.v1.global_variables_initializer())
     self.assertIsInstance(
-        distribution, tfp.distributions.MultivariateNormalDiag)
+        distribution, tfp.distributions.MultivariateNormalDiag
+    )
 
     means, stds = distribution.mean(), distribution.stddev()
 
-    self.assertAllEqual(means.shape.as_list(),
-                        [3] + output_spec.shape.as_list())
+    self.assertAllEqual(
+        means.shape.as_list(), [3] + output_spec.shape.as_list()
+    )
     self.assertAllEqual(stds.shape.as_list(), [3] + output_spec.shape.as_list())
 
   def testTrainableVariables(self):
@@ -87,7 +92,8 @@ class NormalProjectionNetworkTest(tf.test.TestCase):
   def testTrainableVariablesStateDepStddev(self):
     output_spec = tensor_spec.BoundedTensorSpec([2], tf.float32, 0, 1)
     network = normal_projection_network.NormalProjectionNetwork(
-        output_spec, state_dependent_std=True)
+        output_spec, state_dependent_std=True
+    )
 
     inputs = _get_inputs(batch_size=3, num_input_dims=5)
 
@@ -104,8 +110,11 @@ class NormalProjectionNetworkTest(tf.test.TestCase):
   def testScaledDistribution(self):
     output_spec = tensor_spec.BoundedTensorSpec([1], tf.float32, -2, 4)
     network = normal_projection_network.NormalProjectionNetwork(
-        output_spec, init_means_output_factor=10, state_dependent_std=True,
-        scale_distribution=True)
+        output_spec,
+        init_means_output_factor=10,
+        state_dependent_std=True,
+        scale_distribution=True,
+    )
 
     inputs = _get_inputs(batch_size=100, num_input_dims=5)
 

@@ -18,7 +18,6 @@ from typing import Callable, Optional, Text
 
 import gin
 import tensorflow as tf
-
 from tf_agents.agents import tf_agent
 from tf_agents.agents.ppo import ppo_agent
 from tf_agents.networks import utils
@@ -46,23 +45,26 @@ class PPOLearner(object):
       the agent.
   """
 
-  def __init__(self,
-               root_dir: Text,
-               train_step: tf.Variable,
-               agent: ppo_agent.PPOAgent,
-               experience_dataset_fn: Callable[..., tf.data.Dataset],
-               normalization_dataset_fn: Callable[..., tf.data.Dataset],
-               num_samples: int,
-               num_epochs: int = 1,
-               minibatch_size: Optional[int] = None,
-               shuffle_buffer_size: Optional[int] = None,
-               after_train_strategy_step_fn: Optional[Callable[
-                   [types.NestedTensor, tf_agent.LossInfo], None]] = None,
-               triggers: Optional[Callable[..., None]] = None,
-               checkpoint_interval: int = 100000,
-               summary_interval: int = 1000,
-               use_kwargs_in_agent_train: bool = False,
-               strategy: Optional[tf.distribute.Strategy] = None):
+  def __init__(
+      self,
+      root_dir: Text,
+      train_step: tf.Variable,
+      agent: ppo_agent.PPOAgent,
+      experience_dataset_fn: Callable[..., tf.data.Dataset],
+      normalization_dataset_fn: Callable[..., tf.data.Dataset],
+      num_samples: int,
+      num_epochs: int = 1,
+      minibatch_size: Optional[int] = None,
+      shuffle_buffer_size: Optional[int] = None,
+      after_train_strategy_step_fn: Optional[
+          Callable[[types.NestedTensor, tf_agent.LossInfo], None]
+      ] = None,
+      triggers: Optional[Callable[..., None]] = None,
+      checkpoint_interval: int = 100000,
+      summary_interval: int = 1000,
+      use_kwargs_in_agent_train: bool = False,
+      strategy: Optional[tf.distribute.Strategy] = None,
+  ):
     """Initializes a PPOLearner instance.
 
     ```python
@@ -99,8 +101,8 @@ class PPOLearner(object):
         and preprocessing should be done as part of the data pipeline as part of
         `replay_buffer.as_dataset`.
       experience_dataset_fn: a function that will create an instance of a
-        tf.data.Dataset used to sample experience for training. Each element
-        in the dataset is a (Trajectory, SampleInfo) pair. Note that each
+        tf.data.Dataset used to sample experience for training. Each element in
+        the dataset is a (Trajectory, SampleInfo) pair. Note that each
         Trajectory in itself might represent an episode (variable length) or a
         collection of transitions depending on how the replay buffer and hence
         the `experience_dataset_fn` was set up.
@@ -111,30 +113,29 @@ class PPOLearner(object):
         SampleInfo) pair. Note that each Trajectory in itself might represent an
         episode (variable length) or a collection of transitions depending on
         how the replay buffer and hence the `experience_dataset_fn` was set up.
-      num_samples: The number of samples used for training and normalization.
-        A sample here means one reading of the experience_dataset_fn which in
-        turn might  have more than 1 Trajectories (For ex. if this is coming
-        from a  `reverb_replay_buffer` with `sample_batch_size` = 2, then one
-        sample means 2 trajectories, and the trainer will pull in num_samples *
-        2 trajectories for one iteration of training). If fewer than this amount
+      num_samples: The number of samples used for training and normalization. A
+        sample here means one reading of the experience_dataset_fn which in turn
+        might  have more than 1 Trajectories (For ex. if this is coming from a
+        `reverb_replay_buffer` with `sample_batch_size` = 2, then one sample
+        means 2 trajectories, and the trainer will pull in num_samples * 2
+        trajectories for one iteration of training). If fewer than this amount
         of batches exists in the dataset, the learner will wait for more data to
         be added, or until the reverb timeout is reached.
       num_epochs: The number of iterations to go through the same sequences.
       minibatch_size: The minibatch size. If set, the input data set will be
-        flattened, and the dataset used for training is shaped
-        `[minibatch_size, 1, ...]`, where each element in the dataset represents
-        a single step. If None, full sequences will be fed into the agent.
-        Please set this parameter to None for RNN networks which requires full
-        sequences.
+        flattened, and the dataset used for training is shaped `[minibatch_size,
+        1, ...]`, where each element in the dataset represents a single step. If
+        None, full sequences will be fed into the agent. Please set this
+        parameter to None for RNN networks which requires full sequences.
       shuffle_buffer_size: The buffer size for shuffling the trajectories before
-        splitting them into mini batches. Only required when mini batch
-        learning is enabled (minibatch_size is set). Otherwise it is ignored.
-        Commonly set to a number 1-3x the episode length of your environment.
-      after_train_strategy_step_fn: (Optional) callable of the form
-        `fn(sample, loss)` which can be used for example to update priorities in
-        a replay buffer where sample is pulled from the `experience_iterator`
-        and loss is a `LossInfo` named tuple returned from the agent. This is
-        called after every train step. It runs using `strategy.run(...)`.
+        splitting them into mini batches. Only required when mini batch learning
+        is enabled (minibatch_size is set). Otherwise it is ignored. Commonly
+        set to a number 1-3x the episode length of your environment.
+      after_train_strategy_step_fn: (Optional) callable of the form `fn(sample,
+        loss)` which can be used for example to update priorities in a replay
+        buffer where sample is pulled from the `experience_iterator` and loss is
+        a `LossInfo` named tuple returned from the agent. This is called after
+        every train step. It runs using `strategy.run(...)`.
       triggers: List of callables of the form `trigger(train_step)`. After every
         `run` call every trigger is called with the current `train_step` value
         as an np scalar.
@@ -167,16 +168,19 @@ class PPOLearner(object):
     """
     if minibatch_size and shuffle_buffer_size is None:
       raise ValueError(
-          'shuffle_buffer_size must be provided if minibatch_size is not None.')
+          'shuffle_buffer_size must be provided if minibatch_size is not None.'
+      )
 
-    if minibatch_size and (agent._actor_net.state_spec or
-                           agent._value_net.state_spec):
+    if minibatch_size and (
+        agent._actor_net.state_spec or agent._value_net.state_spec
+    ):
       raise ValueError('minibatch_size must be set to None for RNN networks.')
 
     if minibatch_size and agent._compute_value_and_advantage_in_train:
       raise ValueError(
           'agent.compute_value_and_advantage_in_train should be set to False '
-          'when mini batching is used.')
+          'when mini batching is used.'
+      )
 
     if agent.update_normalizers_in_train:
       raise ValueError(
@@ -203,7 +207,8 @@ class PPOLearner(object):
         checkpoint_interval=checkpoint_interval,
         summary_interval=summary_interval,
         use_kwargs_in_agent_train=use_kwargs_in_agent_train,
-        strategy=strategy)
+        strategy=strategy,
+    )
 
     self.num_replicas = strategy.num_replicas_in_sync
     self._create_datasets(strategy)
@@ -225,7 +230,8 @@ class PPOLearner(object):
 
         def squash_dataset_element(sequence, info):
           return tf.nest.map_structure(
-              utils.BatchSquash(2).flatten, (sequence, info))
+              utils.BatchSquash(2).flatten, (sequence, info)
+          )
 
         # We unbatch the dataset shaped [B, T, ...] to a new dataset that
         # contains individual elements.
@@ -236,7 +242,8 @@ class PPOLearner(object):
         train_dataset = train_dataset.shuffle(self._shuffle_buffer_size)
         train_dataset = train_dataset.batch(1, drop_remainder=True)
         train_dataset = train_dataset.batch(
-            self._minibatch_size, drop_remainder=True)
+            self._minibatch_size, drop_remainder=True
+        )
 
       return train_dataset
 
@@ -245,15 +252,17 @@ class PPOLearner(object):
 
     def _make_normalization_dataset(_):
       return self._normalization_dataset_fn()
+
     self._normalization_dataset = tf.data.experimental.Counter().flat_map(
-        _make_normalization_dataset)
+        _make_normalization_dataset
+    )
     self._normalization_iterator = iter(self._normalization_dataset)
 
     with strategy.scope():
-
       if strategy.num_replicas_in_sync > 1:
-        self._train_dataset = (
-            strategy.distribute_datasets_from_function(make_dataset))
+        self._train_dataset = strategy.distribute_datasets_from_function(
+            make_dataset
+        )
       else:
         self._train_dataset = make_dataset(0)
       self._train_iterator = iter(self._train_dataset)
@@ -265,6 +274,7 @@ class PPOLearner(object):
       parallel_iterations: Maximum number of train iterations to allow running
         in parallel. This value is forwarded directly to the training tf.while
         loop.
+
     Returns:
       The total loss computed before running the final step.
     """
@@ -272,21 +282,27 @@ class PPOLearner(object):
     self.num_frames_for_training.assign(num_frames)
 
     if self._minibatch_size:
-      num_total_batches = int(self.num_frames_for_training.numpy() /
-                              self._minibatch_size) * self._num_epochs
+      num_total_batches = (
+          int(self.num_frames_for_training.numpy() / self._minibatch_size)
+          * self._num_epochs
+      )
     else:
       num_total_batches = self._num_samples * self._num_epochs
 
     iterations = int(num_total_batches / self.num_replicas)
     if iterations == 0:
-      raise ValueError('Cannot distribute {} batches across {} replicas. '
-                       'Please increase PPOLearner.num_samples. See PPOLeaner.'
-                       'num_samples documentation for more details.'.format(
-                           num_total_batches, self.num_replicas))
+      raise ValueError(
+          'Cannot distribute {} batches across {} replicas. '
+          'Please increase PPOLearner.num_samples. See PPOLeaner.'
+          'num_samples documentation for more details.'.format(
+              num_total_batches, self.num_replicas
+          )
+      )
     loss_info = self._generic_learner.run(
         iterations,
         self._train_iterator,
-        parallel_iterations=parallel_iterations)
+        parallel_iterations=parallel_iterations,
+    )
 
     return loss_info
 
@@ -295,11 +311,11 @@ class PPOLearner(object):
     """Update the normalizers and count the total number of frames."""
 
     reward_spec = tensor_spec.TensorSpec(shape=[], dtype=tf.float32)
+
     def _update(traj):
       self._agent.update_observation_normalizer(traj.observation)
       self._agent.update_reward_normalizer(traj.reward)
       if traj.reward.shape:
-
         outer_shape = nest_utils.get_outer_shape(traj.reward, reward_spec)
         batch_size = outer_shape[0]
         if len(outer_shape) > 1:

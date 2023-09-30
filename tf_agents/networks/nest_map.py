@@ -23,7 +23,6 @@ import copy
 import typing
 
 import tensorflow.compat.v2 as tf
-
 from tf_agents.networks import network
 from tf_agents.networks import sequential
 from tf_agents.typing import types
@@ -70,21 +69,23 @@ class NestMap(network.Network):
   ```
   """
 
-  def __init__(self,
-               nested_layers: types.NestedLayer,
-               input_spec: typing.Optional[types.NestedTensorSpec] = None,
-               name: typing.Optional[typing.Text] = None):
+  def __init__(
+      self,
+      nested_layers: types.NestedLayer,
+      input_spec: typing.Optional[types.NestedTensorSpec] = None,
+      name: typing.Optional[typing.Text] = None,
+  ):
     """Create a Sequential Network.
 
     Args:
-      nested_layers: A nest of layers and/or networks.  These will be used
-        to process the inputs (input nest structure will have to match this
+      nested_layers: A nest of layers and/or networks.  These will be used to
+        process the inputs (input nest structure will have to match this
         structure).  Any layers that are subclasses of
         `tf.keras.layers.{RNN,LSTM,GRU,...}` are wrapped in
         `tf_agents.keras_layers.RNNWrapper`.
-      input_spec: (Optional.)  A nest of `tf.TypeSpec` representing the
-        input observations.  The structure of `input_spec` must match
-        that of `nested_layers`.
+      input_spec: (Optional.)  A nest of `tf.TypeSpec` representing the input
+        observations.  The structure of `input_spec` must match that of
+        `nested_layers`.
       name: (Optional.) Network name.
 
     Raises:
@@ -96,28 +97,33 @@ class NestMap(network.Network):
     """
     if not tf.executing_eagerly():
       raise RuntimeError(
-          'Not executing eagerly - cannot make deep copies of `nested_layers`.')
+          'Not executing eagerly - cannot make deep copies of `nested_layers`.'
+      )
 
     flat_nested_layers = tf.nest.flatten(nested_layers)
     for layer in flat_nested_layers:
       if not isinstance(layer, tf.keras.layers.Layer):
         raise TypeError(
             'Expected all layers to be instances of keras Layer, but saw'
-            ': \'{}\''.format(layer))
+            ": '{}'".format(layer)
+        )
 
     if input_spec is not None:
       nest_utils.assert_same_structure(
-          nested_layers, input_spec,
+          nested_layers,
+          input_spec,
           message=(
               '`nested_layers` and `input_spec` do not have matching structures'
-          ))
+          ),
+      )
       flat_input_spec = tf.nest.flatten(input_spec)
     else:
       flat_input_spec = [None] * len(flat_nested_layers)
 
     # Wrap in Sequential if necessary.
     flat_nested_layers = [
-        sequential.Sequential([m], s) if not isinstance(m, network.Network)
+        sequential.Sequential([m], s)
+        if not isinstance(m, network.Network)
         else m
         for (s, m) in zip(flat_input_spec, flat_nested_layers)
     ]
@@ -135,11 +141,12 @@ class NestMap(network.Network):
     # of the public TF API.  However, if we do everything in flatland and then
     # use pack_sequence_as, we bypass the more rigid structure tests.
     state_spec = tf.nest.pack_sequence_as(
-        nested_layers, flat_nested_layers_state_specs)
+        nested_layers, flat_nested_layers_state_specs
+    )
 
-    super(NestMap, self).__init__(input_tensor_spec=input_spec,
-                                  state_spec=state_spec,
-                                  name=name)
+    super(NestMap, self).__init__(
+        input_tensor_spec=input_spec, state_spec=state_spec, name=name
+    )
     self._nested_layers = nested_layers
 
   @property
@@ -169,22 +176,26 @@ class NestMap(network.Network):
 
   def call(self, inputs, network_state=(), **kwargs):
     nest_utils.assert_same_structure(
-        self._nested_layers, inputs,
+        self._nested_layers,
+        inputs,
         allow_shallow_nest1=True,
         message=(
-            '`self.nested_layers` and `inputs` do not have matching structures')
+            '`self.nested_layers` and `inputs` do not have matching structures'
+        ),
     )
 
     if network_state:
       nest_utils.assert_same_structure(
-          self.state_spec, network_state,
+          self.state_spec,
+          network_state,
           allow_shallow_nest1=True,
-          message=(
-              'network_state and state_spec do not have matching structure'))
+          message='network_state and state_spec do not have matching structure',
+      )
       nested_layers_state = network_state
     else:
       nested_layers_state = tf.nest.map_structure(
-          lambda _: (), self._nested_layers)
+          lambda _: (), self._nested_layers
+      )
 
     # Here we must use map_structure_up_to because nested_layers_state has a
     # "deeper" structure than self._nested_layers.  For example, an LSTM
@@ -195,16 +206,21 @@ class NestMap(network.Network):
       return layer(inp, network_state=state, **kwargs)
 
     outputs_and_next_state = nest_utils.map_structure_up_to(
-        self._nested_layers, _mapper,
-        inputs, self._nested_layers, nested_layers_state)
+        self._nested_layers,
+        _mapper,
+        inputs,
+        self._nested_layers,
+        nested_layers_state,
+    )
 
     flat_outputs_and_next_state = nest_utils.flatten_up_to(
-        self._nested_layers, outputs_and_next_state)
+        self._nested_layers, outputs_and_next_state
+    )
     flat_outputs, flat_next_state = zip(*flat_outputs_and_next_state)
 
-    outputs = tf.nest.pack_sequence_as(
-        self._nested_layers, flat_outputs)
+    outputs = tf.nest.pack_sequence_as(self._nested_layers, flat_outputs)
     next_network_state = tf.nest.pack_sequence_as(
-        self._nested_layers, flat_next_state)
+        self._nested_layers, flat_next_state
+    )
 
     return outputs, next_network_state

@@ -67,28 +67,36 @@ def _check_spec(spec):
   if any(checked):
     raise ValueError(
         'Specs contain either a missing name or a name collision.\n  '
-        'Spec names: %s\n' %
-        (tf.nest.map_structure(lambda s: s.name or '<MISSING>', spec),))
+        'Spec names: %s\n'
+        % (tf.nest.map_structure(lambda s: s.name or '<MISSING>', spec),)
+    )
 
 
 def _check_compatible(spec, tensor, ignore_outer_dims=True):
   """Checks if `spec` is compatible with `tensor`, maybe ignoring outer dims."""
   if ignore_outer_dims:
     tensor = tensor_spec.remove_outer_dims_nest(
-        tensor, tensor.shape.ndims - spec.shape.ndims)
+        tensor, tensor.shape.ndims - spec.shape.ndims
+    )
   if not spec.is_compatible_with(tensor):
-    raise ValueError('Tensor is incompatible with spec. spec = {0}, '
-                     'tensor = {1}'.format(spec, tensor))
+    raise ValueError(
+        'Tensor is incompatible with spec. spec = {0}, tensor = {1}'.format(
+            spec, tensor
+        )
+    )
 
 
 def add_batch_dim(spec, outer_dims):
   return tf.TensorSpec(
       shape=tf.TensorShape(outer_dims).concatenate(spec.shape),
       name=spec.name,
-      dtype=spec.dtype)
+      dtype=spec.dtype,
+  )
 
-InputFnType = Callable[[types.NestedTensor], Tuple[types.NestedTensor,
-                                                   types.NestedTensor]]
+
+InputFnType = Callable[
+    [types.NestedTensor], Tuple[types.NestedTensor, types.NestedTensor]
+]
 InputFnAndSpecType = Tuple[InputFnType, types.NestedTensorSpec]
 
 
@@ -173,8 +181,8 @@ class PolicySaver(object):
       seed: Optional[types.Seed] = None,
       train_step: Optional[tf.Variable] = None,
       input_fn_and_spec: Optional[InputFnAndSpecType] = None,
-      metadata: Optional[Dict[Text, tf.Variable]] = None
-      ):
+      metadata: Optional[Dict[Text, tf.Variable]] = None,
+  ):
     """Initialize PolicySaver for  TF policy `policy`.
 
     Args:
@@ -211,11 +219,13 @@ class PolicySaver(object):
     """
     if not isinstance(policy, tf_policy.TFPolicy):
       raise TypeError('policy is not a TFPolicy.  Saw: %s' % type(policy))
-    if (batch_size is not None and
-        (not isinstance(batch_size, int) or batch_size < 1)):
+    if batch_size is not None and (
+        not isinstance(batch_size, int) or batch_size < 1
+    ):
       raise ValueError(
-          'Expected batch_size == None or python int > 0, saw: %s' %
-          (batch_size,))
+          'Expected batch_size == None or python int > 0, saw: %s'
+          % (batch_size,)
+      )
 
     self._use_nest_path_signatures = use_nest_path_signatures
 
@@ -232,17 +242,21 @@ class PolicySaver(object):
 
     if train_step is None:
       if not common.has_eager_been_enabled():
-        raise ValueError('train_step is required in TF1 and must be a '
-                         '`tf.Variable`: %s' % train_step)
+        raise ValueError(
+            'train_step is required in TF1 and must be a `tf.Variable`: %s'
+            % train_step
+        )
       train_step = tf.Variable(
           -1,
           trainable=False,
           dtype=tf.int64,
           aggregation=tf.VariableAggregation.ONLY_FIRST_REPLICA,
-          shape=())
-    elif not isinstance(train_step, tf.Variable):
-      raise ValueError('train_step must be a TensorFlow variable: %s' %
-                       train_step)
+          shape=(),
+      )
+    elif not isinstance(train_step, tf.compat.v2.Variable):
+      raise ValueError(
+          'train_step must be a TensorFlow variable: %s' % train_step
+      )
 
     # We will need the train step for the Checkpoint object.
     self._train_step = train_step
@@ -252,17 +266,19 @@ class PolicySaver(object):
     for key, value in self._metadata.items():
       if not isinstance(key, str):
         raise TypeError('Keys of metadata must be strings: %s' % key)
-      if not isinstance(value, tf.Variable):
+      if not isinstance(value, tf.compat.v2.Variable):
         raise TypeError('Values of metadata must be tf.Variable: %s' % value)
     saved_policy.metadata = self._metadata
 
     if batch_size is None:
       get_initial_state_fn = policy.get_initial_state
-      get_initial_state_input_specs = (tf.TensorSpec(
-          dtype=tf.int32, shape=(), name='batch_size'),)
+      get_initial_state_input_specs = (
+          tf.TensorSpec(dtype=tf.int32, shape=(), name='batch_size'),
+      )
     else:
       get_initial_state_fn = functools.partial(
-          policy.get_initial_state, batch_size=batch_size)
+          policy.get_initial_state, batch_size=batch_size
+      )
       get_initial_state_input_specs = ()
 
     get_initial_state_fn = common.function()(get_initial_state_fn)
@@ -274,6 +290,7 @@ class PolicySaver(object):
       def action_fn(time_step, policy_state):
         time_step = cast(ts.TimeStep, time_step)
         return original_action_fn(time_step, policy_state, seed=seed)
+
     else:
       action_fn = original_action_fn
 
@@ -282,8 +299,9 @@ class PolicySaver(object):
       try:
         time_step = cast(ts.TimeStep, time_step)
         outs = policy.distribution(
-            time_step=time_step, policy_state=policy_state)
-        return tf.nest.map_structure(_composite_distribution, outs)
+            time_step=time_step, policy_state=policy_state
+        )
+        return tf.nest.map_structure(_check_composite_distribution, outs)
       except (TypeError, NotImplementedError) as e:
         # TODO(b/156526399): Move this to just the policy.distribution() call
         # once tfp.experimental.as_composite() properly handles LinearOperator*
@@ -291,11 +309,16 @@ class PolicySaver(object):
         logging.warning(
             'WARNING: Could not serialize policy.distribution() for policy '
             '"%s". Calling saved_model.distribution() will raise the following '
-            'assertion error: %s', policy, e)
+            'assertion error: %s',
+            policy,
+            e,
+        )
+
         @common.function()
         def _raise():
           tf.Assert(False, [str(e)])
           return ()
+
         outs = _raise()
 
     # We call get_concrete_function() for its side effect: to ensure the proper
@@ -303,25 +326,30 @@ class PolicySaver(object):
     get_initial_state_fn.get_concrete_function(*get_initial_state_input_specs)
 
     train_step_fn = common.function(
-        lambda: saved_policy.train_step).get_concrete_function()
+        lambda: saved_policy.train_step
+    ).get_concrete_function()
     get_metadata_fn = common.function(
-        lambda: saved_policy.metadata).get_concrete_function()
+        lambda: saved_policy.metadata
+    ).get_concrete_function()
 
     batched_time_step_spec = tf.nest.map_structure(
-        lambda spec: add_batch_dim(spec, [batch_size]), policy.time_step_spec)
+        lambda spec: add_batch_dim(spec, [batch_size]), policy.time_step_spec
+    )
     batched_time_step_spec = cast(ts.TimeStep, batched_time_step_spec)
     batched_policy_state_spec = tf.nest.map_structure(
-        lambda spec: add_batch_dim(spec, [batch_size]),
-        policy.policy_state_spec)
+        lambda spec: add_batch_dim(spec, [batch_size]), policy.policy_state_spec
+    )
 
     policy_step_spec = policy.policy_step_spec
     policy_state_spec = policy.policy_state_spec
 
     if use_nest_path_signatures:
       batched_time_step_spec = rename_spec_with_nest_paths(
-          batched_time_step_spec)
+          batched_time_step_spec
+      )
       batched_policy_state_spec = rename_spec_with_nest_paths(
-          batched_policy_state_spec)
+          batched_policy_state_spec
+      )
       policy_step_spec = rename_spec_with_nest_paths(policy_step_spec)
       policy_state_spec = rename_spec_with_nest_paths(policy_state_spec)
     else:
@@ -335,24 +363,28 @@ class PolicySaver(object):
       @common.function()
       def polymorphic_action_fn(example):
         action_inputs = input_fn_and_spec[0](example)
-        tf.nest.map_structure(_check_compatible, action_fn_input_spec,
-                              action_inputs)
+        tf.nest.map_structure(
+            _check_compatible, action_fn_input_spec, action_inputs
+        )
         return action_fn(*action_inputs)
 
       @common.function()
       def polymorphic_distribution_fn(example):
         action_inputs = input_fn_and_spec[0](example)
-        tf.nest.map_structure(_check_compatible, action_fn_input_spec,
-                              action_inputs)
+        tf.nest.map_structure(
+            _check_compatible, action_fn_input_spec, action_inputs
+        )
         return distribution_fn(*action_inputs)
 
       batched_input_spec = tf.nest.map_structure(
-          lambda spec: add_batch_dim(spec, [batch_size]), input_fn_and_spec[1])
+          lambda spec: add_batch_dim(spec, [batch_size]), input_fn_and_spec[1]
+      )
       # We call get_concrete_function() for its side effect: to ensure the
       # proper ConcreteFunction is stored in the SavedModel.
       polymorphic_action_fn.get_concrete_function(example=batched_input_spec)
       polymorphic_distribution_fn.get_concrete_function(
-          example=batched_input_spec)
+          example=batched_input_spec
+      )
 
       action_input_spec = (input_fn_and_spec[1],)
 
@@ -363,12 +395,15 @@ class PolicySaver(object):
         polymorphic_action_fn = common.function()(action_fn)
         polymorphic_action_fn.get_concrete_function(
             time_step=batched_time_step_spec,
-            policy_state=batched_policy_state_spec)
+            policy_state=batched_policy_state_spec,
+        )
 
         polymorphic_distribution_fn = common.function()(distribution_fn)
         polymorphic_distribution_fn.get_concrete_function(
             time_step=batched_time_step_spec,
-            policy_state=batched_policy_state_spec)
+            policy_state=batched_policy_state_spec,
+        )
+
       else:
         # Create a polymorphic action_fn which you can call as
         #  restored.action(time_step)
@@ -376,56 +411,63 @@ class PolicySaver(object):
         #  restored.action(time_step, ())
         # (without retracing the inner action twice)
         @common.function()
-        def polymorphic_action_fn(time_step,
-                                  policy_state=batched_policy_state_spec):
+        def polymorphic_action_fn(
+            time_step, policy_state=batched_policy_state_spec
+        ):
           return action_fn(time_step, policy_state)
 
         polymorphic_action_fn.get_concrete_function(
             time_step=batched_time_step_spec,
-            policy_state=batched_policy_state_spec)
+            policy_state=batched_policy_state_spec,
+        )
         polymorphic_action_fn.get_concrete_function(
-            time_step=batched_time_step_spec)
+            time_step=batched_time_step_spec
+        )
 
         @common.function()
-        def polymorphic_distribution_fn(time_step,
-                                        policy_state=batched_policy_state_spec):
+        def polymorphic_distribution_fn(
+            time_step, policy_state=batched_policy_state_spec
+        ):
           return distribution_fn(time_step, policy_state)
 
         polymorphic_distribution_fn.get_concrete_function(
             time_step=batched_time_step_spec,
-            policy_state=batched_policy_state_spec)
+            policy_state=batched_policy_state_spec,
+        )
         polymorphic_distribution_fn.get_concrete_function(
-            time_step=batched_time_step_spec)
+            time_step=batched_time_step_spec
+        )
 
     signatures = {
         # CompositeTensors aren't well supported by old-style signature
         # mechanisms, so we do not have a signature for policy.distribution.
-        'action':
-            _function_with_flat_signature(
-                polymorphic_action_fn,
-                input_specs=action_input_spec,
-                output_spec=policy_step_spec,
-                include_batch_dimension=True,
-                batch_size=batch_size),
-        'get_initial_state':
-            _function_with_flat_signature(
-                get_initial_state_fn,
-                input_specs=get_initial_state_input_specs,
-                output_spec=policy_state_spec,
-                include_batch_dimension=False),
-        'get_train_step':
-            _function_with_flat_signature(
-                train_step_fn,
-                input_specs=(),
-                output_spec=train_step.dtype,
-                include_batch_dimension=False),
-        'get_metadata':
-            _function_with_flat_signature(
-                get_metadata_fn,
-                input_specs=(),
-                output_spec=tf.nest.map_structure(lambda v: v.dtype,
-                                                  self._metadata),
-                include_batch_dimension=False),
+        'action': _function_with_flat_signature(
+            polymorphic_action_fn,
+            input_specs=action_input_spec,
+            output_spec=policy_step_spec,
+            include_batch_dimension=True,
+            batch_size=batch_size,
+        ),
+        'get_initial_state': _function_with_flat_signature(
+            get_initial_state_fn,
+            input_specs=get_initial_state_input_specs,
+            output_spec=policy_state_spec,
+            include_batch_dimension=False,
+        ),
+        'get_train_step': _function_with_flat_signature(
+            train_step_fn,
+            input_specs=(),
+            output_spec=train_step.dtype,
+            include_batch_dimension=False,
+        ),
+        'get_metadata': _function_with_flat_signature(
+            get_metadata_fn,
+            input_specs=(),
+            output_spec=tf.nest.map_structure(
+                lambda v: v.dtype, self._metadata
+            ),
+            include_batch_dimension=False,
+        ),
     }
 
     saved_policy.action = polymorphic_action_fn
@@ -442,12 +484,16 @@ class PolicySaver(object):
     try:
       saved_policy._all_assets = {
           name: ref
-          for name, ref in policy._unconditional_checkpoint_dependencies}  # pylint: disable=protected-access
+          for name, ref in policy._unconditional_checkpoint_dependencies
+      }  # pylint: disable=protected-access
     except AttributeError as e:
       if '_self_unconditional' in str(e):
         logging.warning(
             'Unable to capture all trackable objects in policy "%s".  This '
-            'may be okay.  Error: %s', policy, e)
+            'may be okay.  Error: %s',
+            policy,
+            e,
+        )
       else:
         raise e
 
@@ -533,11 +579,13 @@ class PolicySaver(object):
     else:
       return self._metadata
 
-  def register_function(self,
-                        name: str,
-                        fn: InputFnType,
-                        input_spec: types.NestedTensorSpec,
-                        outer_dims: Sequence[Optional[int]] = (None,)) -> None:
+  def register_function(
+      self,
+      name: str,
+      fn: InputFnType,
+      input_spec: types.NestedTensorSpec,
+      outer_dims: Sequence[Optional[int]] = (None,),
+  ) -> None:
     """Registers a function into the saved model.
 
     Note: There is no easy way to generate polymorphic functions. This pattern
@@ -547,19 +595,21 @@ class PolicySaver(object):
 
     Args:
       name: Name of the attribute to use for the saved fn.
-      fn: Function to register. Must be a callable following the input_spec as
-        a single parameter.
-      input_spec: A nest of tf.TypeSpec representing the time_steps.
-        Provided by the user.
+      fn: Function to register. Must be a callable following the input_spec as a
+        single parameter.
+      input_spec: A nest of tf.TypeSpec representing the time_steps. Provided by
+        the user.
       outer_dims: The outer dimensions the saved fn will process at a time. By
         default a batch dimension is added to the input_spec.
     """
     if getattr(self._policy, name, None) is not None:
-      raise ValueError('Policy already has an attribute registered with: %s' %
-                       name)
+      raise ValueError(
+          'Policy already has an attribute registered with: %s' % name
+      )
 
-    batched_spec = tf.nest.map_structure(lambda s: add_batch_dim(s, outer_dims),
-                                         input_spec)
+    batched_spec = tf.nest.map_structure(
+        lambda s: add_batch_dim(s, outer_dims), input_spec
+    )
     tf_fn = common.function(fn)
     # We call get_concrete_function() for its side effect: to ensure the proper
     # ConcreteFunction is stored in the SavedModel.
@@ -567,10 +617,7 @@ class PolicySaver(object):
     setattr(self._policy, name, tf_fn)
 
   def register_concrete_function(
-      self,
-      name: str,
-      fn: def_function.Function,
-      assets: Optional[Any] = None
+      self, name: str, fn: def_function.Function, assets: Optional[Any] = None
   ) -> None:
     """Registers a function into the saved model.
 
@@ -579,14 +626,15 @@ class PolicySaver(object):
 
     Args:
       name: Name of the attribute to use for the saved fn.
-      fn: Function to register. Must be a callable following the input_spec as
-        a single parameter.
+      fn: Function to register. Must be a callable following the input_spec as a
+        single parameter.
       assets: Any extra checkpoint dependencies that must be captured in the
         module. Note variables are automatically captured.
     """
     if getattr(self._policy, name, None) is not None:
-      raise ValueError('Policy already has an attribute registered with: %s' %
-                       name)
+      raise ValueError(
+          'Policy already has an attribute registered with: %s' % name
+      )
 
     setattr(self._policy, name, fn)
 
@@ -597,9 +645,11 @@ class PolicySaver(object):
     if assets:
       setattr(self._policy, name + '__assets', assets)
 
-  def save(self,
-           export_dir: Text,
-           options: Optional[tf.saved_model.SaveOptions] = None):
+  def save(
+      self,
+      export_dir: Text,
+      options: Optional[tf.saved_model.SaveOptions] = None,
+  ):
     """Save the policy to the given `export_dir`.
 
     Args:
@@ -607,13 +657,14 @@ class PolicySaver(object):
       options: Optional `tf.saved_model.SaveOptions` object.
     """
     tf.compat.v2.saved_model.save(
-        self._policy, export_dir, signatures=self._signatures, options=options)
+        self._policy, export_dir, signatures=self._signatures, options=options
+    )
 
     temp_spec_file_name = '{}_temp'.format(POLICY_SPECS_PBTXT)
     temp_spec_output_path = os.path.join(export_dir, temp_spec_file_name)
     specs = {
         'collect_data_spec': self._policy.collect_data_spec,
-        'policy_state_spec': self._policy.policy_state_spec
+        'policy_state_spec': self._policy.policy_state_spec,
     }
     tensor_spec.to_pbtxt_file(temp_spec_output_path, specs)
     spec_output_path = os.path.join(export_dir, POLICY_SPECS_PBTXT)
@@ -622,9 +673,11 @@ class PolicySaver(object):
     # reproduces the exact previous behavior.
     tf.io.gfile.rename(temp_spec_output_path, spec_output_path, overwrite=True)
 
-  def save_checkpoint(self,
-                      export_dir: Text,
-                      options: Optional[tf.train.CheckpointOptions] = None):
+  def save_checkpoint(
+      self,
+      export_dir: Text,
+      options: Optional[tf.train.CheckpointOptions] = None,
+  ):
     """Saves the policy as a checkpoint to the given `export_dir`.
 
     This will only work with checkpoints generated in TF2.x.
@@ -654,19 +707,21 @@ class PolicySaver(object):
     checkpoint = tf.compat.v2.train.Checkpoint(
         policy=self._policy,
         model_variables=self._policy.model_variables,
-        train_step=self._train_step)
+        train_step=self._train_step,
+    )
     # Use write() to make sure that the file prefix is not modified by appending
     # a save counter value.
-    file_prefix = os.path.join(export_dir, tf.saved_model.VARIABLES_DIRECTORY,
-                               tf.saved_model.VARIABLES_FILENAME)
+    file_prefix = os.path.join(
+        export_dir,
+        tf.saved_model.VARIABLES_DIRECTORY,
+        tf.saved_model.VARIABLES_FILENAME,
+    )
     checkpoint.write(file_prefix, options=options)
 
 
-def _function_with_flat_signature(function,
-                                  input_specs,
-                                  output_spec,
-                                  include_batch_dimension,
-                                  batch_size=None):
+def _function_with_flat_signature(
+    function, input_specs, output_spec, include_batch_dimension, batch_size=None
+):
   """Create a tf.function with a given signature for export.
 
   Args:
@@ -688,7 +743,8 @@ def _function_with_flat_signature(function,
       return tf.TensorSpec(
           shape=tf.TensorShape([batch_size]).concatenate(spec.shape),
           name=spec.name,
-          dtype=spec.dtype)
+          dtype=spec.dtype,
+      )
     else:
       return spec
 
@@ -711,7 +767,7 @@ def _function_with_flat_signature(function,
 
 
 def specs_from_collect_data_spec(
-    loaded_policy_specs: types.NestedTensorSpec
+    loaded_policy_specs: types.NestedTensorSpec,
 ) -> Dict[types.NestedSpec, types.NestedSpec]:
   """Creates policy specs from specs loaded from disk.
 
@@ -743,7 +799,8 @@ def specs_from_collect_data_spec(
       step_type=collect_data_spec.step_type,
       reward=collect_data_spec.reward,
       discount=collect_data_spec.discount,
-      observation=collect_data_spec.observation)
+      observation=collect_data_spec.observation,
+  )
   action_spec = collect_data_spec.action
   info_spec = collect_data_spec.policy_info
   return dict(
@@ -751,11 +808,13 @@ def specs_from_collect_data_spec(
       time_step_spec=time_step_spec,
       action_spec=action_spec,
       policy_state_spec=policy_state_spec,
-      info_spec=info_spec)
+      info_spec=info_spec,
+  )
 
 
-def _composite_distribution(d):
-  """Converts tfp Distributions to CompositeTensors."""
-  return (tfp.experimental.as_composite(d)
-          if isinstance(d, tfp.distributions.Distribution)
-          else d)
+def _check_composite_distribution(d):
+  """Checks that the tfp Distributions is a CompositeTensor."""
+  if isinstance(d, tfp.distributions.Distribution):
+    if not hasattr(d, '_type_spec'):
+      raise TypeError(f'{d} is not a composite tensor.')
+  return d

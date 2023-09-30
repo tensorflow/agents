@@ -20,7 +20,6 @@ from __future__ import division
 from __future__ import print_function
 
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
-
 from tf_agents.policies.samplers import qtopt_cem_actions_sampler_continuous
 from tf_agents.specs import tensor_spec
 
@@ -28,7 +27,7 @@ from tf_agents.specs import tensor_spec
 _BATCH = 2
 _NUM_SAMPLES = 10
 _ACTION_SIZE = 3
-_MEAN = [0., 0., 0.0]
+_MEAN = [0.0, 0.0, 0.0]
 _VAR = [0.09, 0.03, 0.05]
 
 
@@ -42,10 +41,12 @@ def dummy_sample_rejecter(samples, state_sample):
 class ActionsSamplerTest(tf.test.TestCase):
 
   def testSampleBatch(self):
-    action_spec = (
-        tensor_spec.BoundedTensorSpec([_ACTION_SIZE], tf.float32, 0.0, 1.0))
+    action_spec = tensor_spec.BoundedTensorSpec(
+        [_ACTION_SIZE], tf.float32, 0.0, 1.0
+    )
     sampler = qtopt_cem_actions_sampler_continuous.GaussianActionsSampler(
-        action_spec=action_spec, sample_rejecters=dummy_sample_rejecter)
+        action_spec=action_spec, sample_rejecters=dummy_sample_rejecter
+    )
 
     mean = tf.constant(_MEAN)
     var = tf.constant(_VAR)
@@ -62,25 +63,35 @@ class ActionsSamplerTest(tf.test.TestCase):
   def testInvalidActionSpec(self):
     action_spec = [
         tensor_spec.BoundedTensorSpec([_ACTION_SIZE], tf.int32, 0, 1),
-        tensor_spec.BoundedTensorSpec([_ACTION_SIZE], tf.int32, 0, 1)]
+        tensor_spec.BoundedTensorSpec([_ACTION_SIZE], tf.int32, 0, 1),
+    ]
     with self.assertRaisesRegex(
-        ValueError, 'Only continuous action is supported by this sampler.*'):
+        ValueError, 'Only continuous action is supported by this sampler.*'
+    ):
       qtopt_cem_actions_sampler_continuous.GaussianActionsSampler(
-          action_spec=action_spec)
+          action_spec=action_spec
+      )
 
     action_spec = [
         tensor_spec.BoundedTensorSpec(
-            [_ACTION_SIZE, _ACTION_SIZE], tf.float32, 0., 1.)]
+            [_ACTION_SIZE, _ACTION_SIZE], tf.float32, 0.0, 1.0
+        )
+    ]
     with self.assertRaisesRegex(
-        ValueError, 'Only 1d action is supported by this sampler.*'):
+        ValueError, 'Only 1d action is supported by this sampler.*'
+    ):
       qtopt_cem_actions_sampler_continuous.GaussianActionsSampler(
-          action_spec=action_spec)
+          action_spec=action_spec
+      )
 
     action_spec = [
-        tensor_spec.BoundedTensorSpec([_ACTION_SIZE], tf.float32, 0., 1.),
-        tensor_spec.BoundedTensorSpec([_ACTION_SIZE], tf.float32, 0., 1.)]
+        tensor_spec.BoundedTensorSpec([_ACTION_SIZE], tf.float32, 0.0, 1.0),
+        tensor_spec.BoundedTensorSpec([_ACTION_SIZE], tf.float32, 0.0, 1.0),
+    ]
     qtopt_cem_actions_sampler_continuous.GaussianActionsSampler(
-        action_spec=action_spec)
+        action_spec=action_spec
+    )
+
 
 if __name__ == '__main__':
   tf.test.main()

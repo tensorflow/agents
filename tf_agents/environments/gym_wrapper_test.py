@@ -20,11 +20,11 @@ from __future__ import division
 from __future__ import print_function
 
 import math
+
 from absl.testing.absltest import mock
 import gym
 import gym.spaces
 import numpy as np
-
 from tf_agents.environments import gym_wrapper
 from tf_agents.utils import test_utils
 
@@ -48,7 +48,8 @@ class GymWrapperSpecTest(test_utils.TestCase):
     self.assertEqual(np.int32, spec.dtype)
     np.testing.assert_array_equal(np.array([0], dtype=int), spec.minimum)
     np.testing.assert_array_equal(
-        np.array([0, 1, 2, 3], dtype=int), spec.maximum)
+        np.array([0, 1, 2, 3], dtype=int), spec.maximum
+    )
 
   def test_spec_from_gym_space_multi_binary(self):
     multi_binary_space = gym.spaces.MultiBinary(4)
@@ -93,7 +94,8 @@ class GymWrapperSpecTest(test_utils.TestCase):
     box_space = gym.spaces.Box(-1.0, 1.0, (2,))
     dict_space = gym.spaces.Dict({'box1': box_space, 'box2': box_space})
     spec = gym_wrapper.spec_from_gym_space(
-        dict_space, simplify_box_bounds=False)
+        dict_space, simplify_box_bounds=False
+    )
 
     self.assertEqual((2,), spec['box1'].shape)
     self.assertEqual((2,), spec['box2'].shape)
@@ -101,19 +103,24 @@ class GymWrapperSpecTest(test_utils.TestCase):
     self.assertEqual(np.float32, spec['box2'].dtype)
     self.assertEqual('box1', spec['box1'].name)
     self.assertEqual('box2', spec['box2'].name)
-    np.testing.assert_array_equal(np.array([-1, -1], dtype=int),
-                                  spec['box1'].minimum)
-    np.testing.assert_array_equal(np.array([1, 1], dtype=int),
-                                  spec['box1'].maximum)
-    np.testing.assert_array_equal(np.array([-1, -1], dtype=int),
-                                  spec['box2'].minimum)
-    np.testing.assert_array_equal(np.array([1, 1], dtype=int),
-                                  spec['box2'].maximum)
+    np.testing.assert_array_equal(
+        np.array([-1, -1], dtype=int), spec['box1'].minimum
+    )
+    np.testing.assert_array_equal(
+        np.array([1, 1], dtype=int), spec['box1'].maximum
+    )
+    np.testing.assert_array_equal(
+        np.array([-1, -1], dtype=int), spec['box2'].minimum
+    )
+    np.testing.assert_array_equal(
+        np.array([1, 1], dtype=int), spec['box2'].maximum
+    )
 
   def test_spec_from_gym_space_box_array(self):
     for dtype in (np.float32, np.float64):
-      box_space = gym.spaces.Box(np.array([-1.0, -2.0]), np.array([2.0, 4.0]),
-                                 dtype=dtype)
+      box_space = gym.spaces.Box(
+          np.array([-1.0, -2.0]), np.array([2.0, 4.0]), dtype=dtype
+      )
       spec = gym_wrapper.spec_from_gym_space(box_space)
 
       self.assertEqual((2,), spec.shape)
@@ -124,7 +131,8 @@ class GymWrapperSpecTest(test_utils.TestCase):
   def test_spec_from_gym_space_box_array_constant_bounds(self):
     for dtype in (np.float32, np.float64):
       box_space = gym.spaces.Box(
-          np.array([-1.0, -1.0]), np.array([2.0, 2.0]), dtype=dtype)
+          np.array([-1.0, -1.0]), np.array([2.0, 2.0]), dtype=dtype
+      )
       spec = gym_wrapper.spec_from_gym_space(box_space)
 
       self.assertEqual((2,), spec.shape)
@@ -135,17 +143,19 @@ class GymWrapperSpecTest(test_utils.TestCase):
   def test_spec_from_gym_space_box_array_constant_min(self):
     for dtype in (np.float32, np.float64):
       box_space = gym.spaces.Box(
-          np.array([-1.0, -1.0]), np.array([2.0, 4.0]), dtype=dtype)
+          np.array([-1.0, -1.0]), np.array([2.0, 4.0]), dtype=dtype
+      )
       spec = gym_wrapper.spec_from_gym_space(box_space)
 
       self.assertEqual((2,), spec.shape)
       self.assertEqual(dtype, spec.dtype)
-      self.assertAllEqual([-1., -1.], spec.minimum)
-      self.assertAllEqual([2., 4.], spec.maximum)
+      self.assertAllEqual([-1.0, -1.0], spec.minimum)
+      self.assertAllEqual([2.0, 4.0], spec.maximum)
 
   def test_spec_from_gym_space_tuple(self):
-    tuple_space = gym.spaces.Tuple((gym.spaces.Discrete(2),
-                                    gym.spaces.Discrete(3)))
+    tuple_space = gym.spaces.Tuple(
+        (gym.spaces.Discrete(2), gym.spaces.Discrete(3))
+    )
     spec = gym_wrapper.spec_from_gym_space(tuple_space)
 
     self.assertEqual(2, len(spec))
@@ -165,11 +175,10 @@ class GymWrapperSpecTest(test_utils.TestCase):
         gym.spaces.Box(-1.0, 1.0, (3, 4)),
         gym.spaces.Tuple((gym.spaces.Discrete(2), gym.spaces.Discrete(3))),
         gym.spaces.Dict({
-            'spec_1':
-                gym.spaces.Discrete(2),
-            'spec_2':
-                gym.spaces.Tuple((gym.spaces.Discrete(2),
-                                  gym.spaces.Discrete(3))),
+            'spec_1': gym.spaces.Discrete(2),
+            'spec_2': gym.spaces.Tuple(
+                (gym.spaces.Discrete(2), gym.spaces.Discrete(3))
+            ),
         }),
     ))
     spec = gym_wrapper.spec_from_gym_space(tuple_space)
@@ -259,18 +268,16 @@ class GymWrapperSpecTest(test_utils.TestCase):
         Box(0, 1, (3, 4)),
         gym.spaces.Tuple((gym.spaces.Discrete(2), gym.spaces.Discrete(3))),
         gym.spaces.Dict({
-            'spec_1':
+            'spec_1': gym.spaces.Discrete(2),
+            'spec_2': gym.spaces.Tuple((
                 gym.spaces.Discrete(2),
-            'spec_2':
-                gym.spaces.Tuple((
-                    gym.spaces.Discrete(2),
-                    Box(0, 1, (3, 4)),
-                )),
+                Box(0, 1, (3, 4)),
+            )),
         }),
     ))
 
     dtype_map = {gym.spaces.Discrete: np.uint8, gym.spaces.Box: np.uint16}
-    spec = gym_wrapper.spec_from_gym_space(tuple_space, dtype_map=dtype_map)
+    spec = gym_wrapper.spec_from_gym_space(tuple_space, dtype_map=dtype_map)  # pytype: disable=wrong-arg-types  # numpy-scalars
     self.assertEqual(np.uint8, spec[0].dtype)
     self.assertEqual(np.uint16, spec[1].dtype)
     self.assertEqual(np.uint8, spec[2][0].dtype)
@@ -281,23 +288,28 @@ class GymWrapperSpecTest(test_utils.TestCase):
 
   def test_spec_name(self):
     box_space = gym.spaces.Box(
-        np.array([-1.0, -2.0]), np.array([2.0, 4.0]), dtype=np.float32)
+        np.array([-1.0, -2.0]), np.array([2.0, 4.0]), dtype=np.float32
+    )
     spec = gym_wrapper.spec_from_gym_space(box_space, name='observation')
     self.assertEqual('observation', spec.name)
 
   def test_spec_name_nested(self):
-    dict_space = gym.spaces.Tuple((gym.spaces.Dict({
-        'spec_0':
-            gym.spaces.Dict({
+    dict_space = gym.spaces.Tuple((
+        gym.spaces.Dict({
+            'spec_0': gym.spaces.Dict({
                 'spec_1': gym.spaces.Discrete(2),
                 'spec_2': gym.spaces.Discrete(2),
             }),
-    }), gym.spaces.Discrete(2)))
+        }),
+        gym.spaces.Discrete(2),
+    ))
     spec = gym_wrapper.spec_from_gym_space(dict_space, name='observation')
-    self.assertEqual('observation/tuple_0/spec_0/spec_1',
-                     spec[0]['spec_0']['spec_1'].name)
-    self.assertEqual('observation/tuple_0/spec_0/spec_2',
-                     spec[0]['spec_0']['spec_2'].name)
+    self.assertEqual(
+        'observation/tuple_0/spec_0/spec_1', spec[0]['spec_0']['spec_1'].name
+    )
+    self.assertEqual(
+        'observation/tuple_0/spec_0/spec_2', spec[0]['spec_0']['spec_2'].name
+    )
     self.assertEqual('observation/tuple_1', spec[1].name)
 
 
@@ -319,8 +331,9 @@ class GymWrapperOnCartpoleTest(test_utils.TestCase):
     self.assertEqual(np.float32, observation_spec.dtype)
     high = np.array([
         4.8,
-        np.finfo(np.float32).max, 2 / 15.0 * math.pi,
-        np.finfo(np.float32).max
+        np.finfo(np.float32).max,
+        2 / 15.0 * math.pi,
+        np.finfo(np.float32).max,
     ])
     np.testing.assert_array_almost_equal(-high, observation_spec.minimum)
     np.testing.assert_array_almost_equal(high, observation_spec.maximum)
@@ -416,15 +429,18 @@ class GymWrapperOnCartpoleTest(test_utils.TestCase):
 
   def test_render_kwargs(self):
     cartpole_env = gym.spec('CartPole-v1').make()
+
     def _gym_render_mock(mode='rgb_array', **kwargs):
       del mode, kwargs  # unused
       return None
+
     cartpole_env.render = mock.MagicMock(side_effect=_gym_render_mock)
 
     # The following are hypothetical (mocked) usages of render(),
     # as the CartPole environment actually does not support kwargs for `render`.
     env = gym_wrapper.GymWrapper(
-        cartpole_env, render_kwargs={'width': 96, 'height': 128})
+        cartpole_env, render_kwargs={'width': 96, 'height': 128}
+    )
     env.render()
     cartpole_env.render.assert_called_with('rgb_array', width=96, height=128)
     env.render(mode='human')

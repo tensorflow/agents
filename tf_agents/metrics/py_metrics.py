@@ -19,18 +19,16 @@ from __future__ import division
 from __future__ import print_function
 
 import abc
+from typing import Any, Iterable, Optional, Text
 
 import gin
 import numpy as np
 import six
-
 from tf_agents.metrics import py_metric
 from tf_agents.trajectories import trajectory as traj
 from tf_agents.typing import types
 from tf_agents.utils import nest_utils
 from tf_agents.utils import numpy_storage
-
-from typing import Any, Iterable, Optional, Text
 
 
 class NumpyDeque(numpy_storage.NumpyState):
@@ -89,7 +87,7 @@ class NumpyDeque(numpy_storage.NumpyState):
       return np.mean(self._buffer, dtype=dtype)
 
     assert self._start_index == 0
-    return np.mean(self._buffer[:self._len], dtype=dtype)
+    return np.mean(self._buffer[: self._len], dtype=dtype)
 
 
 @six.add_metaclass(abc.ABCMeta)
@@ -101,10 +99,12 @@ class StreamingMetric(py_metric.PyStepMetric):
   items in the buffer.
   """
 
-  def __init__(self,
-               name: Text = 'StreamingMetric',
-               buffer_size: types.Int = 10,
-               batch_size: Optional[types.Int] = None):
+  def __init__(
+      self,
+      name: Text = 'StreamingMetric',
+      buffer_size: types.Int = 10,
+      batch_size: Optional[types.Int] = None,
+  ):
     super(StreamingMetric, self).__init__(name)
     self._buffer = NumpyDeque(maxlen=buffer_size, dtype=np.float64)
     self._batch_size = batch_size
@@ -154,22 +154,26 @@ class StreamingMetric(py_metric.PyStepMetric):
 class AverageReturnMetric(StreamingMetric):
   """Computes the average undiscounted reward."""
 
-  def __init__(self,
-               name: Text = 'AverageReturn',
-               buffer_size: types.Int = 10,
-               batch_size: Optional[types.Int] = None):
+  def __init__(
+      self,
+      name: Text = 'AverageReturn',
+      buffer_size: types.Int = 10,
+      batch_size: Optional[types.Int] = None,
+  ):
     """Creates an AverageReturnMetric."""
     self._np_state = numpy_storage.NumpyState()
     # Set a dummy value on self._np_state.episode_return so it gets included in
     # the first checkpoint (before metric is first called).
     self._np_state.episode_return = np.float64(0)
-    super(AverageReturnMetric, self).__init__(name, buffer_size=buffer_size,
-                                              batch_size=batch_size)
+    super(AverageReturnMetric, self).__init__(
+        name, buffer_size=buffer_size, batch_size=batch_size
+    )
 
   def _reset(self, batch_size):
     """Resets stat gathering variables."""
     self._np_state.episode_return = np.zeros(
-        shape=(batch_size,), dtype=np.float64)
+        shape=(batch_size,), dtype=np.float64
+    )
 
   def _batched_call(self, trajectory):
     """Processes the trajectory to update the metric.
@@ -192,22 +196,26 @@ class AverageReturnMetric(StreamingMetric):
 class AverageEpisodeLengthMetric(StreamingMetric):
   """Computes the average episode length."""
 
-  def __init__(self,
-               name: Text = 'AverageEpisodeLength',
-               buffer_size: types.Int = 10,
-               batch_size: Optional[types.Int] = None):
+  def __init__(
+      self,
+      name: Text = 'AverageEpisodeLength',
+      buffer_size: types.Int = 10,
+      batch_size: Optional[types.Int] = None,
+  ):
     """Creates an AverageEpisodeLengthMetric."""
     self._np_state = numpy_storage.NumpyState()
     # Set a dummy value on self._np_state.episode_return so it gets included in
     # the first checkpoint (before metric is first called).
     self._np_state.episode_steps = np.float64(0)
     super(AverageEpisodeLengthMetric, self).__init__(
-        name, buffer_size=buffer_size, batch_size=batch_size)
+        name, buffer_size=buffer_size, batch_size=batch_size
+    )
 
   def _reset(self, batch_size):
     """Resets stat gathering variables."""
     self._np_state.episode_steps = np.zeros(
-        shape=(batch_size,), dtype=np.float64)
+        shape=(batch_size,), dtype=np.float64
+    )
 
   def _batched_call(self, trajectory):
     """Processes the trajectory to update the metric.

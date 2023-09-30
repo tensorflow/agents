@@ -34,27 +34,30 @@ from tf_agents.utils import nest_utils
 class RandomPyPolicy(py_policy.PyPolicy):
   """Returns random samples of the given action_spec."""
 
-  def __init__(self,
-               time_step_spec: ts.TimeStep,
-               action_spec: types.NestedArraySpec,
-               policy_state_spec: types.NestedArraySpec = (),
-               info_spec: types.NestedArraySpec = (),
-               seed: Optional[types.Seed] = None,
-               outer_dims: Optional[Sequence[int]] = None,
-               observation_and_action_constraint_splitter: Optional[
-                   types.Splitter] = None):
+  def __init__(
+      self,
+      time_step_spec: ts.TimeStep,
+      action_spec: types.NestedArraySpec,
+      policy_state_spec: types.NestedArraySpec = (),
+      info_spec: types.NestedArraySpec = (),
+      seed: Optional[types.Seed] = None,
+      outer_dims: Optional[Sequence[int]] = None,
+      observation_and_action_constraint_splitter: Optional[
+          types.Splitter
+      ] = None,
+  ):
     """Initializes the RandomPyPolicy.
 
     Args:
-      time_step_spec: Reference `time_step_spec`. If not None and outer_dims
-        is not provided this is used to infer the outer_dims required for the
-        given time_step when action is called.
+      time_step_spec: Reference `time_step_spec`. If not None and outer_dims is
+        not provided this is used to infer the outer_dims required for the given
+        time_step when action is called.
       action_spec: A nest of BoundedArraySpec representing the actions to sample
         from.
       policy_state_spec: Nest of `tf.TypeSpec` representing the data in the
         policy state field.
-      info_spec: Nest of `tf.TypeSpec` representing the data in the policy
-        info field.
+      info_spec: Nest of `tf.TypeSpec` representing the data in the policy info
+        field.
       seed: Optional seed used to instantiate a random number generator.
       outer_dims: An optional list/tuple specifying outer dimensions to add to
         the spec shape before sampling. If unspecified the outer_dims are
@@ -63,22 +66,19 @@ class RandomPyPolicy(py_policy.PyPolicy):
       observation_and_action_constraint_splitter: A function used to process
         observations with action constraints. These constraints can indicate,
         for example, a mask of valid/invalid actions for a given state of the
-        environment.
-        The function takes in a full observation and returns a tuple consisting
-        of 1) the part of the observation intended as input to the network and
-        2) the constraint. An example
-        `observation_and_action_constraint_splitter` could be as simple as:
-        ```
-        def observation_and_action_constraint_splitter(observation):
-          return observation['network_input'], observation['constraint']
-        ```
-        *Note*: when using `observation_and_action_constraint_splitter`, make
-        sure the provided `q_network` is compatible with the network-specific
-        half of the output of the `observation_and_action_constraint_splitter`.
-        In particular, `observation_and_action_constraint_splitter` will be
-        called on the observation before passing to the network.
-        If `observation_and_action_constraint_splitter` is None, action
-        constraints are not applied.
+        environment. The function takes in a full observation and returns a
+        tuple consisting of 1) the part of the observation intended as input to
+        the network and 2) the constraint. An example
+        `observation_and_action_constraint_splitter` could be as simple as: ```
+        def observation_and_action_constraint_splitter(observation): return
+        observation['network_input'], observation['constraint'] ``` *Note*: when
+        using `observation_and_action_constraint_splitter`, make sure the
+        provided `q_network` is compatible with the network-specific half of the
+        output of the `observation_and_action_constraint_splitter`. In
+        particular, `observation_and_action_constraint_splitter` will be called
+        on the observation before passing to the network. If
+        `observation_and_action_constraint_splitter` is None, action constraints
+        are not applied.
     """
     self._seed = seed
     self._outer_dims = outer_dims
@@ -87,7 +87,8 @@ class RandomPyPolicy(py_policy.PyPolicy):
       if not isinstance(action_spec, array_spec.BoundedArraySpec):
         raise NotImplementedError(
             'RandomPyPolicy only supports action constraints for '
-            'BoundedArraySpec action specs.')
+            'BoundedArraySpec action specs.'
+        )
 
       scalar_shape = not action_spec.shape
       single_dim_shape = action_spec.shape == (1,) or action_spec.shape == [1]
@@ -95,7 +96,8 @@ class RandomPyPolicy(py_policy.PyPolicy):
       if not scalar_shape and not single_dim_shape:
         raise NotImplementedError(
             'RandomPyPolicy only supports action constraints for action specs '
-            'shaped as () or (1,) or their equivalent list forms.')
+            'shaped as () or (1,) or their equivalent list forms.'
+        )
 
     self._rng = np.random.RandomState(seed)
     if time_step_spec is None:
@@ -107,7 +109,9 @@ class RandomPyPolicy(py_policy.PyPolicy):
         policy_state_spec=policy_state_spec,
         info_spec=info_spec,
         observation_and_action_constraint_splitter=(
-            observation_and_action_constraint_splitter))
+            observation_and_action_constraint_splitter
+        ),
+    )
 
   def _action(self, time_step, policy_state, seed: Optional[types.Seed] = None):
     del seed  # Unused. Seed passed to the class.
@@ -115,22 +119,26 @@ class RandomPyPolicy(py_policy.PyPolicy):
     if outer_dims is None:
       if self.time_step_spec.observation:
         outer_dims = nest_utils.get_outer_array_shape(
-            time_step.observation, self.time_step_spec.observation)
+            time_step.observation, self.time_step_spec.observation
+        )
       else:
         outer_dims = ()
 
     observation_and_action_constraint_splitter = (
-        self.observation_and_action_constraint_splitter)
+        self.observation_and_action_constraint_splitter
+    )
 
     if observation_and_action_constraint_splitter is not None:
       _, mask = observation_and_action_constraint_splitter(
-          time_step.observation)
+          time_step.observation
+      )
 
       zero_logits = tf.cast(tf.zeros_like(mask), tf.float32)
       masked_categorical = masked.MaskedCategorical(zero_logits, mask)
       random_action = tf.cast(
           masked_categorical.sample() + self.action_spec.minimum,
-          self.action_spec.dtype)
+          self.action_spec.dtype,
+      )
 
       # If the action spec says each action should be shaped (1,), add another
       # dimension so the final shape is (B, 1) rather than (B,).
@@ -138,9 +146,11 @@ class RandomPyPolicy(py_policy.PyPolicy):
         random_action = tf.expand_dims(random_action, axis=-1)
     else:
       random_action = array_spec.sample_spec_nest(
-          self._action_spec, self._rng, outer_dims=outer_dims)
+          self._action_spec, self._rng, outer_dims=outer_dims
+      )
 
     info = array_spec.sample_spec_nest(
-        self._info_spec, self._rng, outer_dims=outer_dims)
+        self._info_spec, self._rng, outer_dims=outer_dims
+    )
 
     return policy_step.PolicyStep(random_action, policy_state, info)

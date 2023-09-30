@@ -28,8 +28,9 @@ from tf_agents.trajectories import time_step as ts
 class ValueRnnNetworkTest(tf.test.TestCase):
 
   def testBuilds(self):
-    observation_spec = tensor_spec.BoundedTensorSpec((8, 8, 3), tf.float32, 0,
-                                                     1)
+    observation_spec = tensor_spec.BoundedTensorSpec(
+        (8, 8, 3), tf.float32, 0, 1
+    )
     time_step_spec = ts.time_step_spec(observation_spec)
     time_step = tensor_spec.sample_spec_nest(time_step_spec, outer_dims=(1, 3))
 
@@ -38,10 +39,14 @@ class ValueRnnNetworkTest(tf.test.TestCase):
         conv_layer_params=[(4, 2, 2)],
         input_fc_layer_params=(5,),
         lstm_size=(7,),
-        output_fc_layer_params=(3,))
+        output_fc_layer_params=(3,),
+    )
 
-    value, state = net(time_step.observation, step_type=time_step.step_type,
-                       network_state=net.get_initial_state(batch_size=1))
+    value, state = net(
+        time_step.observation,
+        step_type=time_step.step_type,
+        network_state=net.get_initial_state(batch_size=1),
+    )
     self.evaluate(tf.compat.v1.global_variables_initializer())
 
     self.assertEqual((1, 3), value.shape)
@@ -75,8 +80,9 @@ class ValueRnnNetworkTest(tf.test.TestCase):
     self.assertEqual((1, 7), state[1].shape)
 
   def testBuildsStackedLstm(self):
-    observation_spec = tensor_spec.BoundedTensorSpec((8, 8, 3), tf.float32, 0,
-                                                     1)
+    observation_spec = tensor_spec.BoundedTensorSpec(
+        (8, 8, 3), tf.float32, 0, 1
+    )
     time_step_spec = ts.time_step_spec(observation_spec)
     time_step = tensor_spec.sample_spec_nest(time_step_spec, outer_dims=(1, 3))
 
@@ -85,11 +91,14 @@ class ValueRnnNetworkTest(tf.test.TestCase):
         conv_layer_params=[(4, 2, 2)],
         input_fc_layer_params=(5,),
         lstm_size=(7, 5),
-        output_fc_layer_params=(3,))
+        output_fc_layer_params=(3,),
+    )
 
-    _, state = net(time_step.observation,
-                   step_type=time_step.step_type,
-                   network_state=net.get_initial_state(batch_size=1))
+    _, state = net(
+        time_step.observation,
+        step_type=time_step.step_type,
+        network_state=net.get_initial_state(batch_size=1),
+    )
     self.evaluate(tf.compat.v1.global_variables_initializer())
 
     # Assert LSTM cell is created.
@@ -101,8 +110,9 @@ class ValueRnnNetworkTest(tf.test.TestCase):
     self.assertEqual((1, 5), state[1][1].shape)
 
   def testHandleBatchOnlyObservation(self):
-    observation_spec = tensor_spec.BoundedTensorSpec((8, 8, 3), tf.float32, 0,
-                                                     1)
+    observation_spec = tensor_spec.BoundedTensorSpec(
+        (8, 8, 3), tf.float32, 0, 1
+    )
     time_step_spec = ts.time_step_spec(observation_spec)
     time_step = tensor_spec.sample_spec_nest(time_step_spec, outer_dims=(3,))
 
@@ -111,33 +121,42 @@ class ValueRnnNetworkTest(tf.test.TestCase):
         conv_layer_params=[(4, 2, 2)],
         input_fc_layer_params=(5,),
         lstm_size=(7, 5),
-        output_fc_layer_params=(3,))
+        output_fc_layer_params=(3,),
+    )
 
-    value, _ = net(time_step.observation,
-                   step_type=time_step.step_type,
-                   network_state=net.get_initial_state(batch_size=3))
+    value, _ = net(
+        time_step.observation,
+        step_type=time_step.step_type,
+        network_state=net.get_initial_state(batch_size=3),
+    )
     self.assertEqual([3], value.shape.as_list())
 
   def testHandlePreprocessingLayers(self):
-    observation_spec = (tensor_spec.TensorSpec([1], tf.float32),
-                        tensor_spec.TensorSpec([], tf.float32))
+    observation_spec = (
+        tensor_spec.TensorSpec([1], tf.float32),
+        tensor_spec.TensorSpec([], tf.float32),
+    )
     time_step_spec = ts.time_step_spec(observation_spec)
     time_step = tensor_spec.sample_spec_nest(time_step_spec, outer_dims=(2, 3))
 
-    preprocessing_layers = (tf.keras.layers.Dense(4),
-                            tf.keras.Sequential([
-                                tf.keras.layers.Reshape((1,)),
-                                tf.keras.layers.Dense(4)
-                            ]))
+    preprocessing_layers = (
+        tf.keras.layers.Dense(4),
+        tf.keras.Sequential(
+            [tf.keras.layers.Reshape((1,)), tf.keras.layers.Dense(4)]
+        ),
+    )
 
     net = value_rnn_network.ValueRnnNetwork(
         observation_spec,
         preprocessing_layers=preprocessing_layers,
-        preprocessing_combiner=tf.keras.layers.Add())
+        preprocessing_combiner=tf.keras.layers.Add(),
+    )
 
-    value, _ = net(time_step.observation,
-                   step_type=time_step.step_type,
-                   network_state=net.get_initial_state(batch_size=2))
+    value, _ = net(
+        time_step.observation,
+        step_type=time_step.step_type,
+        network_state=net.get_initial_state(batch_size=2),
+    )
     self.assertEqual([2, 3], value.shape.as_list())
     self.assertGreater(len(net.trainable_variables), 4)
 

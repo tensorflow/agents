@@ -174,7 +174,7 @@ run_tests() {
   # TensorFlow is not set as a dependency of TF-Agents because there are many
   # different TensorFlow versions a user might want and installed.
   if [ "$RELEASE_TYPE" = "nightly" ]; then
-    # TODO(b/224850217): rlds does not have nightly builds yet.
+    # rlds does not do nightly builds.
     install_optional_dependencies "tf-nightly" "dm-reverb-nightly" "tfp-nightly" "rlds"
 
     # Run the tests

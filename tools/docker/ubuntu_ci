@@ -12,7 +12,7 @@ FROM $base_image
 LABEL maintainer="tobyboyd@google.com"
 
 # Supports setting up a single version of python.
-ARG python_version="python3"
+ARG python_version="python3.9"
 ARG APT_COMMAND="apt-get -o Acquire::Retries=3 -y"
 
 # Stops tzdata from asking about timezones and blocking install on user input.
@@ -42,9 +42,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
       xvfb \
       freeglut3-dev \
       ffmpeg \
-      python3-opencv \
-      python3-dev \
-      python3-scipy \
+      python3.9-dev \
+      python3.10-dev \
+      # python >= 3.8 needs distutils for packaging.
+      python3.9-distutils \
+      python3.10-distutils \
       gfortran \
       libopenblas-dev \
       liblapack-dev
@@ -52,7 +54,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 RUN curl -O https://bootstrap.pypa.io/get-pip.py
 
 ARG pip_dependencies=' \
-       virtualenv'
+       virtualenv \
+       scipy'
 
 # No need to install tf-agents as that should be part of the test setup.
 # Doing it for now to test.

@@ -30,13 +30,15 @@ from tensorflow.python.lib.io import tf_record  # TF internal
 # pylint: enable=g-direct-tensorflow-import
 
 
-def run_test(target_call,
-             num_steps,
-             strategy,
-             batch_size=None,
-             log_steps=100,
-             num_steps_per_batch=1,
-             iterator=None):
+def run_test(
+    target_call,
+    num_steps,
+    strategy,
+    batch_size=None,
+    log_steps=100,
+    num_steps_per_batch=1,
+    iterator=None,
+):
   """Run benchmark and return TimeHistory object with stats.
 
   Args:
@@ -80,7 +82,8 @@ class BatchTimestamp(object):
 
   def __repr__(self):
     return "'BatchTimestamp<batch_index: {}, timestamp: {}>'".format(
-        self.batch_index, self.timestamp)
+        self.batch_index, self.timestamp
+    )
 
 
 class TimeHistory(object):
@@ -108,7 +111,8 @@ class TimeHistory(object):
     if self.global_steps == 1:
       self.start_time = time.time()
       self.timestamp_log.append(
-          BatchTimestamp(self.global_steps, self.start_time))
+          BatchTimestamp(self.global_steps, self.start_time)
+      )
 
   def on_batch_end(self):
     """Records elapse time of the batch and calculates examples per second."""
@@ -119,11 +123,16 @@ class TimeHistory(object):
       examples_per_second = steps_per_second * self.batch_size
       step_time = elapsed_time / self.log_steps
       self.timestamp_log.append(BatchTimestamp(self.global_steps, timestamp))
-      print("BenchmarkMetric: '{{global step':{}, "
-            "'steps_per_second':{:.5g}, step_time:{:.5g}, "
-            "'examples_per_second':{:.3f}}}".format(self.global_steps,
-                                                    steps_per_second, step_time,
-                                                    examples_per_second))
+      print(
+          "BenchmarkMetric: '{{global step':{}, "
+          "'steps_per_second':{:.5g}, step_time:{:.5g}, "
+          "'examples_per_second':{:.3f}}}".format(
+              self.global_steps,
+              steps_per_second,
+              step_time,
+              examples_per_second,
+          )
+      )
       self.start_time = timestamp
 
   def get_average_examples_per_second(self, warmup=True):
@@ -138,8 +147,12 @@ class TimeHistory(object):
     Returns:
       Average examples per second.
     """
-    return 1 / self.get_average_step_time(
-        warmup=warmup) * self.batch_size * self.num_steps_per_batch
+    return (
+        1
+        / self.get_average_step_time(warmup=warmup)
+        * self.batch_size
+        * self.num_steps_per_batch
+    )
 
   def get_average_step_time(self, warmup=True):
     """Returns average step time (seconds) so far.
@@ -150,19 +163,20 @@ class TimeHistory(object):
 
     Returns:
       Average step time in seconds.
-
     """
     if warmup:
       if len(self.timestamp_log) < 3:
         return -1
-      elapsed = self.timestamp_log[-1].timestamp - self.timestamp_log[
-          1].timestamp
+      elapsed = (
+          self.timestamp_log[-1].timestamp - self.timestamp_log[1].timestamp
+      )
       return elapsed / (self.log_steps * (len(self.timestamp_log) - 2))
     else:
       if len(self.timestamp_log) < 2:
         return -1
-      elapsed = self.timestamp_log[-1].timestamp - self.timestamp_log[
-          0].timestamp
+      elapsed = (
+          self.timestamp_log[-1].timestamp - self.timestamp_log[0].timestamp
+      )
       return elapsed / (self.log_steps * (len(self.timestamp_log) - 1))
 
 
@@ -173,7 +187,8 @@ def set_session_config(enable_xla=False):
     # Disable PinToHostOptimizer in grappler when enabling XLA because it
     # causes OOM and performance regression.
     tf.config.optimizer.set_experimental_options(
-        {'pin_to_host_optimization': False})
+        {'pin_to_host_optimization': False}
+    )
 
 
 def get_variable_value(agent, name):
@@ -181,12 +196,14 @@ def get_variable_value(agent, name):
   policy_vars = agent.policy.variables()
   tf_vars = [v for v in policy_vars if name in v.name]
   assert tf_vars, 'Variable "{}" does not exist. Found: {}'.format(
-      name, policy_vars)
+      name, policy_vars
+  )
   if tf.executing_eagerly() and len(tf_vars) > 1:
     var = tf_vars[0]
   else:
     assert len(tf_vars) == 1, 'More than one variable with name {}. {}'.format(
-        name, [(v.name, v.shape) for v in tf_vars])
+        name, [(v.name, v.shape) for v in tf_vars]
+    )
     var = tf_vars[0]
   return var.numpy() if tf.executing_eagerly() else var.eval()
 
@@ -198,13 +215,16 @@ def get_initial_values(agent, check_values):
 
 def check_values_changed(agent, initial_values, check_value_changes, name=None):
   """Checks that the initial values."""
-  final_values = [get_variable_value(agent, var_name) for var_name in \
-                    check_value_changes]
-  for var_name, initial, final in zip(check_value_changes, initial_values,
-                                      final_values):
+  final_values = [
+      get_variable_value(agent, var_name) for var_name in check_value_changes
+  ]
+  for var_name, initial, final in zip(
+      check_value_changes, initial_values, final_values
+  ):
     all_close = np.allclose(initial, final)
-    assert not all_close, ('[{}] Variable "{}" did not change: {} -> {}'.format(
-        name, var_name, initial, final))
+    assert not all_close, '[{}] Variable "{}" did not change: {} -> {}'.format(
+        name, var_name, initial, final
+    )
 
 
 def summary_iterator(path: str) -> event_pb2.Event:
@@ -214,8 +234,9 @@ def summary_iterator(path: str) -> event_pb2.Event:
     yield event_pb2.Event.FromString(record)
 
 
-def find_event_log(eventlog_dir: str,
-                   log_file_pattern: str = 'events.out.tfevents.*') -> str:
+def find_event_log(
+    eventlog_dir: str, log_file_pattern: str = 'events.out.tfevents.*'
+) -> str:
   """Find the event log in a given folder.
 
   Expects to find a single log file matching the pattern provided.
@@ -244,9 +265,11 @@ def find_event_log(eventlog_dir: str,
   if not event_files:
     raise FileNotFoundError(f'No files found matching pattern:{event_log_path}')
 
-  assert len(event_files) == 1, (
-      'Found {} event files({}) matching "{}" pattern and expected 1.'.format(
-          len(event_files), ','.join(event_files), event_log_path))
+  assert (
+      len(event_files) == 1
+  ), 'Found {} event files({}) matching "{}" pattern and expected 1.'.format(
+      len(event_files), ','.join(event_files), event_log_path
+  )
 
   return event_files[0]
 
@@ -255,7 +278,8 @@ def extract_event_log_values(
     event_file: str,
     event_tag: str,
     end_step: Optional[int] = None,
-    start_step: Optional[int] = 0) -> Tuple[Dict[int, np.generic], float]:
+    start_step: Optional[int] = 0,
+) -> Tuple[Dict[int, np.generic], float]:
   """Extracts the event values for the `event_tag` and total wall time.
 
   Args:
@@ -288,9 +312,12 @@ def extract_event_log_values(
           if current_step == start_step:
             start_time = summary.wall_time
             logging.info(
-                'training start (step %d): %s', current_step,
-                datetime.datetime.fromtimestamp(
-                    summary.wall_time).strftime('%Y-%m-%d %H:%M:%S.%f'))
+                'training start (step %d): %s',
+                current_step,
+                datetime.datetime.fromtimestamp(summary.wall_time).strftime(
+                    '%Y-%m-%d %H:%M:%S.%f'
+                ),
+            )
         # Avoids issue of summaries not recorded in order.
         max_wall_time = max(summary.wall_time, max_wall_time)
     if end_step and summary.step >= end_step:
@@ -299,15 +326,19 @@ def extract_event_log_values(
   if not start_time:
     raise ValueError(
         'Error: Starting event not found. Check arg event_name and '
-        'warmup_steps. Possible no events were found.')
+        'warmup_steps. Possible no events were found.'
+    )
 
   if end_step and current_step < end_step:
     raise ValueError('Error: Final step was less than the requested end_step.')
 
   elapse_time = (max_wall_time - start_time) / 60
   logging.info(
-      'training end (step %d): %s', current_step,
+      'training end (step %d): %s',
+      current_step,
       datetime.datetime.fromtimestamp(max_wall_time).strftime(
-          '%Y-%m-%d %H:%M:%S.%f'))
+          '%Y-%m-%d %H:%M:%S.%f'
+      ),
+  )
   logging.info('elapsed time:%dm', elapse_time)
   return event_values, elapse_time

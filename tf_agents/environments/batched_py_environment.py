@@ -44,6 +44,7 @@ class BatchedPyEnvironment(py_environment.PyEnvironment):
   The environments should only access shared python variables using
   shared mutex locks (from the threading module).
   """
+
   # These declarations are required because their types could not be inferred
   # in Python 2.
   _envs = ...  # type: Sequence[py_environment.PyEnvironment]
@@ -54,9 +55,11 @@ class BatchedPyEnvironment(py_environment.PyEnvironment):
   _time_step_spec = ...  # type: ts.TimeStep
   _pool = ...  # type: pool.ThreadPool
 
-  def __init__(self,
-               envs: Sequence[py_environment.PyEnvironment],
-               multithreading: bool = True):
+  def __init__(
+      self,
+      envs: Sequence[py_environment.PyEnvironment],
+      multithreading: bool = True,
+  ):
     """Batch together multiple (non-batched) py environments.
 
     The environments can be different but must use the same action and
@@ -64,12 +67,11 @@ class BatchedPyEnvironment(py_environment.PyEnvironment):
 
     Args:
       envs: List python environments (must be non-batched).
-      multithreading: Python bool describing whether interactions with the
-        given environments should happen in their own threadpool.  If `False`,
-        then all interaction is performed serially in the current thread.
-
-        This may be combined with wrapper `TFPyEnvironment(..., isolation=True)`
-        to ensure that multiple environments are all run in the same thread.
+      multithreading: Python bool describing whether interactions with the given
+        environments should happen in their own threadpool.  If `False`, then
+        all interaction is performed serially in the current thread.  This may
+        be combined with wrapper `TFPyEnvironment(..., isolation=True)` to
+        ensure that multiple environments are all run in the same thread.
 
     Raises:
       ValueError: If envs is not a list or tuple, or is zero length, or if
@@ -81,7 +83,8 @@ class BatchedPyEnvironment(py_environment.PyEnvironment):
     batched_envs = [(i, env) for i, env in enumerate(envs) if env.batched]
     if batched_envs:
       raise ValueError(
-          "Some of the envs are already batched: %s" % batched_envs)
+          "Some of the envs are already batched: %s" % batched_envs
+      )
     self._parallel_execution = multithreading
     self._envs = envs
     self._num_envs = len(envs)
@@ -90,12 +93,14 @@ class BatchedPyEnvironment(py_environment.PyEnvironment):
     self._time_step_spec = self._envs[0].time_step_spec()
     if any(env.action_spec() != self._action_spec for env in self._envs):
       raise ValueError(
-          "All environments must have the same action spec.  Saw: %s" %
-          [env.action_spec() for env in self._envs])
+          "All environments must have the same action spec.  Saw: %s"
+          % [env.action_spec() for env in self._envs]
+      )
     if any(env.time_step_spec() != self._time_step_spec for env in self._envs):
       raise ValueError(
-          "All environments must have the same time_step_spec.  Saw: %s" %
-          [env.time_step_spec() for env in self._envs])
+          "All environments must have the same time_step_spec.  Saw: %s"
+          % [env.time_step_spec() for env in self._envs]
+      )
     # Create a multiprocessing threadpool for execution.
     if multithreading:
       self._pool = mp_threads.Pool(self._num_envs)
@@ -169,10 +174,12 @@ class BatchedPyEnvironment(py_environment.PyEnvironment):
       if len(unstacked_actions) != self.batch_size:
         raise ValueError(
             "Primary dimension of action items does not match "
-            "batch size: %d vs. %d" % (len(unstacked_actions), self.batch_size))
+            "batch size: %d vs. %d" % (len(unstacked_actions), self.batch_size)
+        )
       time_steps = self._execute(
           lambda env_action: env_action[0].step(env_action[1]),
-          zip(self._envs, unstacked_actions))
+          zip(self._envs, unstacked_actions),
+      )
       return nest_utils.stack_nested_arrays(time_steps)
 
   def render(self, mode="rgb_array") -> Optional[types.NestedArray]:

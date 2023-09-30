@@ -29,7 +29,6 @@ from typing import Optional, Sequence, Text
 import gin
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 import tensorflow_probability as tfp
-
 from tf_agents.policies import tf_policy
 from tf_agents.specs import tensor_spec
 from tf_agents.trajectories import policy_step
@@ -47,10 +46,12 @@ SUBPOLICY_INFO = 'subpolicy_info'
 class MixturePolicy(tf_policy.TFPolicy):
   """A policy that chooses from a set of policies to decide the action."""
 
-  def __init__(self,
-               mixture_distribution: types.Distribution,
-               policies: Sequence[tf_policy.TFPolicy],
-               name: Optional[Text] = None):
+  def __init__(
+      self,
+      mixture_distribution: types.Distribution,
+      policies: Sequence[tf_policy.TFPolicy],
+      name: Optional[Text] = None,
+  ):
     """Initializes an instance of `MixturePolicy`.
 
     Args:
@@ -64,30 +65,33 @@ class MixturePolicy(tf_policy.TFPolicy):
     self._policies = policies
     if not isinstance(mixture_distribution, tfd.Categorical):
       raise TypeError(
-          'mixture distribution must be an instance of `tfd.Categorical`.')
+          'mixture distribution must be an instance of `tfd.Categorical`.'
+      )
     self._mixture_distribution = mixture_distribution
     action_spec = policies[0].action_spec
     time_step_spec = policies[0].time_step_spec
     for policy in policies[1:]:
       assert action_spec == policy.action_spec, 'Inconsistent action specs.'
-      assert time_step_spec == policy.time_step_spec, ('Inconsistent time step '
-                                                       'specs.')
-      assert policies[0].info_spec == policy.info_spec, ('Inconsistent info '
-                                                         'specs.')
+      assert (
+          time_step_spec == policy.time_step_spec
+      ), 'Inconsistent time step specs.'
+      assert (
+          policies[0].info_spec == policy.info_spec
+      ), 'Inconsistent info specs.'
 
     info_spec = {
-        MIXTURE_AGENT_ID:
-            tensor_spec.BoundedTensorSpec(
-                shape=(), dtype=tf.int32, minimum=0, maximum=len(policies) - 1),
-        SUBPOLICY_INFO:
-            policies[0].info_spec
+        MIXTURE_AGENT_ID: tensor_spec.BoundedTensorSpec(
+            shape=(), dtype=tf.int32, minimum=0, maximum=len(policies) - 1
+        ),
+        SUBPOLICY_INFO: policies[0].info_spec,
     }
 
     super(MixturePolicy, self).__init__(
         time_step_spec=time_step_spec,
         action_spec=action_spec,
         info_spec=info_spec,
-        name=name)
+        name=name,
+    )
 
   def _variables(self):
     variables = sum([p.variables() for p in self._policies], [])
@@ -96,31 +100,39 @@ class MixturePolicy(tf_policy.TFPolicy):
 
   def _distribution(self, time_step, policy_state):
     raise NotImplementedError(
-        '_distribution is not implemented for this policy.')
+        '_distribution is not implemented for this policy.'
+    )
 
   def _action(self, time_step, policy_state, seed=None):
     first_obs = tf.nest.flatten(time_step.observation)[0]
-    batch_size = tf.compat.dimension_value(
-        first_obs.shape[0]) or tf.shape(first_obs)[0]
+    batch_size = (
+        tf.compat.dimension_value(first_obs.shape[0]) or tf.shape(first_obs)[0]
+    )
     policy_choice = self._mixture_distribution.sample(batch_size)
     policy_steps = [
         policy.action(time_step, policy_state) for policy in self._policies
     ]
     policy_actions = nest_utils.stack_nested_tensors(
-        [step.action for step in policy_steps], axis=-1)
+        [step.action for step in policy_steps], axis=-1
+    )
     policy_infos = nest_utils.stack_nested_tensors(
-        [step.info for step in policy_steps], axis=-1)
+        [step.info for step in policy_steps], axis=-1
+    )
 
     expanded_choice = tf.expand_dims(policy_choice, axis=-1)
     mixture_action = tf.nest.map_structure(
-        lambda t: tf.gather(t, policy_choice, batch_dims=1), policy_actions)
+        lambda t: tf.gather(t, policy_choice, batch_dims=1), policy_actions
+    )
 
     expanded_mixture_info = tf.nest.map_structure(
         lambda t: tf.gather(t, expanded_choice, batch_dims=1, axis=-1),
-        policy_infos)
-    mixture_info = tf.nest.map_structure(lambda t: tf.squeeze(t, axis=-1),
-                                         expanded_mixture_info)
-    return policy_step.PolicyStep(mixture_action, policy_state, {
-        MIXTURE_AGENT_ID: policy_choice,
-        SUBPOLICY_INFO: mixture_info
-    })
+        policy_infos,
+    )
+    mixture_info = tf.nest.map_structure(
+        lambda t: tf.squeeze(t, axis=-1), expanded_mixture_info
+    )
+    return policy_step.PolicyStep(
+        mixture_action,
+        policy_state,
+        {MIXTURE_AGENT_ID: policy_choice, SUBPOLICY_INFO: mixture_info},
+    )

@@ -37,15 +37,15 @@ from tf_agents.utils import common
 class DummyNet(network.Network):
 
   def __init__(self, input_spec, name=None, bias=2):
-    super(DummyNet, self).__init__(
-        input_spec, state_spec=(), name=name)
+    super(DummyNet, self).__init__(input_spec, state_spec=(), name=name)
 
     # Store custom layers that can be serialized through the Checkpointable API.
     self._dummy_layers = [
         tf.keras.layers.Dense(
             1,
             kernel_initializer=tf.constant_initializer([2, 1]),
-            bias_initializer=tf.constant_initializer([bias]))
+            bias_initializer=tf.constant_initializer([bias]),
+        )
     ]
 
   def call(self, inputs, step_type=None, network_state=()):
@@ -63,23 +63,25 @@ class QtoptAgentTest(tf.test.TestCase, parameterized.TestCase):
     tf.compat.v1.enable_resource_variables()
     self._observation_spec = tensor_spec.TensorSpec([2], tf.float32)
     self._time_step_spec = ts.time_step_spec(self._observation_spec)
-    self._action_spec = (
-        tensor_spec.BoundedTensorSpec([1], tf.float32, 0.0, 1.0))
+    self._action_spec = tensor_spec.BoundedTensorSpec([1], tf.float32, 0.0, 1.0)
 
     # Initiate random mean and var.
     self._num_samples = 32
     action_size = 1
     np.random.seed(1999)
-    samples = np.random.rand(self._num_samples,
-                             action_size).astype(np.float32)  # [N, a]
+    samples = np.random.rand(self._num_samples, action_size).astype(
+        np.float32
+    )  # [N, a]
     self._mean = np.mean(samples, axis=0)
     self._var = np.var(samples, axis=0)
     self._sampler = qtopt_cem_actions_sampler_continuous.GaussianActionsSampler(
-        action_spec=self._action_spec)
+        action_spec=self._action_spec
+    )
 
   def testCreateAgent(self):
     q_net = critic_network.CriticNetwork(
-        (self._observation_spec, self._action_spec))
+        (self._observation_spec, self._action_spec)
+    )
     agent = qtopt_agent.QtOptAgent(
         self._time_step_spec,
         self._action_spec,
@@ -88,12 +90,14 @@ class QtoptAgentTest(tf.test.TestCase, parameterized.TestCase):
         init_mean_cem=self._mean,
         init_var_cem=self._var,
         num_samples_cem=self._num_samples,
-        actions_sampler=self._sampler)
+        actions_sampler=self._sampler,
+    )
     self.assertIsNotNone(agent.policy)
 
   def testInitializeAgent(self):
     q_net = critic_network.CriticNetwork(
-        (self._observation_spec, self._action_spec))
+        (self._observation_spec, self._action_spec)
+    )
     agent = qtopt_agent.QtOptAgent(
         self._time_step_spec,
         self._action_spec,
@@ -102,12 +106,14 @@ class QtoptAgentTest(tf.test.TestCase, parameterized.TestCase):
         init_mean_cem=self._mean,
         init_var_cem=self._var,
         num_samples_cem=self._num_samples,
-        actions_sampler=self._sampler)
+        actions_sampler=self._sampler,
+    )
     agent.initialize()
 
   def testPolicy(self):
     q_net = critic_network.CriticNetwork(
-        (self._observation_spec, self._action_spec))
+        (self._observation_spec, self._action_spec)
+    )
     agent = qtopt_agent.QtOptAgent(
         self._time_step_spec,
         self._action_spec,
@@ -116,7 +122,8 @@ class QtoptAgentTest(tf.test.TestCase, parameterized.TestCase):
         init_mean_cem=self._mean,
         init_var_cem=self._var,
         num_samples_cem=self._num_samples,
-        actions_sampler=self._sampler)
+        actions_sampler=self._sampler,
+    )
     observations = tf.constant([[1, 2], [3, 4]], dtype=tf.float32)
     time_steps = ts.restart(observations, batch_size=2)
     policy = agent.policy
@@ -141,17 +148,18 @@ class QtoptAgentTest(tf.test.TestCase, parameterized.TestCase):
         init_mean_cem=self._mean,
         init_var_cem=self._var,
         num_samples_cem=self._num_samples,
-        actions_sampler=self._sampler)
+        actions_sampler=self._sampler,
+    )
 
     agent._target_q_network_delayed = DummyNet(
-        (self._observation_spec, self._action_spec), bias=1)
+        (self._observation_spec, self._action_spec), bias=1
+    )
 
     observations = tf.constant([[1, 2], [3, 4]], dtype=tf.float32)
     time_steps = ts.restart(observations, batch_size=2)
 
     actions = tf.constant([[0.0], [0.0]], dtype=tf.float32)
-    action_steps = policy_step.PolicyStep(
-        actions, info=())
+    action_steps = policy_step.PolicyStep(actions, info=())
 
     rewards = tf.constant([10, 20], dtype=tf.float32)
     discounts = tf.constant([0.9, 0.9], dtype=tf.float32)
@@ -159,7 +167,8 @@ class QtoptAgentTest(tf.test.TestCase, parameterized.TestCase):
     next_time_steps = ts.transition(next_observations, rewards, discounts)
 
     experience = trajectories_test_utils.stacked_trajectory_from_transition(
-        time_steps, action_steps, next_time_steps)
+        time_steps, action_steps, next_time_steps
+    )
 
     # Using the kernel initializer [[2, 1], [1, 1]] and bias initializer
     # ([[2], [2]] for q_network/target_network, [[1], [1]] for delayed
@@ -183,15 +192,17 @@ class QtoptAgentTest(tf.test.TestCase, parameterized.TestCase):
 
     self.evaluate(tf.compat.v1.initialize_all_variables())
     self.assertAllClose(self.evaluate(loss), expected_td_loss)
-    self.assertAllClose(self.evaluate(tf.reduce_mean(loss_info.td_loss)),
-                        expected_td_loss)
+    self.assertAllClose(
+        self.evaluate(tf.reduce_mean(loss_info.td_loss)), expected_td_loss
+    )
 
   def VerifyVariableAssignAndRestore(self):
     strategy = tf.distribute.get_strategy()
     with strategy.scope():
       # Use BehaviorCloningAgent instead of AWRAgent to test the network.
       q_net = critic_network.CriticNetwork(
-          (self._observation_spec, self._action_spec))
+          (self._observation_spec, self._action_spec)
+      )
       agent = qtopt_agent.QtOptAgent(
           self._time_step_spec,
           self._action_spec,
@@ -200,14 +211,14 @@ class QtoptAgentTest(tf.test.TestCase, parameterized.TestCase):
           init_mean_cem=self._mean,
           init_var_cem=self._var,
           num_samples_cem=self._num_samples,
-          actions_sampler=self._sampler)
+          actions_sampler=self._sampler,
+      )
     # Assign all vars to 0.
     for var in tf.nest.flatten(agent.variables):
       var.assign(tf.zeros_like(var))
     # Save checkpoint
     ckpt_dir = self.create_tempdir()
-    checkpointer = common.Checkpointer(
-        ckpt_dir=ckpt_dir, agent=agent)
+    checkpointer = common.Checkpointer(ckpt_dir=ckpt_dir, agent=agent)
     global_step = tf.constant(0)
     checkpointer.save(global_step)
     # Assign all vars to 1.
@@ -221,17 +232,21 @@ class QtoptAgentTest(tf.test.TestCase, parameterized.TestCase):
         self.assertEqual(value, 0)
       else:
         self.assertAllEqual(
-            value, np.zeros_like(value),
-            msg='{} has var mean {}, expected 0.'.format(var.name, value))
+            value,
+            np.zeros_like(value),
+            msg='{} has var mean {}, expected 0.'.format(var.name, value),
+        )
 
   def VerifyTrainAndRestore(self):
     """Helper function for testing correct variable updating and restoring."""
     batch_size = 2
     seq_len = 2
     observations = tensor_spec.sample_spec_nest(
-        self._observation_spec, outer_dims=(batch_size, seq_len))
+        self._observation_spec, outer_dims=(batch_size, seq_len)
+    )
     actions = tensor_spec.sample_spec_nest(
-        self._action_spec, outer_dims=(batch_size, seq_len))
+        self._action_spec, outer_dims=(batch_size, seq_len)
+    )
     rewards = tf.constant([[10, 10], [20, 20]], dtype=tf.float32)
     discounts = tf.constant([[0.9, 0.9], [0.9, 0.9]], dtype=tf.float32)
     experience = trajectory.first(
@@ -239,11 +254,13 @@ class QtoptAgentTest(tf.test.TestCase, parameterized.TestCase):
         action=actions,
         policy_info=(),
         reward=rewards,
-        discount=discounts)
+        discount=discounts,
+    )
     strategy = tf.distribute.get_strategy()
     with strategy.scope():
       q_net = critic_network.CriticNetwork(
-          (self._observation_spec, self._action_spec))
+          (self._observation_spec, self._action_spec)
+      )
       agent = qtopt_agent.QtOptAgent(
           self._time_step_spec,
           self._action_spec,
@@ -253,7 +270,8 @@ class QtoptAgentTest(tf.test.TestCase, parameterized.TestCase):
           init_var_cem=self._var,
           num_samples_cem=self._num_samples,
           actions_sampler=self._sampler,
-          in_graph_bellman_update=True)
+          in_graph_bellman_update=True,
+      )
     loss_before_train = agent.loss(experience).loss
     # Check loss is stable.
     self.assertEqual(loss_before_train, agent.loss(experience).loss)

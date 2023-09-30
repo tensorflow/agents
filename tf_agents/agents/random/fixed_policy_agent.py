@@ -22,7 +22,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-from typing import Callable, Union, Optional, Text
+from typing import Callable, Optional, Text, Union
 
 import gin
 import tensorflow.compat.v2 as tf
@@ -40,15 +40,17 @@ PolicyClassType = Callable[..., Union[tf_policy.TFPolicy, py_policy.PyPolicy]]
 class FixedPolicyAgent(tf_agent.TFAgent):
   """An agent with a fixed policy and no learning."""
 
-  def __init__(self,
-               time_step_spec: ts.TimeStep,
-               action_spec: types.NestedTensorSpec,
-               policy_class: PolicyClassType,
-               debug_summaries: bool = False,
-               summarize_grads_and_vars: bool = False,
-               train_step_counter: Optional[tf.Variable] = None,
-               num_outer_dims: int = 1,
-               name: Optional[Text] = None):
+  def __init__(
+      self,
+      time_step_spec: ts.TimeStep,
+      action_spec: types.NestedTensorSpec,
+      policy_class: PolicyClassType,
+      debug_summaries: bool = False,
+      summarize_grads_and_vars: bool = False,
+      train_step_counter: Optional[tf.Variable] = None,
+      num_outer_dims: int = 1,
+      name: Optional[Text] = None,
+  ):
     """Creates a fixed-policy agent with no-op for training.
 
     Args:
@@ -60,17 +62,18 @@ class FixedPolicyAgent(tf_agent.TFAgent):
         base class
       summarize_grads_and_vars: If true, gradient summaries will be written.
       train_step_counter: An optional counter to increment every time the train
-        op is run.  Defaults to the global_step. Used to initialize the
-        base class
+        op is run.  Defaults to the global_step. Used to initialize the base
+        class
       num_outer_dims: Used to initialize the base class
       name: The name of this agent. All variables in this module will fall under
-        that name. Defaults to the class name. Used to initialize the
-        base class.
+        that name. Defaults to the class name. Used to initialize the base
+        class.
     """
     tf.Module.__init__(self, name=name)
 
-    policy = policy_class(time_step_spec=time_step_spec,
-                          action_spec=action_spec)
+    policy = policy_class(
+        time_step_spec=time_step_spec, action_spec=action_spec
+    )
 
     collect_policy = policy
 
@@ -83,7 +86,8 @@ class FixedPolicyAgent(tf_agent.TFAgent):
         debug_summaries=debug_summaries,
         summarize_grads_and_vars=summarize_grads_and_vars,
         train_step_counter=train_step_counter,
-        num_outer_dims=num_outer_dims)
+        num_outer_dims=num_outer_dims,
+    )
 
   def _initialize(self):
     pass

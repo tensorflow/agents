@@ -32,23 +32,27 @@ def check_unbatched_time_step_spec(time_step, time_step_spec, batch_size):
     return array_spec.check_arrays_nest(time_step, time_step_spec)
 
   return array_spec.check_arrays_nest(
-      time_step, array_spec.add_outer_dims_nest(time_step_spec, (batch_size,)))
+      time_step, array_spec.add_outer_dims_nest(time_step_spec, (batch_size,))
+  )
 
 
 class StationaryStochasticStructuredBanditPyEnvironmentTest(tf.test.TestCase):
 
   def test_with_random_policy(self):
-
     def _global_context_sampling_fn():
       abc = np.array(['a', 'b', 'c'])
-      return {'global1': np.random.randint(-2, 3, [3, 4]),
-              'global2': abc[np.random.randint(0, 2, [1])]}
+      return {
+          'global1': np.random.randint(-2, 3, [3, 4]),
+          'global2': abc[np.random.randint(0, 2, [1])],
+      }
 
     def _arm_context_sampling_fn():
       aabbcc = np.array(['aa', 'bb', 'cc'])
-      return {'arm1': np.random.randint(-3, 4, [5]),
-              'arm2': np.random.randint(-3, 4, [3, 1]),
-              'arm3': aabbcc[np.random.randint(0, 2, [1])]}
+      return {
+          'arm1': np.random.randint(-3, 4, [5]),
+          'arm2': np.random.randint(-3, 4, [3, 1]),
+          'arm3': aabbcc[np.random.randint(0, 2, [1])],
+      }
 
     def _reward_fn(global_obs, arm_obs):
       return global_obs['global1'][2, 1] + arm_obs['arm1'][4]
@@ -58,13 +62,16 @@ class StationaryStochasticStructuredBanditPyEnvironmentTest(tf.test.TestCase):
         _arm_context_sampling_fn,
         6,
         _reward_fn,
-        batch_size=2)
+        batch_size=2,
+    )
     time_step_spec = env.time_step_spec()
     action_spec = array_spec.BoundedArraySpec(
-        shape=(), minimum=0, maximum=5, dtype=np.int32)
+        shape=(), minimum=0, maximum=5, dtype=np.int32
+    )
 
     random_policy = random_py_policy.RandomPyPolicy(
-        time_step_spec=time_step_spec, action_spec=action_spec)
+        time_step_spec=time_step_spec, action_spec=action_spec
+    )
 
     for _ in range(5):
       time_step = env.reset()
@@ -72,7 +79,9 @@ class StationaryStochasticStructuredBanditPyEnvironmentTest(tf.test.TestCase):
           check_unbatched_time_step_spec(
               time_step=time_step,
               time_step_spec=time_step_spec,
-              batch_size=env.batch_size))
+              batch_size=env.batch_size,
+          )
+      )
 
       action = random_policy.action(time_step).action
       self.assertAllEqual(action.shape, [2])

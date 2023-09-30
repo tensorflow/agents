@@ -33,7 +33,8 @@ from tf_agents.typing import types
 
 @gin.configurable
 class NeuralFalconAgent(
-    greedy_reward_prediction_agent.GreedyRewardPredictionAgent):
+    greedy_reward_prediction_agent.GreedyRewardPredictionAgent
+):
   """A neural network based agent implementing the Falcon sampling strategy.
 
   This agent receives a neural network that it trains to predict rewards. The
@@ -51,8 +52,12 @@ class NeuralFalconAgent(
       optimizer: types.Optimizer,
       num_samples_list: Sequence[tf.Variable],
       exploitation_coefficient: types.FloatOrReturningFloat = 1.0,
+      max_exploration_probability_hint: Optional[
+          types.FloatOrReturningFloat
+      ] = None,
       observation_and_action_constraint_splitter: Optional[
-          types.Splitter] = None,
+          types.Splitter
+      ] = None,
       accepts_per_arm_features: bool = False,
       constraints: Iterable[constr.BaseConstraint] = (),
       # Params for training.
@@ -66,7 +71,8 @@ class NeuralFalconAgent(
       train_step_counter: Optional[tf.Variable] = None,
       laplacian_matrix: Optional[types.Float] = None,
       laplacian_smoothing_weight: float = 0.001,
-      name: Optional[Text] = None):
+      name: Optional[Text] = None,
+  ):
     """Creates a Neural Falcon Agent.
 
     Args:
@@ -88,6 +94,16 @@ class NeuralFalconAgent(
         exploitative the policy behaves with respect to the predicted rewards: A
         larger value makes the policy sample the greedy action (one with the
         best predicted reward) with a higher probability.
+      max_exploration_probability_hint: An optional float, representing a hint
+        on the maximum exploration probability, internally clipped to [0, 1].
+        When this argument is set, `exploitation_coefficient` is ignored and the
+        policy attempts to choose non-greedy actions with at most this
+        probability. When such an upper bound cannot be achieved, e.g. due to
+        insufficient training data, the policy attempts to minimize the
+        probability of choosing non-greedy actions on a best-effort basis. For a
+        demonstration of how it affects the policy behavior, see the unit test
+        `testTrainedPolicyWithMaxExplorationProbabilityHint` in
+        `neural_falcon_agent_test`.
       observation_and_action_constraint_splitter: A function used for masking
         valid/invalid actions with each state of the environment. The function
         takes in a full observation and returns a tuple consisting of 1) the
@@ -136,7 +152,8 @@ class NeuralFalconAgent(
         reward_network=reward_network,
         optimizer=optimizer,
         observation_and_action_constraint_splitter=(
-            observation_and_action_constraint_splitter),
+            observation_and_action_constraint_splitter
+        ),
         accepts_per_arm_features=accepts_per_arm_features,
         constraints=constraints,
         error_loss_fn=error_loss_fn,
@@ -149,16 +166,21 @@ class NeuralFalconAgent(
         num_samples_list=num_samples_list,
         laplacian_smoothing_weight=laplacian_smoothing_weight,
         laplacian_matrix=laplacian_matrix,
-        name=name)
+        name=name,
+    )
     self._policy = falcon_reward_prediction_policy.FalconRewardPredictionPolicy(
         time_step_spec,
         action_spec,
         reward_network,
-        exploitation_coefficient,
-        observation_and_action_constraint_splitter,
+        exploitation_coefficient=exploitation_coefficient,
+        max_exploration_probability_hint=max_exploration_probability_hint,
+        observation_and_action_constraint_splitter=(
+            observation_and_action_constraint_splitter
+        ),
         constraints=constraints,
         accepts_per_arm_features=accepts_per_arm_features,
         emit_policy_info=emit_policy_info,
-        num_samples_list=num_samples_list)
+        num_samples_list=num_samples_list,
+    )
 
     self._collect_policy = self._policy

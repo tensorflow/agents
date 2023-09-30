@@ -25,9 +25,7 @@ from typing import Text
 from absl.testing import parameterized
 from absl.testing.absltest import mock
 import numpy as np
-
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
-
 from tf_agents import specs
 from tf_agents.environments import batched_py_environment
 from tf_agents.environments import py_environment
@@ -94,12 +92,13 @@ class PYEnvironmentMock(py_environment.PyEnvironment):
 
   def action_spec(self):
     return specs.BoundedArraySpec(
-        [], np.int32, minimum=0, maximum=10, name='action')
+        [], np.int32, minimum=0, maximum=10, name='action'
+    )
 
   def observation_spec(self):
     return specs.ArraySpec([], np.int64, name='observation')
 
-  def render(self, mode):
+  def render(self, mode):  # pytype: disable=signature-mismatch  # overriding-parameter-count-checks
     assert isinstance(mode, (str, Text)), 'Got: {}'.format(type(mode))
     if mode == 'rgb_array':
       return np.ones((4, 4, 3), dtype=np.uint8)
@@ -122,7 +121,8 @@ class PYEnvironmentMockNestedRewards(py_environment.PyEnvironment):
 
   def action_spec(self):
     return specs.BoundedArraySpec(
-        [], np.int32, minimum=0, maximum=10, name='action')
+        [], np.int32, minimum=0, maximum=10, name='action'
+    )
 
   def observation_spec(self):
     return specs.ArraySpec([], np.int64, name='observation')
@@ -130,14 +130,15 @@ class PYEnvironmentMockNestedRewards(py_environment.PyEnvironment):
   def reward_spec(self):
     return {
         'reward': specs.ArraySpec([], np.float32, name='reward'),
-        'constraint': specs.ArraySpec([], np.float32, name='constraint')
+        'constraint': specs.ArraySpec([], np.float32, name='constraint'),
     }
 
   def _reset(self):
     self._state = 0
     self.last_call_thread_id = threading.current_thread().ident
     return ts.restart(
-        [self._state], batch_size=1, reward_spec=self._reward_spec)  # pytype: disable=wrong-arg-types
+        [self._state], batch_size=1, reward_spec=self._reward_spec
+    )  # pytype: disable=wrong-arg-types
 
   def _step(self, action):
     self._state = (self._state + 1) % 3
@@ -145,12 +146,13 @@ class PYEnvironmentMockNestedRewards(py_environment.PyEnvironment):
 
     observation = [self._state]
     reward = {
-        'constraint': 2.,
-        'reward': 1.,
+        'constraint': 2.0,
+        'reward': 1.0,
     }
     if self._state == 0:
       return ts.restart(
-          observation, batch_size=1, reward_spec=self._reward_spec)  # pytype: disable=wrong-arg-types
+          observation, batch_size=1, reward_spec=self._reward_spec
+      )  # pytype: disable=wrong-arg-types
     elif self._state == 2:
       return ts.termination(observation, reward=reward)  # pytype: disable=wrong-arg-types
     return ts.transition(observation, reward=reward)  # pytype: disable=wrong-arg-types
@@ -161,8 +163,9 @@ class TFPYEnvironmentTest(tf.test.TestCase, parameterized.TestCase):
   def testPyenv(self):
     py_env = PYEnvironmentMock()
     tf_env = tf_py_environment.TFPyEnvironment(py_env)
-    self.assertIsInstance(tf_env.pyenv,
-                          batched_py_environment.BatchedPyEnvironment)
+    self.assertIsInstance(
+        tf_env.pyenv, batched_py_environment.BatchedPyEnvironment
+    )
 
   def _get_py_env(self, batch_py_env, isolation, batch_size=None):
     def _create_env():
@@ -172,8 +175,10 @@ class TFPYEnvironmentTest(tf.test.TestCase, parameterized.TestCase):
         py_env = [PYEnvironmentMock() for _ in range(batch_size)]
       if batch_py_env:
         py_env = batched_py_environment.BatchedPyEnvironment(
-            py_env if isinstance(py_env, list) else [py_env])
+            py_env if isinstance(py_env, list) else [py_env]
+        )
       return py_env
+
     # If using isolation, we'll pass a callable
     return _create_env if isolation else _create_env()
 
@@ -231,8 +236,7 @@ class TFPYEnvironmentTest(tf.test.TestCase, parameterized.TestCase):
     # observation
     self.assertEqual(type(spec.observation), specs.TensorSpec)
 
-  @parameterized.parameters(
-      *COMMON_PARAMETERS)
+  @parameterized.parameters(*COMMON_PARAMETERS)
   def testResetOp(self, batch_py_env, isolation):
     py_env = self._get_py_env(batch_py_env, isolation)
     tf_env = tf_py_environment.TFPyEnvironment(py_env, isolation=isolation)
@@ -279,7 +283,7 @@ class TFPYEnvironmentTest(tf.test.TestCase, parameterized.TestCase):
     time_step = self.evaluate(tf_env.step(action))
 
     self.assertAllEqual([ts.StepType.MID], time_step.step_type)
-    self.assertAllEqual([0.], time_step.reward)
+    self.assertAllEqual([0.0], time_step.reward)
     self.assertAllEqual([1.0], time_step.discount)
     self.assertAllEqual([1], time_step.observation)
     self.assertAllEqual([1], get(tf_env.pyenv, 'actions_taken'))
@@ -290,7 +294,8 @@ class TFPYEnvironmentTest(tf.test.TestCase, parameterized.TestCase):
   @parameterized.parameters(dict(isolation=False), dict(isolation=True))
   def testBatchedFirstTimeStepAndOneStep(self, isolation):
     py_env = self._get_py_env(
-        batch_py_env=True, isolation=isolation, batch_size=3)
+        batch_py_env=True, isolation=isolation, batch_size=3
+    )
     tf_env = tf_py_environment.TFPyEnvironment(py_env, isolation=isolation)
     self.assertEqual(tf_env.batch_size, 3)
     time_step_0 = tf_env.current_time_step()
@@ -311,7 +316,7 @@ class TFPYEnvironmentTest(tf.test.TestCase, parameterized.TestCase):
     time_step_1_val = self.evaluate(time_step_1)
 
     self.assertAllEqual([ts.StepType.MID] * 3, time_step_1_val.step_type)
-    self.assertAllEqual([0.] * 3, time_step_1_val.reward)
+    self.assertAllEqual([0.0] * 3, time_step_1_val.reward)
     self.assertAllEqual([1.0] * 3, time_step_1_val.discount)
     self.assertAllEqual(np.array([1, 1, 1]), time_step_1_val.observation)
     for py_env in tf_env.pyenv.envs:
@@ -334,13 +339,14 @@ class TFPYEnvironmentTest(tf.test.TestCase, parameterized.TestCase):
 
     self.assertEqual(ts.StepType.LAST, time_step.step_type)
     self.assertEqual([2], time_step.observation)
-    self.assertEqual(1., time_step.reward)
-    self.assertEqual(0., time_step.discount)
+    self.assertEqual(1.0, time_step.reward)
+    self.assertEqual(0.0, time_step.discount)
     self.assertEqual([1, 2], get(tf_env.pyenv, 'actions_taken'))
 
   @parameterized.parameters(*COMMON_PARAMETERS)
   def testFirstObservationIsPreservedAfterTwoSteps(
-      self, batch_py_env, isolation):
+      self, batch_py_env, isolation
+  ):
     py_env = self._get_py_env(batch_py_env, isolation)
     tf_env = tf_py_environment.TFPyEnvironment(py_env, isolation=isolation)
     time_step = tf_env.current_time_step()
@@ -417,8 +423,8 @@ class TFPYEnvironmentTest(tf.test.TestCase, parameterized.TestCase):
     time_step = self.evaluate(tf_env.step(action))
 
     self.assertAllEqual([ts.StepType.MID], time_step.step_type)
-    self.assertAllEqual([1.], time_step.reward['reward'])
-    self.assertAllEqual([2.], time_step.reward['constraint'])
+    self.assertAllEqual([1.0], time_step.reward['reward'])
+    self.assertAllEqual([2.0], time_step.reward['constraint'])
     self.assertAllEqual([1.0], time_step.discount)
     self.assertAllEqual([1], time_step.observation)
 
@@ -429,8 +435,9 @@ class TFPYEnvironmentTest(tf.test.TestCase, parameterized.TestCase):
     time_step_1 = py_env.reset()
     time_step_2 = py_env.reset()
     # Make sure py env generates unique observations
-    self.assertNotEqual(time_step_1.observation.tolist(),
-                        time_step_2.observation.tolist())
+    self.assertNotEqual(
+        time_step_1.observation.tolist(), time_step_2.observation.tolist()
+    )
 
     # Test tf_env also creates uniquee observations
     time_step_1 = tf_env.reset()

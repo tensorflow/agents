@@ -21,7 +21,6 @@ from typing import Any, Optional, Tuple
 from absl import logging
 import gin
 import tensorflow.compat.v2 as tf
-
 from tf_agents.agents import tf_agent
 from tf_agents.specs import tensor_spec
 from tf_agents.train import interval_trigger
@@ -56,24 +55,26 @@ class Learner(tf.Module):
       the agent.
   """
 
-  def __init__(self,
-               root_dir,
-               train_step,
-               agent,
-               experience_dataset_fn=None,
-               after_train_strategy_step_fn=None,
-               triggers=None,
-               checkpoint_interval=100000,
-               summary_interval=1000,
-               max_checkpoints_to_keep=3,
-               use_kwargs_in_agent_train=False,
-               strategy=None,
-               run_optimizer_variable_init=True,
-               use_reverb_v2=False,
-               direct_sampling=False,
-               experience_dataset_options=None,
-               strategy_run_options=None,
-               summary_root_dir=None):
+  def __init__(
+      self,
+      root_dir,
+      train_step,
+      agent,
+      experience_dataset_fn=None,
+      after_train_strategy_step_fn=None,
+      triggers=None,
+      checkpoint_interval=100000,
+      summary_interval=1000,
+      max_checkpoints_to_keep=3,
+      use_kwargs_in_agent_train=False,
+      strategy=None,
+      run_optimizer_variable_init=True,
+      use_reverb_v2=False,
+      direct_sampling=False,
+      experience_dataset_options=None,
+      strategy_run_options=None,
+      summary_root_dir=None,
+  ):
     """Initializes a Learner instance.
 
     Args:
@@ -129,8 +130,8 @@ class Learner(tf.Module):
       use_reverb_v2: If True then we expect the dataset samples to return a
         named_tuple with a data and an info field. If False we expect a
         tuple(data, info).
-      direct_sampling: Do not use replay_buffer, but sample from offline
-        dataset directly.
+      direct_sampling: Do not use replay_buffer, but sample from offline dataset
+        directly.
       experience_dataset_options: (Optional) `tf.distribute.InputOptions` passed
         to `strategy.distribute_datasets_from_function`, used to control options
         on how this dataset is distributed.
@@ -138,7 +139,7 @@ class Learner(tf.Module):
         `strategy.run`. This is passed to every strategy.run invocation by the
         learner.
       summary_root_dir: (Optional) Root directory path where summaries will be
-       written to.
+        written to.
     """
     if checkpoint_interval < 0:
       logging.warning(
@@ -149,13 +150,15 @@ class Learner(tf.Module):
 
     self._train_dir = os.path.join(root_dir, TRAIN_DIR)
     summary_root_dir = (
-        root_dir if summary_root_dir is None else summary_root_dir)
+        root_dir if summary_root_dir is None else summary_root_dir
+    )
     self._summary_dir = os.path.join(summary_root_dir, TRAIN_DIR)
     self._use_reverb_v2 = use_reverb_v2
     self._direct_sampling = direct_sampling
     if summary_interval:
       self.train_summary_writer = tf.compat.v2.summary.create_file_writer(
-          self._summary_dir, flush_millis=10000)
+          self._summary_dir, flush_millis=10000
+      )
     else:
       self.train_summary_writer = tf.summary.create_noop_writer()
 
@@ -169,7 +172,8 @@ class Learner(tf.Module):
       with self.strategy.scope():
         dataset = self.strategy.distribute_datasets_from_function(
             lambda _: experience_dataset_fn(),
-            options=experience_dataset_options)
+            options=experience_dataset_options,
+        )
         self._experience_iterator = iter(dataset)
 
     self.after_train_strategy_step_fn = after_train_strategy_step_fn
@@ -197,10 +201,10 @@ class Learner(tf.Module):
         else:
           batched_specs = tensor_spec.add_outer_dims_nest(
               self._agent.training_data_spec,
-              (None, self._agent.train_sequence_length))
+              (None, self._agent.train_sequence_length),
+          )
         if self.use_kwargs_in_agent_train:
-          batched_specs = dict(
-              experience=batched_specs)
+          batched_specs = dict(experience=batched_specs)
 
         @common.function
         def _create_variables(specs):
@@ -211,11 +215,13 @@ class Learner(tf.Module):
             return self.strategy.run(
                 self._agent.train,
                 kwargs=specs,
-                options=self._strategy_run_options)
+                options=self._strategy_run_options,
+            )
           return self.strategy.run(
               self._agent.train,
               args=(specs,),
-              options=self._strategy_run_options)
+              options=self._strategy_run_options,
+          )
 
         _create_variables.get_concrete_function(batched_specs)
       else:
@@ -226,7 +232,8 @@ class Learner(tf.Module):
           checkpoint_dir,
           max_to_keep=max_checkpoints_to_keep,
           agent=self._agent,
-          train_step=self.train_step)
+          train_step=self.train_step,
+      )
       self._checkpointer.initialize_or_restore()  # pytype: disable=attribute-error
 
     for trigger in self.triggers:
@@ -252,7 +259,8 @@ class Learner(tf.Module):
 
     save_fn = lambda: self._checkpointer.save(self.train_step)
     return interval_trigger.IntervalTrigger(
-        checkpoint_interval, save_fn, start=self.train_step.numpy())
+        checkpoint_interval, save_fn, start=self.train_step.numpy()
+    )
 
   def run(self, iterations=1, iterator=None, parallel_iterations=10):
     """Runs `iterations` iterations of training.
@@ -271,22 +279,24 @@ class Learner(tf.Module):
       The total loss computed before running the final step.
     """
     assert iterations >= 1, (
-        'Iterations must be greater or equal to 1, was %d' % iterations)
+        'Iterations must be greater or equal to 1, was %d' % iterations
+    )
+
     def _summary_record_if():
       if self.summary_interval:
         return tf.math.equal(
-            self.train_step % tf.constant(self.summary_interval), 0)
+            self.train_step % tf.constant(self.summary_interval), 0
+        )
       else:
         return tf.constant(False)
 
-    with self.train_summary_writer.as_default(), \
-         common.soft_device_placement(), \
-         tf.compat.v2.summary.record_if(_summary_record_if), \
-         self.strategy.scope():
+    with self.train_summary_writer.as_default(), common.soft_device_placement(), tf.compat.v2.summary.record_if(
+        _summary_record_if
+    ), self.strategy.scope():
       iterator = iterator or self._experience_iterator
-      loss_info = self._train(tf.constant(iterations),
-                              iterator,
-                              parallel_iterations)
+      loss_info = self._train(
+          tf.constant(iterations), iterator, parallel_iterations
+      )
 
       train_step_val = self.train_step.numpy()
       for trigger in self.triggers:
@@ -305,7 +315,8 @@ class Learner(tf.Module):
 
     for _ in tf.range(iterations - 1):
       tf.autograph.experimental.set_loop_options(
-          parallel_iterations=parallel_iterations)
+          parallel_iterations=parallel_iterations
+      )
       loss_info = self.single_train_step(iterator)
 
     def _reduce_loss(loss):
@@ -339,25 +350,30 @@ class Learner(tf.Module):
       loss_info = self.strategy.run(
           self._agent.train,
           kwargs=experience,
-          options=self._strategy_run_options)
+          options=self._strategy_run_options,
+      )
     else:
       loss_info = self.strategy.run(
           self._agent.train,
           args=(experience,),
-          options=self._strategy_run_options)
+          options=self._strategy_run_options,
+      )
 
     if self.after_train_strategy_step_fn:
       if self.use_kwargs_in_agent_train:
         self.strategy.run(
             self.after_train_strategy_step_fn,
             kwargs=dict(
-                experience=(experience, sample_info), loss_info=loss_info),
-            options=self._strategy_run_options)
+                experience=(experience, sample_info), loss_info=loss_info
+            ),
+            options=self._strategy_run_options,
+        )
       else:
         self.strategy.run(
             self.after_train_strategy_step_fn,
             args=((experience, sample_info), loss_info),
-            options=self._strategy_run_options)
+            options=self._strategy_run_options,
+        )
 
     return loss_info
 
@@ -373,8 +389,8 @@ class Learner(tf.Module):
     so statistics like batch norm are not updated.
 
     Args:
-      experience_and_sample_info: A batch of experience and sample info. If
-        not specified, `next(self._experience_iterator)` is used.
+      experience_and_sample_info: A batch of experience and sample info. If not
+        specified, `next(self._experience_iterator)` is used.
       reduce_op: a `tf.distribute.ReduceOp` value specifying how loss values
         should be aggregated across replicas.
 
@@ -384,13 +400,12 @@ class Learner(tf.Module):
 
     def _summary_record_if():
       return tf.math.equal(
-          self.train_step % tf.constant(self.summary_interval), 0)
+          self.train_step % tf.constant(self.summary_interval), 0
+      )
 
-    with self.train_summary_writer.as_default(), \
-         common.soft_device_placement(), \
-         tf.compat.v2.summary.record_if(_summary_record_if), \
-         self.strategy.scope():
-
+    with self.train_summary_writer.as_default(), common.soft_device_placement(), tf.compat.v2.summary.record_if(
+        _summary_record_if
+    ), self.strategy.scope():
       if experience_and_sample_info is None:
         sample = next(self._experience_iterator)
         if self._direct_sampling:
@@ -424,13 +439,16 @@ class Learner(tf.Module):
         self.strategy.run(
             self.after_train_strategy_step_fn,
             kwargs=dict(
-                experience=(experience, sample_info), loss_info=loss_info),
-            options=self._strategy_run_options)
+                experience=(experience, sample_info), loss_info=loss_info
+            ),
+            options=self._strategy_run_options,
+        )
       else:
         self.strategy.run(
             self.after_train_strategy_step_fn,
             args=((experience, sample_info), loss_info),
-            options=self._strategy_run_options)
+            options=self._strategy_run_options,
+        )
 
     def _reduce_loss(loss):
       rank = None

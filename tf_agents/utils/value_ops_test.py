@@ -25,8 +25,9 @@ import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 from tf_agents.utils import value_ops
 
 
-def _naive_gae_as_ground_truth(discounts, rewards, values, final_value,
-                               td_lambda):
+def _naive_gae_as_ground_truth(
+    discounts, rewards, values, final_value, td_lambda
+):
   """A naive GAE closely resembles equation (16) in the paper.
 
   Slow, for testing purpose only.
@@ -91,24 +92,31 @@ class DiscountedReturnTest(tf.test.TestCase, parameterized.TestCase):
       ('multiple_batch_multiple_step_without_final_value', 7, 9, False),
       ('multiple_batch_multiple_step_with_final_value', 7, 9, True),
   )
-  def testDiscountedReturnIsCorrectlyComputed(self,
-                                              num_time_steps,
-                                              batch_size,
-                                              with_final_value):
+  def testDiscountedReturnIsCorrectlyComputed(
+      self, num_time_steps, batch_size, with_final_value
+  ):
     rewards = np.random.rand(num_time_steps, batch_size).astype(np.float32)
     discounts = np.random.rand(num_time_steps, batch_size).astype(np.float32)
-    final_value = np.random.rand(batch_size).astype(
-        np.float32) if with_final_value else None
+    final_value = (
+        np.random.rand(batch_size).astype(np.float32)
+        if with_final_value
+        else None
+    )
 
     discounted_return = value_ops.discounted_return(
-        rewards=rewards, discounts=discounts, final_value=final_value)
+        rewards=rewards, discounts=discounts, final_value=final_value
+    )
 
     single_discounted_return = value_ops.discounted_return(
-        rewards=rewards, discounts=discounts, final_value=final_value,
-        provide_all_returns=False)
+        rewards=rewards,
+        discounts=discounts,
+        final_value=final_value,
+        provide_all_returns=False,
+    )
 
     expected = _numpy_discounted_return(
-        rewards=rewards, discounts=discounts, final_value=final_value)
+        rewards=rewards, discounts=discounts, final_value=final_value
+    )
 
     self.assertAllClose(discounted_return, expected)
     self.assertAllClose(single_discounted_return, expected[0])
@@ -119,76 +127,93 @@ class DiscountedReturnTest(tf.test.TestCase, parameterized.TestCase):
       ('multiple_batch_multiple_step_without_final_value', 7, 9, False),
       ('multiple_batch_multiple_step_with_final_value', 7, 9, True),
   )
-  def testTimeMajorBatchMajorDiscountedReturnsAreSame(self,
-                                                      num_time_steps,
-                                                      batch_size,
-                                                      with_final_value):
+  def testTimeMajorBatchMajorDiscountedReturnsAreSame(
+      self, num_time_steps, batch_size, with_final_value
+  ):
     rewards = np.random.rand(num_time_steps, batch_size).astype(np.float32)
     discounts = np.random.rand(num_time_steps, batch_size).astype(np.float32)
-    final_value = np.random.rand(batch_size).astype(
-        np.float32) if with_final_value else None
+    final_value = (
+        np.random.rand(batch_size).astype(np.float32)
+        if with_final_value
+        else None
+    )
 
     time_major_discounted_return = value_ops.discounted_return(
-        rewards=rewards,
-        discounts=discounts,
-        final_value=final_value)
+        rewards=rewards, discounts=discounts, final_value=final_value
+    )
 
     batch_major_discounted_return = value_ops.discounted_return(
         rewards=tf.transpose(rewards),
         discounts=tf.transpose(discounts),
         final_value=final_value,
-        time_major=False)
+        time_major=False,
+    )
 
-    self.assertAllClose(time_major_discounted_return,
-                        tf.transpose(batch_major_discounted_return))
+    self.assertAllClose(
+        time_major_discounted_return,
+        tf.transpose(batch_major_discounted_return),
+    )
 
     single_time_major_discounted_return = value_ops.discounted_return(
         rewards=rewards,
         discounts=discounts,
         final_value=final_value,
-        provide_all_returns=False)
+        provide_all_returns=False,
+    )
 
     single_batch_major_discounted_return = value_ops.discounted_return(
         rewards=tf.transpose(rewards),
         discounts=tf.transpose(discounts),
         final_value=final_value,
         time_major=False,
-        provide_all_returns=False)
+        provide_all_returns=False,
+    )
 
-    self.assertAllClose(single_time_major_discounted_return,
-                        time_major_discounted_return[0])
-    self.assertAllClose(single_batch_major_discounted_return,
-                        time_major_discounted_return[0])
+    self.assertAllClose(
+        single_time_major_discounted_return, time_major_discounted_return[0]
+    )
+    self.assertAllClose(
+        single_batch_major_discounted_return, time_major_discounted_return[0]
+    )
 
   def testDiscountedReturnWithFinalValueMatchPrecomputedResult(self):
     discounted_return = value_ops.discounted_return(
         rewards=tf.constant([1] * 9, dtype=tf.float32),
         discounts=tf.constant(
-            [1, 1, 1, 1, 0, 0.9, 0.9, 0.9, 0.9], dtype=tf.float32),
-        final_value=tf.constant(8, dtype=tf.float32))
+            [1, 1, 1, 1, 0, 0.9, 0.9, 0.9, 0.9], dtype=tf.float32
+        ),
+        final_value=tf.constant(8, dtype=tf.float32),
+    )
 
     expected = [
-        5, 4, 3, 2, 1, 8 * 0.9**4 + 3.439, 8 * 0.9**3 + 2.71, 8 * 0.9**2 + 1.9,
-        8 * 0.9 + 1
+        5,
+        4,
+        3,
+        2,
+        1,
+        8 * 0.9**4 + 3.439,
+        8 * 0.9**3 + 2.71,
+        8 * 0.9**2 + 1.9,
+        8 * 0.9 + 1,
     ]
 
     self.evaluate(tf.compat.v1.global_variables_initializer())
     self.assertAllClose(discounted_return, expected)
 
 
-class GeneralizedAdvantageEstimationTest(tf.test.TestCase,
-                                         parameterized.TestCase):
+class GeneralizedAdvantageEstimationTest(
+    tf.test.TestCase, parameterized.TestCase
+):
 
   @parameterized.named_parameters(
       ('single_batch_single_step', 1, 1, 0.7),
       ('multiple_batch_multiple_step', 7, 9, 0.7),
-      ('multiple_batch_multiple_step_lambda_0', 7, 9, 0.),
-      ('multiple_batch_multiple_step_lambda_1', 7, 9, 1.),
+      ('multiple_batch_multiple_step_lambda_0', 7, 9, 0.0),
+      ('multiple_batch_multiple_step_lambda_1', 7, 9, 1.0),
   )
-  def testAdvantagesAreCorrectlyComputed(self,
-                                         batch_size,
-                                         num_time_steps,
-                                         td_lambda):
+  def testAdvantagesAreCorrectlyComputed(
+      self, batch_size, num_time_steps, td_lambda
+  ):
     rewards = np.random.rand(num_time_steps, batch_size).astype(np.float32)
     discounts = np.random.rand(num_time_steps, batch_size).astype(np.float32)
     values = np.random.rand(num_time_steps, batch_size).astype(np.float32)
@@ -198,33 +223,57 @@ class GeneralizedAdvantageEstimationTest(tf.test.TestCase,
         rewards=rewards,
         values=values,
         final_value=final_value,
-        td_lambda=td_lambda)
+        td_lambda=td_lambda,
+    )
 
     advantages = value_ops.generalized_advantage_estimation(
         discounts=discounts,
         rewards=rewards,
         values=values,
         final_value=final_value,
-        td_lambda=td_lambda)
+        td_lambda=td_lambda,
+    )
 
     self.assertAllClose(advantages, ground_truth)
 
   def testAdvantagesMatchPrecomputedResult(self):
     advantages = value_ops.generalized_advantage_estimation(
-        discounts=tf.constant([[1.0, 1.0, 1.0, 1.0, 0.0, 0.9, 0.9, 0.9, 0.0],
-                               [1.0, 1.0, 1.0, 1.0, 0.0, 0.9, 0.9, 0.9, 0.0]]),
+        discounts=tf.constant([
+            [1.0, 1.0, 1.0, 1.0, 0.0, 0.9, 0.9, 0.9, 0.0],
+            [1.0, 1.0, 1.0, 1.0, 0.0, 0.9, 0.9, 0.9, 0.0],
+        ]),
         rewards=tf.fill([2, 9], 1.0),
         values=tf.fill([2, 9], 3.0),
         final_value=tf.fill([2], 3.0),
         td_lambda=0.95,
-        time_major=False)
+        time_major=False,
+    )
 
     # Precomputed according to equation (16) in paper.
-    ground_truth = tf.constant([[
-        2.0808625, 1.13775, 0.145, -0.9, -2.0, 0.56016475, -0.16355, -1.01, -2.0
-    ], [
-        2.0808625, 1.13775, 0.145, -0.9, -2.0, 0.56016475, -0.16355, -1.01, -2.0
-    ]])
+    ground_truth = tf.constant([
+        [
+            2.0808625,
+            1.13775,
+            0.145,
+            -0.9,
+            -2.0,
+            0.56016475,
+            -0.16355,
+            -1.01,
+            -2.0,
+        ],
+        [
+            2.0808625,
+            1.13775,
+            0.145,
+            -0.9,
+            -2.0,
+            0.56016475,
+            -0.16355,
+            -1.01,
+            -2.0,
+        ],
+    ])
 
     self.assertAllClose(advantages, ground_truth)
 

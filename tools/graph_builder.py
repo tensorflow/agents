@@ -40,47 +40,60 @@ from tf_agents.benchmark import utils
 
 FLAGS = flags.FLAGS
 
-flags.DEFINE_multi_string('eventlog', None,
-                          'Diretory where eventlog is stored.')
-flags.DEFINE_string('output_path', '.',
-                    'Path to store the graph and any other associated data.')
+flags.DEFINE_multi_string(
+    'eventlog', None, 'Diretory where eventlog is stored.'
+)
+flags.DEFINE_string(
+    'output_path', '.', 'Path to store the graph and any other associated data.'
+)
 flags.DEFINE_string('output_prefix', 'results', 'Prefix used for artifacts')
 flags.DEFINE_string('graph_title', '', 'Title for the graph.')
 flags.DEFINE_string('graph_xaxis_title', 'steps', 'Title for the x-axis.')
-flags.DEFINE_string('graph_yaxis_title', 'AverageReturn',
-                    'Title for the y-axis or event_name is used.')
+flags.DEFINE_string(
+    'graph_yaxis_title',
+    'AverageReturn',
+    'Title for the y-axis or event_name is used.',
+)
 
 flags.DEFINE_string('event_name', 'AverageReturn', 'Name of event to track.')
-flags.DEFINE_integer('end_step', None,
-                     'If set, processing of the event log ends on this step.')
+flags.DEFINE_integer(
+    'end_step', None, 'If set, processing of the event log ends on this step.'
+)
 flags.DEFINE_boolean('show_graph', False, 'If true, show graph in a window.')
 
 
 class GraphAggTypes(enum.Enum):
   """Enum of options to aggregate data when generating a graph."""
+
   MEAN = 'mean'
   MEDIAN = 'median'
 
 
-flags.DEFINE_enum_class('graph_agg', GraphAggTypes.MEAN, GraphAggTypes,
-                        'Method to aggregate data for the graph.')
+flags.DEFINE_enum_class(
+    'graph_agg',
+    GraphAggTypes.MEAN,
+    GraphAggTypes,
+    'Method to aggregate data for the graph.',
+)
 Number = Union[int, float]
 
 
 class StatsBuilder(object):
   """Builds graphs and other summary information from eventlogs."""
 
-  def __init__(self,
-               eventlog_dirs: List[str],
-               event_tag: str,
-               output_path: str = '.',
-               title: str = '',
-               xaxis_title: str = 'steps',
-               yaxis_title: Optional[str] = None,
-               graph_agg: GraphAggTypes = GraphAggTypes.MEAN,
-               output_prefix: str = 'results',
-               end_step: Optional[int] = None,
-               show_graph: bool = False):
+  def __init__(
+      self,
+      eventlog_dirs: List[str],
+      event_tag: str,
+      output_path: str = '.',
+      title: str = '',
+      xaxis_title: str = 'steps',
+      yaxis_title: Optional[str] = None,
+      graph_agg: GraphAggTypes = GraphAggTypes.MEAN,
+      output_prefix: str = 'results',
+      end_step: Optional[int] = None,
+      show_graph: bool = False,
+  ):
     """Initializes StatsBuilder class.
 
     Args:
@@ -134,16 +147,16 @@ class StatsBuilder(object):
     for eventlog_dir in self.eventlog_dirs:
       event_file = utils.find_event_log(eventlog_dir)
       logging.info('Processing event file: %s', event_file)
-      data, total_time = utils.extract_event_log_values(event_file,
-                                                        self.event_tag,
-                                                        self.end_step)
+      data, total_time = utils.extract_event_log_values(
+          event_file, self.event_tag, self.end_step
+      )
       walltimes.append(total_time)
       data_collector.append(data)
     return data_collector, walltimes
 
   def _align_and_aggregate(
-      self, data_collector: List[Dict[int,
-                                      np.generic]]) -> List[Sequence[Number]]:
+      self, data_collector: List[Dict[int, np.generic]]
+  ) -> List[Sequence[Number]]:
     """Combines data from multipole runs into a pivot table like structure.
 
     Uses the first run as the base and aligns the data for each run by rows
@@ -157,7 +170,6 @@ class StatsBuilder(object):
     Returns:
       2d array with each row representing a step and each run represented as
       a column, e.g. step, run 1, run 2, median, and mean.
-
     """
     # Use the first event log's steps as the base and create aggregated data
     # at the step internals of the first event log.
@@ -176,7 +188,7 @@ class StatsBuilder(object):
       values.append(mean_val)
       entry += values
       agg_data.append(entry)
-    return agg_data
+    return agg_data  # pytype: disable=bad-return-type  # numpy-scalars
 
   def _output_csv(self, agg_data: List[Sequence[Number]]):
     """Exports the `agg_data` as a csv.
@@ -185,8 +197,9 @@ class StatsBuilder(object):
       agg_data: 2d array of data to export to csv.
     """
     # Outputs csv with aggregated data for each step.
-    csv_path = os.path.join(self.output_path,
-                            self.output_prefix + '_summary.csv')
+    csv_path = os.path.join(
+        self.output_path, self.output_prefix + '_summary.csv'
+    )
     with open(csv_path, 'w', newline='') as f:
       writer = csv.writer(f)
       writer.writerows(agg_data)
@@ -209,19 +222,22 @@ class StatsBuilder(object):
     new_pd = pd.melt(
         df,
         id_vars='step',
-        value_vars=list(df.columns[1:num_runs + 1]),
+        value_vars=list(df.columns[1 : num_runs + 1]),
         var_name='run',
-        value_name=self.yaxis_title)
+        value_name=self.yaxis_title,
+    )
     logging.info('DataFrame to graph:\n%s', new_pd)
     # Build graph
     plt.figure(figsize=(10, 5))
     ax = sns.lineplot(
-        data=new_pd, x='step', y=self.yaxis_title, estimator=self.graph_agg)
+        data=new_pd, x='step', y=self.yaxis_title, estimator=self.graph_agg
+    )
     ax.set_title(self.title)
     ax.set(xlabel=self.xaxis_title)
     plt.ticklabel_format(style='plain', axis='x')
-    graph_path = os.path.join(self.output_path,
-                              self.output_prefix + '_graph.png')
+    graph_path = os.path.join(
+        self.output_path, self.output_prefix + '_graph.png'
+    )
     plt.savefig(graph_path)
 
   def build_artifacts(self):
@@ -248,7 +264,8 @@ def main(_):
       yaxis_title=FLAGS.graph_yaxis_title,
       graph_agg=FLAGS.graph_agg,
       end_step=FLAGS.end_step,
-      show_graph=FLAGS.show_graph)
+      show_graph=FLAGS.show_graph,
+  )
 
   stat_builder.build_artifacts()
 

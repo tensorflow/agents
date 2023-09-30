@@ -21,10 +21,8 @@ from tf_agents.specs import array_spec
 from tf_agents.specs import bandit_spec_utils
 from tf_agents.specs import distribution_spec
 from tf_agents.specs import tensor_spec
-
 from tf_agents.specs.array_spec import ArraySpec
 from tf_agents.specs.array_spec import BoundedArraySpec
-
 from tf_agents.specs.tensor_spec import BoundedTensorSpec
 from tf_agents.specs.tensor_spec import from_spec
 from tf_agents.specs.tensor_spec import is_bounded

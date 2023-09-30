@@ -22,7 +22,6 @@ from __future__ import print_function
 import os
 
 from absl import flags
-
 import gin
 import numpy as np
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
@@ -40,13 +39,15 @@ def contains(list1, list2):
   Args:
     list1: List which may or may not contain list2.
     list2: List to check if included in list 1.
+
   Returns:
     A boolean indicating whether list2 is contained in list1.
   """
   contains_result = True
   for item2 in list2:
     contains_result = contains_result and np.any(
-        [np.all(item2 == item1) for item1 in list1])
+        [np.all(item2 == item1) for item1 in list1]
+    )
     if not contains_result:
       break
   return contains_result
@@ -56,15 +57,15 @@ def test_src_dir_path(relative_path):
   """Returns an absolute test srcdir path given a relative path.
 
   Args:
-    relative_path: a path relative to tf_agents root.
-      e.g. "environments/config".
+    relative_path: a path relative to tf_agents root. e.g.
+      "environments/config".
 
   Returns:
     An absolute path to the linked in runfiles.
   """
-  return os.path.join(FLAGS.test_srcdir,
-                      'tf_agents',
-                      relative_path)
+  return os.path.join(
+      FLAGS.test_srcdir, 'tf_agents', relative_path
+  )
 
 
 class TestCase(tf.test.TestCase):

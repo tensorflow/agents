@@ -21,7 +21,6 @@ from __future__ import print_function
 
 from absl import flags
 import numpy as np
-
 from tf_agents.environments import atari_wrappers
 from tf_agents.environments import py_environment
 from tf_agents.environments import suite_atari

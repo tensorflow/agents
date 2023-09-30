@@ -18,13 +18,12 @@
 Follow these instructions to install it:
 
 https://github.com/deepmind/dm_control#installation-and-requirements
-
 """
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-from typing import Any, Callable, Sequence, Text, TYPE_CHECKING
+from typing import Any, Callable, Sequence, TYPE_CHECKING, Text
 
 import gin
 from tf_agents.environments import dm_control_wrapper
@@ -54,11 +53,13 @@ def is_available() -> bool:
   return suite is not None
 
 
-def _load_env(domain_name: Text,
-              task_name: Text,
-              task_kwargs=None,
-              environment_kwargs=None,
-              visualize_reward: bool = False):
+def _load_env(
+    domain_name: Text,
+    task_name: Text,
+    task_kwargs=None,
+    environment_kwargs=None,
+    visualize_reward: bool = False,
+):
   """Loads a DM environment.
 
   Args:
@@ -84,7 +85,8 @@ def _load_env(domain_name: Text,
       task_name,
       task_kwargs=task_kwargs,
       environment_kwargs=environment_kwargs,
-      visualize_reward=visualize_reward)
+      visualize_reward=visualize_reward,
+  )
 
 
 @gin.configurable
@@ -95,7 +97,7 @@ def load(
     environment_kwargs=None,
     visualize_reward: bool = False,
     render_kwargs=None,
-    env_wrappers: Sequence[types.PyEnvWrapper] = ()
+    env_wrappers: Sequence[types.PyEnvWrapper] = (),
 ) -> py_environment.PyEnvironment:
   """Returns an environment from a domain name, task name and optional settings.
 
@@ -122,7 +124,8 @@ def load(
       task_name,
       task_kwargs=task_kwargs,
       environment_kwargs=environment_kwargs,
-      visualize_reward=visualize_reward)
+      visualize_reward=visualize_reward,
+  )
 
   env = dm_control_wrapper.DmControlWrapper(dmc_env, render_kwargs)
 
@@ -143,8 +146,7 @@ def load_pixels(
     visualize_reward: bool = False,
     render_kwargs=None,
     env_wrappers: Sequence[types.PyEnvWrapper] = (),
-    env_state_wrappers: Sequence[Callable[[DMEnvironment],
-                                          DMEnvironment]] = (),
+    env_state_wrappers: Sequence[Callable[[DMEnvironment], DMEnvironment]] = (),
 ) -> py_environment.PyEnvironment:
   """Returns an environment from a domain name, task name and optional settings.
 
@@ -180,7 +182,8 @@ def load_pixels(
       task_name,
       task_kwargs=task_kwargs,
       environment_kwargs=environment_kwargs,
-      visualize_reward=visualize_reward)
+      visualize_reward=visualize_reward,
+  )
 
   for wrapper in env_state_wrappers:
     dmc_env = wrapper(dmc_env)
@@ -189,7 +192,8 @@ def load_pixels(
       dmc_env,
       pixels_only=pixels_only,
       render_kwargs=render_kwargs,
-      observation_key=observation_key)
+      observation_key=observation_key,
+  )
   env = dm_control_wrapper.DmControlWrapper(dmc_env, render_kwargs)
 
   for wrapper in env_wrappers:

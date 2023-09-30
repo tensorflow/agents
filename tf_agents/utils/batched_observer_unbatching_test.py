@@ -35,7 +35,6 @@ from __future__ import print_function
 
 import reverb
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
-
 from tf_agents.drivers import py_driver
 from tf_agents.environments import parallel_py_environment
 from tf_agents.environments import suite_gym
@@ -58,7 +57,8 @@ class BatchedObserverUnbatchingTest(tf.test.TestCase):
       return observer
 
     unbatcher = batched_observer_unbatching.BatchedObserverUnbatching(
-        observer_fn, batch_size=2)
+        observer_fn, batch_size=2
+    )
 
     trajectory = trajectory_lib.Trajectory(
         action=tf.constant([0, 1]),
@@ -107,10 +107,12 @@ class BatchedObserverUnbatchingTest(tf.test.TestCase):
   def test_reverb_integration(self):
     num_envs = 3
     env = parallel_py_environment.ParallelPyEnvironment(
-        [lambda: suite_gym.load("CartPole-v0")] * num_envs)
+        [lambda: suite_gym.load("CartPole-v0")] * num_envs
+    )
 
-    policy = random_py_policy.RandomPyPolicy(env.time_step_spec(),
-                                             env.action_spec())
+    policy = random_py_policy.RandomPyPolicy(
+        env.time_step_spec(), env.action_spec()
+    )
 
     replay_buffer_signature = tensor_spec.from_spec(policy.collect_data_spec)
     replay_buffer_signature = tensor_spec.add_outer_dim(replay_buffer_signature)
@@ -132,10 +134,12 @@ class BatchedObserverUnbatchingTest(tf.test.TestCase):
       )
 
     rb_observer = batched_observer_unbatching.BatchedObserverUnbatching(
-        create_add_episode_observer, batch_size=num_envs)
+        create_add_episode_observer, batch_size=num_envs
+    )
 
     driver = py_driver.PyDriver(
-        env, policy, observers=[rb_observer], max_episodes=30)
+        env, policy, observers=[rb_observer], max_episodes=30
+    )
     driver.run(env.reset())
 
 

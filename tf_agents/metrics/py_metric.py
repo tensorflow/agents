@@ -26,7 +26,6 @@ from absl import logging
 import numpy as np
 import six
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
-
 from tf_agents.metrics import tf_metric
 from tf_agents.trajectories import trajectory as traj
 from tf_agents.typing import types
@@ -37,8 +36,10 @@ PyMetricType = types.ForwardRef('PyMetric')  # pylint: disable=invalid-name
 MetricType = Union[tf_metric.TFStepMetric, PyMetricType]
 
 
-def run_summaries(metrics: Sequence[PyMetricType],
-                  session: Optional[tf.compat.v1.Session] = None):
+def run_summaries(
+    metrics: Sequence[PyMetricType],
+    session: Optional[tf.compat.v1.Session] = None,
+):
   """Execute summary ops for py_metrics.
 
   Args:
@@ -57,17 +58,21 @@ def run_summaries(metrics: Sequence[PyMetricType],
     if default_session is None:
       raise AttributeError(
           'No TensorFlow session-like object was provided, and none '
-          'could be retrieved using \'tf.get_default_session()\'.')
+          "could be retrieved using 'tf.get_default_session()'."
+      )
     session = default_session
 
   for metric in metrics:
     if metric.summary_op is None:
-      raise RuntimeError('metric.tf_summaries() must be called on py_metric '
-                         '{} before attempting to run '
-                         'summaries.'.format(metric.name))
+      raise RuntimeError(
+          'metric.tf_summaries() must be called on py_metric '
+          '{} before attempting to run '
+          'summaries.'.format(metric.name)
+      )
   summary_ops = [metric.summary_op for metric in metrics]
   feed_dict = dict(
-      (metric.summary_placeholder, metric.result()) for metric in metrics)
+      (metric.summary_placeholder, metric.result()) for metric in metrics
+  )
   session.run(summary_ops, feed_dict=feed_dict)
 
 
@@ -99,9 +104,11 @@ class PyMetric(tf.Module):
     tag = common.join_scope(self.prefix, self.name)
     logging.info('%s', '{0} = {1}'.format(tag, self.result()))
 
-  def tf_summaries(self,
-                   train_step: types.Int = None,
-                   step_metrics: Sequence[MetricType] = ()) -> tf.Operation:
+  def tf_summaries(
+      self,
+      train_step: types.Int = None,
+      step_metrics: Sequence[MetricType] = (),
+  ) -> tf.Operation:
     """Build TF summary op and placeholder for this metric.
 
     To execute the op, call py_metric.run_summaries.
@@ -125,8 +132,11 @@ class PyMetric(tf.Module):
 
     tag = common.join_scope(self.prefix, self.name)
     summaries = []
-    summaries.append(tf.compat.v2.summary.scalar(
-        name=tag, data=self.summary_placeholder, step=train_step))
+    summaries.append(
+        tf.compat.v2.summary.scalar(
+            name=tag, data=self.summary_placeholder, step=train_step
+        )
+    )
     prefix = self.prefix
     if prefix:
       prefix += '_'
@@ -140,12 +150,16 @@ class PyMetric(tf.Module):
       elif isinstance(step_metric, tf_metric.TFStepMetric):
         step_tensor = step_metric.result()
       else:
-        raise ValueError('step_metric is not PyMetric or TFStepMetric: '
-                         '{}'.format(step_metric))
-      summaries.append(tf.compat.v2.summary.scalar(
-          name=step_tag,
-          data=self.summary_placeholder,
-          step=step_tensor))
+        raise ValueError(
+            'step_metric is not PyMetric or TFStepMetric: {}'.format(
+                step_metric
+            )
+        )
+      summaries.append(
+          tf.compat.v2.summary.scalar(
+              name=step_tag, data=self.summary_placeholder, step=step_tensor
+          )
+      )
 
     self._summary_op = tf.group(*summaries)
     return self._summary_op
@@ -160,7 +174,8 @@ class PyMetric(tf.Module):
       dtype = tf.as_dtype(result.dtype)
       shape = result.shape
       self._summary_placeholder = tf.compat.v1.placeholder(
-          dtype, shape=shape, name='{}_ph'.format(self.name))
+          dtype, shape=shape, name='{}_ph'.format(self.name)
+      )
     return self._summary_placeholder
 
   @property
@@ -176,6 +191,7 @@ class PyMetric(tf.Module):
 
     Args:
       metrics: a list of metrics, of the same class.
+
     Returns:
       The result of aggregating this metric.
     """

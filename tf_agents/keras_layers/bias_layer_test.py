@@ -21,7 +21,6 @@ from __future__ import print_function
 
 import numpy as np
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
-
 from tf_agents.keras_layers import bias_layer
 
 
@@ -43,7 +42,8 @@ class BiasLayerTest(tf.test.TestCase):
 
   def testTrainableVariables(self):
     bias = bias_layer.BiasLayer(
-        bias_initializer=tf.constant_initializer(value=1.0))
+        bias_initializer=tf.constant_initializer(value=1.0)
+    )
     states = tf.zeros((2, 3))
     _ = bias(states)
     self.evaluate(tf.compat.v1.global_variables_initializer())

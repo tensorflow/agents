@@ -26,7 +26,6 @@ import gym
 import gym.spaces
 import numpy as np
 import tensorflow as tf
-
 from tf_agents import specs
 from tf_agents.environments import py_environment
 from tf_agents.trajectories import time_step as ts
@@ -35,10 +34,12 @@ from tf_agents.typing import types
 from tensorflow.python.util import nest  # pylint:disable=g-direct-tensorflow-import  # TF internal
 
 
-def spec_from_gym_space(space: gym.Space,
-                        dtype_map: Optional[Dict[gym.Space, np.dtype]] = None,
-                        simplify_box_bounds: bool = True,
-                        name: Optional[Text] = None) -> specs.BoundedArraySpec:
+def spec_from_gym_space(
+    space: gym.Space,
+    dtype_map: Optional[Dict[gym.Space, np.dtype]] = None,
+    simplify_box_bounds: bool = True,
+    name: Optional[Text] = None,
+) -> specs.BoundedArraySpec:
   """Converts gym spaces into array specs.
 
   Gym does not properly define dtypes for spaces. By default all spaces set
@@ -80,8 +81,9 @@ def spec_from_gym_space(space: gym.Space,
   def nested_spec(spec, child_name):
     """Returns the nested spec with a unique name."""
     nested_name = name + '/' + child_name if name else child_name
-    return spec_from_gym_space(spec, dtype_map, simplify_box_bounds,
-                               nested_name)
+    return spec_from_gym_space(
+        spec, dtype_map, simplify_box_bounds, nested_name
+    )
 
   if isinstance(space, gym.spaces.Discrete):
     # Discrete spaces span the set {0, 1, ... , n-1} while Bounded Array specs
@@ -90,13 +92,16 @@ def spec_from_gym_space(space: gym.Space,
     # TODO(oars): change to use dtype in space once Gym is updated.
     dtype = dtype_map.get(gym.spaces.Discrete, np.int64)
     return specs.BoundedArraySpec(
-        shape=(), dtype=dtype, minimum=0, maximum=maximum, name=name)
+        shape=(), dtype=dtype, minimum=0, maximum=maximum, name=name
+    )
   elif isinstance(space, gym.spaces.MultiDiscrete):
     dtype = dtype_map.get(gym.spaces.MultiDiscrete, np.int32)
     maximum = try_simplify_array_to_value(
-        np.asarray(space.nvec - 1, dtype=dtype))
+        np.asarray(space.nvec - 1, dtype=dtype)
+    )
     return specs.BoundedArraySpec(
-        shape=space.shape, dtype=dtype, minimum=0, maximum=maximum, name=name)
+        shape=space.shape, dtype=dtype, minimum=0, maximum=maximum, name=name
+    )
   elif isinstance(space, gym.spaces.MultiBinary):
     dtype = dtype_map.get(gym.spaces.MultiBinary, np.int32)
     # Can remove this once we update gym.
@@ -105,7 +110,8 @@ def spec_from_gym_space(space: gym.Space,
     else:
       shape = tuple(space.n)
     return specs.BoundedArraySpec(
-        shape=shape, dtype=dtype, minimum=0, maximum=1, name=name)
+        shape=shape, dtype=dtype, minimum=0, maximum=1, name=name
+    )
   elif isinstance(space, gym.spaces.Box):
     if hasattr(space, 'dtype') and gym.spaces.Box not in dtype_map:
       dtype = space.dtype
@@ -128,17 +134,20 @@ def spec_from_gym_space(space: gym.Space,
         dtype=dtype,
         minimum=minimum,
         maximum=maximum,
-        name=name)
+        name=name,
+    )
   elif isinstance(space, gym.spaces.Tuple):
     return tuple(
-        [nested_spec(s, 'tuple_%d' % i) for i, s in enumerate(space.spaces)])
+        [nested_spec(s, 'tuple_%d' % i) for i, s in enumerate(space.spaces)]
+    )
   elif isinstance(space, gym.spaces.Dict):
-    return collections.OrderedDict([
-        (key, nested_spec(s, key)) for key, s in space.spaces.items()
-    ])
+    return collections.OrderedDict(
+        [(key, nested_spec(s, key)) for key, s in space.spaces.items()]
+    )
   else:
     raise ValueError(
-        'The gym space {} is currently not supported.'.format(space))
+        'The gym space {} is currently not supported.'.format(space)
+    )
 
 
 class GymWrapper(py_environment.PyEnvironment):
@@ -148,28 +157,36 @@ class GymWrapper(py_environment.PyEnvironment):
   observation spaces. See base class for py_environment.Base details.
   """
 
-  def __init__(self,
-               gym_env: gym.Env,
-               discount: types.Float = 1.0,
-               spec_dtype_map: Optional[Dict[gym.Space, np.dtype]] = None,
-               match_obs_space_dtype: bool = True,
-               auto_reset: bool = True,
-               simplify_box_bounds: bool = True,
-               render_kwargs: Optional[Dict[str, Any]] = None,
-               ):
+  def __init__(
+      self,
+      gym_env: gym.Env,
+      discount: types.Float = 1.0,
+      spec_dtype_map: Optional[Dict[gym.Space, np.dtype]] = None,
+      match_obs_space_dtype: bool = True,
+      auto_reset: bool = True,
+      simplify_box_bounds: bool = True,
+      render_kwargs: Optional[Dict[str, Any]] = None,
+  ):
     super(GymWrapper, self).__init__(auto_reset)
 
     self._gym_env = gym_env
     self._discount = discount
-    self._action_is_discrete = isinstance(self._gym_env.action_space,
-                                          gym.spaces.Discrete)
+    self._action_is_discrete = isinstance(
+        self._gym_env.action_space, gym.spaces.Discrete
+    )
     self._match_obs_space_dtype = match_obs_space_dtype
     self._observation_spec = spec_from_gym_space(
-        self._gym_env.observation_space, spec_dtype_map, simplify_box_bounds,
-        'observation')
-    self._action_spec = spec_from_gym_space(self._gym_env.action_space,
-                                            spec_dtype_map, simplify_box_bounds,
-                                            'action')
+        self._gym_env.observation_space,
+        spec_dtype_map,
+        simplify_box_bounds,
+        'observation',
+    )
+    self._action_spec = spec_from_gym_space(
+        self._gym_env.action_space,
+        spec_dtype_map,
+        simplify_box_bounds,
+        'action',
+    )
     self._flat_obs_spec = tf.nest.flatten(self._observation_spec)
     self._render_kwargs = render_kwargs or {}
     self._info = None
@@ -244,8 +261,9 @@ class GymWrapper(py_environment.PyEnvironment):
     matched_observations = []
     for spec, obs in zip(self._flat_obs_spec, flat_obs):
       matched_observations.append(np.asarray(obs, dtype=spec.dtype))
-    return tf.nest.pack_sequence_as(self._observation_spec,
-                                    matched_observations)
+    return tf.nest.pack_sequence_as(
+        self._observation_spec, matched_observations
+    )
 
   def observation_spec(self) -> types.NestedArraySpec:
     return self._observation_spec
@@ -271,4 +289,5 @@ class GymWrapper(py_environment.PyEnvironment):
 
   def get_state(self) -> Any:
     return self._gym.get_state()
+
   # pytype: enable=attribute-error

@@ -22,11 +22,9 @@ from __future__ import print_function
 import os
 
 from absl import flags
-
 import numpy as np
 import tensorflow as tf
 import tensorflow_probability as tfp
-
 from tf_agents.distributions import utils as distribution_utils
 from tf_agents.keras_layers import dynamic_unroll_layer
 from tf_agents.keras_layers import inner_reshape
@@ -53,13 +51,15 @@ class ActorNetwork(network.Network):
         [
             tf.keras.layers.Dense(50),
             tf.keras.layers.Dense(10),
-            tf.keras.layers.Dense(num_actions)
+            tf.keras.layers.Dense(num_actions),
         ],
-        input_spec=input_tensor_spec)  # pytype: disable=wrong-arg-types
+        input_spec=input_tensor_spec,
+    )  # pytype: disable=wrong-arg-types
     super(ActorNetwork, self).__init__(
         input_tensor_spec=input_tensor_spec,
         state_spec=self._sequential.state_spec,
-        name='TestActorNetwork')
+        name='TestActorNetwork',
+    )
 
   def call(self, observations, step_type=(), network_state=(), training=False):
     return self._sequential(observations, network_state)
@@ -74,9 +74,9 @@ class SequentialTest(test_utils.TestCase):
 
   def testCall(self):
     sequential = sequential_lib.Sequential(
-        [tf.keras.layers.Dense(4, use_bias=False),
-         tf.keras.layers.ReLU()],
-        input_spec=tf.TensorSpec((3,), tf.float32))  # pytype: disable=wrong-arg-types
+        [tf.keras.layers.Dense(4, use_bias=False), tf.keras.layers.ReLU()],
+        input_spec=tf.TensorSpec((3,), tf.float32),
+    )  # pytype: disable=wrong-arg-types
     inputs = np.ones((2, 3))
     out, state = sequential(inputs)
     self.assertEqual(state, ())
@@ -93,10 +93,12 @@ class SequentialTest(test_utils.TestCase):
             tf.keras.layers.Dense(2),
             tf.keras.layers.LSTM(2, return_state=True, return_sequences=True),
             tf.keras.layers.RNN(
-                tf.keras.layers.StackedRNNCells([
-                    tf.keras.layers.LSTMCell(1),
-                    tf.keras.layers.LSTMCell(32),
-                ],),
+                tf.keras.layers.StackedRNNCells(
+                    [
+                        tf.keras.layers.LSTMCell(1),
+                        tf.keras.layers.LSTMCell(32),
+                    ],
+                ),
                 return_state=True,
                 return_sequences=True,
             ),
@@ -108,11 +110,14 @@ class SequentialTest(test_utils.TestCase):
             tf.keras.layers.GRU(2, return_state=True, return_sequences=True),
             dynamic_unroll_layer.DynamicUnroll(tf.keras.layers.LSTMCell(2)),
             tf.keras.layers.Lambda(
-                lambda x: tfd.MultivariateNormalDiag(loc=x, scale_diag=x)),
+                lambda x: tfd.MultivariateNormalDiag(loc=x, scale_diag=x)
+            ),
         ],
-        input_spec=tf.TensorSpec((3,), tf.float32))  # pytype: disable=wrong-arg-types
+        input_spec=tf.TensorSpec((3,), tf.float32),
+    )  # pytype: disable=wrong-arg-types
     self.assertEqual(
-        sequential.input_tensor_spec, tf.TensorSpec((3,), tf.float32))
+        sequential.input_tensor_spec, tf.TensorSpec((3,), tf.float32)
+    )
 
     output_spec = sequential.create_variables()
     self.assertIsInstance(output_spec, distribution_utils.DistributionSpecV2)
@@ -142,7 +147,9 @@ class SequentialTest(test_utils.TestCase):
             (  # DynamicUnroll
                 tf.TensorSpec((2,), tf.float32),
                 tf.TensorSpec((2,), tf.float32),
-            )))
+            ),
+        ),
+    )
 
     inputs = tf.ones((8, 10, 3), dtype=tf.float32)
     dist, _ = sequential(inputs)
@@ -151,8 +158,8 @@ class SequentialTest(test_utils.TestCase):
 
   def testBuild(self):
     sequential = sequential_lib.Sequential(
-        [tf.keras.layers.Dense(4, use_bias=False),
-         tf.keras.layers.ReLU()])
+        [tf.keras.layers.Dense(4, use_bias=False), tf.keras.layers.ReLU()]
+    )
     inputs = np.ones((2, 3))
     out, _ = sequential(inputs)
     self.evaluate(tf.compat.v1.global_variables_initializer())
@@ -163,18 +170,20 @@ class SequentialTest(test_utils.TestCase):
     self.assertAllClose(expected, out)
 
   def testAllZeroLengthStateSpecsShowAsEmptyState(self):
-    sequential = sequential_lib.Sequential([
-        nest_map.NestMap({
-            'a': tf.keras.layers.Dense(2),
-            'b': tf.keras.layers.Dense(3),
-        })
-    ])
+    sequential = sequential_lib.Sequential(
+        [
+            nest_map.NestMap({
+                'a': tf.keras.layers.Dense(2),
+                'b': tf.keras.layers.Dense(3),
+            })
+        ]
+    )
     self.assertEqual(sequential.state_spec, ())
 
   def testTrainableVariables(self):
     sequential = sequential_lib.Sequential(
-        [tf.keras.layers.Dense(3),
-         tf.keras.layers.Dense(4)])
+        [tf.keras.layers.Dense(3), tf.keras.layers.Dense(4)]
+    )
     sequential.create_variables(tf.TensorSpec(shape=(3, 2)))
     self.evaluate(tf.compat.v1.global_variables_initializer())
     variables = self.evaluate(sequential.trainable_variables)
@@ -191,7 +200,8 @@ class SequentialTest(test_utils.TestCase):
     non_trainable_layer.trainable = False
 
     sequential = sequential_lib.Sequential(
-        [tf.keras.layers.Dense(3), non_trainable_layer])
+        [tf.keras.layers.Dense(3), non_trainable_layer]
+    )
     sequential.create_variables(tf.TensorSpec(shape=(3, 2)))
     self.evaluate(tf.compat.v1.global_variables_initializer())
     variables = self.evaluate(sequential.trainable_variables)
@@ -205,11 +215,11 @@ class SequentialTest(test_utils.TestCase):
 
   def testTrainableVariablesNestedNetwork(self):
     sequential_inner = sequential_lib.Sequential(
-        [tf.keras.layers.Dense(3),
-         tf.keras.layers.Dense(4)])
+        [tf.keras.layers.Dense(3), tf.keras.layers.Dense(4)]
+    )
     sequential = sequential_lib.Sequential(
-        [tf.keras.layers.Dense(3),
-         sequential_inner])
+        [tf.keras.layers.Dense(3), sequential_inner]
+    )
     sequential.create_variables(tf.TensorSpec(shape=(3, 2)))
     self.evaluate(tf.compat.v1.global_variables_initializer())
     variables = self.evaluate(sequential.trainable_variables)
@@ -225,8 +235,8 @@ class SequentialTest(test_utils.TestCase):
 
   def testCopy(self):
     sequential = sequential_lib.Sequential(
-        [tf.keras.layers.Dense(3),
-         tf.keras.layers.Dense(4, use_bias=False)])
+        [tf.keras.layers.Dense(3), tf.keras.layers.Dense(4, use_bias=False)]
+    )
     clone = type(sequential).from_config(sequential.get_config())
     self.assertLen(clone.layers, 2)
     for l1, l2 in zip(sequential.layers, clone.layers):
@@ -243,7 +253,8 @@ class SequentialTest(test_utils.TestCase):
     policy = actor_policy.ActorPolicy(time_step_tensor_spec, action_spec, net)
 
     sample = tensor_spec.sample_spec_nest(
-        time_step_tensor_spec, outer_dims=(5,))
+        time_step_tensor_spec, outer_dims=(5,)
+    )
 
     policy.action(sample)
 

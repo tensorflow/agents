@@ -19,7 +19,6 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 import numpy as np
-
 from tf_agents import specs
 from tf_agents.utils import test_utils
 
@@ -59,6 +58,7 @@ class SpecWithTensorflowTest(test_utils.TestCase):
     self.assertEqual(array_spec.maximum, tensor_spec.maximum)
     self.assertEqual(array_spec.name, tensor_spec.name)
     self.assertEqual(type(tensor_spec), specs.tensor_spec.BoundedTensorSpec)
+
 
 if __name__ == '__main__':
   test_utils.main()

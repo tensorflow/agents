@@ -57,7 +57,6 @@ from typing import Optional, Text
 
 import gin
 import tensorflow as tf
-
 from tf_agents.agents.ppo import ppo_agent
 from tf_agents.networks import network
 from tf_agents.trajectories import time_step as ts
@@ -102,7 +101,8 @@ class PPOClipAgent(ppo_agent.PPOAgent):
       debug_summaries: bool = False,
       summarize_grads_and_vars: bool = False,
       train_step_counter: Optional[tf.Variable] = None,
-      name: Optional[Text] = 'PPOClipAgent'):
+      name: Optional[Text] = 'PPOClipAgent',
+  ):
     """Creates a PPO Agent implementing the clipped probability ratios.
 
     Args:
@@ -126,7 +126,7 @@ class PPOClipAgent(ppo_agent.PPOAgent):
       policy_l2_reg: Coefficient for l2 regularization of unshared policy
         weights.
       value_function_l2_reg: Coefficient for l2 regularization of unshared value
-       function weights.
+        function weights.
       shared_vars_l2_reg: Coefficient for l2 regularization of weights shared
         between the policy and value functions.
       value_pred_loss_coef: Multiplier for value prediction loss to balance with
@@ -147,28 +147,17 @@ class PPOClipAgent(ppo_agent.PPOAgent):
         convert the observation spec received from the environment to tf.float32
         before creating the networks. Otherwise, the normalized input to the
         network (float32) will have a different dtype as what the network
-        expects, resulting in a mismatch error.
-
-        Example usage:
-          ```python
-          observation_tensor_spec, action_spec, time_step_tensor_spec = (
-            spec_utils.get_tensor_specs(env))
-          normalized_observation_tensor_spec = tf.nest.map_structure(
-            lambda s: tf.TensorSpec(
-              dtype=tf.float32, shape=s.shape, name=s.name
-            ),
-            observation_tensor_spec
-          )
-
-          actor_net = actor_distribution_network.ActorDistributionNetwork(
-            normalized_observation_tensor_spec, ...)
-          value_net = value_network.ValueNetwork(
-            normalized_observation_tensor_spec, ...)
-          # Note that the agent still uses the original time_step_tensor_spec
-          # from the environment.
-          agent = ppo_clip_agent.PPOClipAgent(
-            time_step_tensor_spec, action_spec, actor_net, value_net, ...)
-          ```
+        expects, resulting in a mismatch error.  Example usage: ```python
+        observation_tensor_spec, action_spec, time_step_tensor_spec = (
+        spec_utils.get_tensor_specs(env)) normalized_observation_tensor_spec =
+        tf.nest.map_structure( lambda s: tf.TensorSpec( dtype=tf.float32,
+        shape=s.shape, name=s.name ), observation_tensor_spec )  actor_net =
+        actor_distribution_network.ActorDistributionNetwork(
+        normalized_observation_tensor_spec, ...) value_net =
+        value_network.ValueNetwork( normalized_observation_tensor_spec, ...) #
+        Note that the agent still uses the original time_step_tensor_spec # from
+        the environment. agent = ppo_clip_agent.PPOClipAgent(
+        time_step_tensor_spec, action_spec, actor_net, value_net, ...) ```
       log_prob_clipping: +/- value for clipping log probs to prevent inf / NaN
         values.  Default: no clipping.
       gradient_clipping: Norm length to clip gradients.  Default: no clipping.
@@ -240,4 +229,5 @@ class PPOClipAgent(ppo_agent.PPOAgent):
         kl_cutoff_coef=0.0,
         initial_adaptive_kl_beta=0.0,
         adaptive_kl_target=0.0,
-        adaptive_kl_tolerance=0.0)
+        adaptive_kl_tolerance=0.0,
+    )

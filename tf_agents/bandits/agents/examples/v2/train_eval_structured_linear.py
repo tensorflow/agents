@@ -21,9 +21,9 @@ from __future__ import print_function
 
 import functools
 import os
+
 from absl import app
 from absl import flags
-
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 from tf_agents.bandits.agents import lin_ucb_agent
 from tf_agents.bandits.agents import linear_thompson_sampling_agent as lin_ts_agent
@@ -36,11 +36,17 @@ from tf_agents.bandits.metrics import tf_metrics as tf_bandit_metrics
 from tf_agents.environments import tf_py_environment
 from tf_agents.networks import q_network
 
-flags.DEFINE_string('root_dir', os.getenv('TEST_UNDECLARED_OUTPUTS_DIR'),
-                    'Root directory for writing logs/summaries/checkpoints.')
+flags.DEFINE_string(
+    'root_dir',
+    os.getenv('TEST_UNDECLARED_OUTPUTS_DIR'),
+    'Root directory for writing logs/summaries/checkpoints.',
+)
 flags.DEFINE_enum(
-    'agent', 'LinUCB', ['LinUCB', 'LinTS', 'epsGreedy'],
-    'Which agent to use. Possible values are `LinUCB` and `LinTS`.')
+    'agent',
+    'LinUCB',
+    ['LinUCB', 'LinTS', 'epsGreedy'],
+    'Which agent to use. Possible values are `LinUCB` and `LinTS`.',
+)
 
 FLAGS = flags.FLAGS
 
@@ -62,58 +68,71 @@ def main(unused_argv):
   with tf.device('/CPU:0'):  # due to b/128333994
     action_reward_fns = (
         environment_utilities.structured_linear_reward_fn_generator(
-            CONTEXT_DIM, NUM_ACTIONS, REWARD_NOISE_VARIANCE))
+            CONTEXT_DIM, NUM_ACTIONS, REWARD_NOISE_VARIANCE
+        )
+    )
 
     env = sspe.StationaryStochasticPyEnvironment(
         functools.partial(
             environment_utilities.context_sampling_fn,
             batch_size=BATCH_SIZE,
-            context_dim=CONTEXT_DIM),
+            context_dim=CONTEXT_DIM,
+        ),
         action_reward_fns,
-        batch_size=BATCH_SIZE)
+        batch_size=BATCH_SIZE,
+    )
     environment = tf_py_environment.TFPyEnvironment(env)
 
     optimal_reward_fn = functools.partial(
         environment_utilities.tf_compute_optimal_reward,
-        per_action_reward_fns=action_reward_fns)
+        per_action_reward_fns=action_reward_fns,
+    )
 
     optimal_action_fn = functools.partial(
         environment_utilities.tf_compute_optimal_action,
-        per_action_reward_fns=action_reward_fns)
+        per_action_reward_fns=action_reward_fns,
+    )
 
     if FLAGS.agent == 'LinUCB':
       agent = lin_ucb_agent.LinearUCBAgent(
           time_step_spec=environment.time_step_spec(),
           action_spec=environment.action_spec(),
           alpha=AGENT_ALPHA,
-          dtype=tf.float32)
+          dtype=tf.float32,
+      )
     elif FLAGS.agent == 'epsGreedy':
       laplacian_matrix = utils.build_laplacian_over_ordinal_integer_actions(
-          environment.action_spec())
+          environment.action_spec()
+      )
 
       network = q_network.QNetwork(
           input_tensor_spec=environment.time_step_spec().observation,
           action_spec=environment.action_spec(),
-          fc_layer_params=REWARD_NETWORK_LAYER_PARAMS)
+          fc_layer_params=REWARD_NETWORK_LAYER_PARAMS,
+      )
       agent = eps_greedy_agent.NeuralEpsilonGreedyAgent(
           time_step_spec=environment.time_step_spec(),
           action_spec=environment.action_spec(),
           reward_network=network,
           optimizer=tf.compat.v1.train.AdamOptimizer(
-              learning_rate=NN_LEARNING_RATE),
+              learning_rate=NN_LEARNING_RATE
+          ),
           epsilon=EPSILON,
           laplacian_matrix=laplacian_matrix,
-          laplacian_smoothing_weight=0.01)
+          laplacian_smoothing_weight=0.01,
+      )
     elif FLAGS.agent == 'LinTS':
       agent = lin_ts_agent.LinearThompsonSamplingAgent(
           time_step_spec=environment.time_step_spec(),
           action_spec=environment.action_spec(),
           alpha=AGENT_ALPHA,
-          dtype=tf.float32)
+          dtype=tf.float32,
+      )
 
     regret_metric = tf_bandit_metrics.RegretMetric(optimal_reward_fn)
     suboptimal_arms_metric = tf_bandit_metrics.SuboptimalArmsMetric(
-        optimal_action_fn)
+        optimal_action_fn
+    )
 
     trainer.train(
         root_dir=FLAGS.root_dir,
@@ -121,7 +140,8 @@ def main(unused_argv):
         environment=environment,
         training_loops=TRAINING_LOOPS,
         steps_per_loop=STEPS_PER_LOOP,
-        additional_metrics=[regret_metric, suboptimal_arms_metric])
+        additional_metrics=[regret_metric, suboptimal_arms_metric],
+    )
 
 
 if __name__ == '__main__':

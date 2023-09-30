@@ -44,7 +44,8 @@ class IntervalTrigger(object):
     if self._interval <= 0:
       logging.info(
           'IntervalTrigger will not be triggered because interval is set to %d',
-          self._interval)
+          self._interval,
+      )
 
   def __call__(self, value: int, force_trigger: bool = False) -> None:
     """Maybe trigger the event based on the interval.
@@ -58,7 +59,8 @@ class IntervalTrigger(object):
       return
 
     if (force_trigger and value != self._last_trigger_value) or (
-        value >= self._last_trigger_value + self._interval):
+        value >= self._last_trigger_value + self._interval
+    ):
       self._last_trigger_value = value
       self._fn()
 

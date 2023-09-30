@@ -25,7 +25,6 @@ import itertools
 from absl.testing import parameterized
 import numpy as np
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
-
 from tf_agents.utils import eager_utils
 from tf_agents.utils import test_utils
 
@@ -45,7 +44,8 @@ class Network(tf.keras.layers.Layer):
   def __init__(self, name=None):
     super(Network, self).__init__(name=name)
     self._layer = tf.keras.layers.Dense(
-        3, kernel_initializer=tf.keras.initializers.Ones(), name='logits')
+        3, kernel_initializer=tf.keras.initializers.Ones(), name='logits'
+    )
 
   def call(self, inputs):
     return self._layer(inputs)
@@ -141,7 +141,8 @@ class FutureTest(test_utils.TestCase, parameterized.TestCase):
     with run_mode():
       inputs, labels = input_fn()
       future = eager_utils.Future(
-          func_or_method, inputs=inputs, labels=labels, param=1)
+          func_or_method, inputs=inputs, labels=labels, param=1
+      )
       inputs, labels, param = future()
       self.assertAllEqual(self.evaluate(inputs), [[1, 2], [2, 3], [3, 4]])
       self.assertAllEqual(self.evaluate(labels), [[0], [1], [2]])
@@ -309,39 +310,46 @@ class ClipGradsTest(test_utils.TestCase):
     grads = tf.constant(4.0)
     gradients_to_variables = [(grads, xs)]
     clipped_gradients_to_variables = eager_utils.clip_gradient_norms(
-        gradients_to_variables, 3.0)
+        gradients_to_variables, 3.0
+    )
 
     self.evaluate(tf.compat.v1.global_variables_initializer())
     self.assertAlmostEqual(4.0, self.evaluate(gradients_to_variables[0][0]))
-    self.assertAlmostEqual(3.0,
-                           self.evaluate(clipped_gradients_to_variables[0][0]))
+    self.assertAlmostEqual(
+        3.0, self.evaluate(clipped_gradients_to_variables[0][0])
+    )
 
   def testClipGradsIndexedSlices(self):
     xs = tf.Variable(0.0)
-    grads = tf.IndexedSlices(values=tf.constant(4.0),
-                             indices=tf.constant([0]),
-                             dense_shape=None)
+    grads = tf.IndexedSlices(
+        values=tf.constant(4.0), indices=tf.constant([0]), dense_shape=None
+    )
     gradients_to_variables = [(grads, xs)]
     clipped_gradients_to_variables = eager_utils.clip_gradient_norms(
-        gradients_to_variables, 3.0)
+        gradients_to_variables, 3.0
+    )
 
     self.evaluate(tf.compat.v1.global_variables_initializer())
     self.assertAlmostEqual(
-        4.0, self.evaluate(gradients_to_variables[0][0].values))
+        4.0, self.evaluate(gradients_to_variables[0][0].values)
+    )
     self.assertAlmostEqual(
-        3.0, self.evaluate(clipped_gradients_to_variables[0][0].values))
+        3.0, self.evaluate(clipped_gradients_to_variables[0][0].values)
+    )
 
   def testClipGradsFn(self):
     xs = tf.Variable(0.0)
     grads = tf.constant(4.0)
     gradients_to_variables = [(grads, xs)]
     clipped_gradients_to_variables = eager_utils.clip_gradient_norms_fn(3.0)(
-        gradients_to_variables)
+        gradients_to_variables
+    )
 
     self.evaluate(tf.compat.v1.global_variables_initializer())
     self.assertAlmostEqual(4.0, self.evaluate(gradients_to_variables[0][0]))
-    self.assertAlmostEqual(3.0,
-                           self.evaluate(clipped_gradients_to_variables[0][0]))
+    self.assertAlmostEqual(
+        3.0, self.evaluate(clipped_gradients_to_variables[0][0])
+    )
 
 
 class CreateTrainOpTest(test_utils.TestCase):
@@ -369,8 +377,11 @@ class CreateTrainOpTest(test_utils.TestCase):
 
     @eager_utils.future_in_eager_mode
     def tuple_loss(loss, loss_2):
-      return (loss() if callable(loss) else loss,
-              loss_2() if callable(loss_2) else loss_2)
+      return (
+          loss() if callable(loss) else loss,
+          loss_2() if callable(loss_2) else loss_2,
+      )
+
     tuple_loss_value = tuple_loss(loss, loss_2)
 
     def first_element(tuple_value):
@@ -378,7 +389,8 @@ class CreateTrainOpTest(test_utils.TestCase):
 
     optimizer = tf.compat.v1.train.GradientDescentOptimizer(0.1)
     loss = eager_utils.create_train_step(
-        tuple_loss_value, optimizer, total_loss_fn=first_element)
+        tuple_loss_value, optimizer, total_loss_fn=first_element
+    )
     expected_loss = 1.098612
     self.evaluate(tf.compat.v1.global_variables_initializer())
     train_step_model_0, train_step_model_1 = self.evaluate(loss)
@@ -419,7 +431,8 @@ class CreateTrainOpTest(test_utils.TestCase):
     loss = model.loss_fn(inputs, labels)
     optimizer = tf.compat.v1.train.GradientDescentOptimizer(0.1)
     train_step = eager_utils.create_train_step(
-        loss, optimizer, variables_to_train=variables_to_train)
+        loss, optimizer, variables_to_train=variables_to_train
+    )
     expected_loss = 1.098612
     self.evaluate(tf.compat.v1.global_variables_initializer())
     self.assertAllClose(self.evaluate(train_step), expected_loss)
@@ -429,7 +442,6 @@ class CreateTrainOpTest(test_utils.TestCase):
 class HasSelfClsArgTest(test_utils.TestCase):
 
   def testDirect(self):
-
     def func():
       pass
 
@@ -462,9 +474,7 @@ class HasSelfClsArgTest(test_utils.TestCase):
     self.assertFalse(eager_utils.has_self_cls_arg(A.__dict__['static_method']))
 
   def testDecorator(self):
-
     def decorator(method):
-
       @functools.wraps(method)
       def _decorator(*args, **kwargs):
         method(*args, **kwargs)
@@ -519,60 +529,60 @@ class NpFunctionTest(test_utils.TestCase):
   @test_util.run_in_graph_and_eager_modes()
   def testMeshGrid(self):
     xv, yv = meshgrid(tf.constant(0), tf.constant(1))
-    self.assertAllEqual(self.evaluate(xv), [[0., 1.], [0., 1.], [0., 1.]])
-    self.assertAllEqual(self.evaluate(yv), [[0., 0.], [.5, .5], [1., 1.]])
-    xv, yv = meshgrid(tf.constant(0.), tf.constant(1.))
-    self.assertAllEqual(self.evaluate(xv), [[0., 1.], [0., 1.], [0., 1.]])
-    self.assertAllEqual(self.evaluate(yv), [[0., 0.], [.5, .5], [1., 1.]])
+    self.assertAllEqual(self.evaluate(xv), [[0.0, 1.0], [0.0, 1.0], [0.0, 1.0]])
+    self.assertAllEqual(self.evaluate(yv), [[0.0, 0.0], [0.5, 0.5], [1.0, 1.0]])
+    xv, yv = meshgrid(tf.constant(0.0), tf.constant(1.0))
+    self.assertAllEqual(self.evaluate(xv), [[0.0, 1.0], [0.0, 1.0], [0.0, 1.0]])
+    self.assertAllEqual(self.evaluate(yv), [[0.0, 0.0], [0.5, 0.5], [1.0, 1.0]])
 
   @test_util.run_in_graph_and_eager_modes()
   def testMeshGridKwargs(self):
     xv, yv = meshgrid(tf.constant(0), tf.constant(1), nx=2, ny=2)
-    self.assertAllEqual(self.evaluate(xv), [[0., 1.], [0., 1.]])
-    self.assertAllEqual(self.evaluate(yv), [[0., 0.], [1., 1.]])
+    self.assertAllEqual(self.evaluate(xv), [[0.0, 1.0], [0.0, 1.0]])
+    self.assertAllEqual(self.evaluate(yv), [[0.0, 0.0], [1.0, 1.0]])
 
   @test_util.run_in_graph_and_eager_modes()
   def testVariables(self):
     a, b = tf.Variable(0), tf.Variable(1)
     xv, yv = meshgrid(a, b, nx=2, ny=2)
     self.evaluate(tf.compat.v1.initializers.global_variables())
-    self.assertAllEqual(self.evaluate(xv), [[0., 1.], [0., 1.]])
-    self.assertAllEqual(self.evaluate(yv), [[0., 0.], [1., 1.]])
+    self.assertAllEqual(self.evaluate(xv), [[0.0, 1.0], [0.0, 1.0]])
+    self.assertAllEqual(self.evaluate(yv), [[0.0, 0.0], [1.0, 1.0]])
 
   @test_util.run_in_graph_and_eager_modes()
   def testGetOutputDtypesInts2Floats(self):
     x = tf.constant([1, 2, 3])
     mean_x = mean(x)
-    self.assertEqual(self.evaluate(mean_x), 2.)
+    self.assertEqual(self.evaluate(mean_x), 2.0)
 
   @test_util.run_in_graph_and_eager_modes()
   def testGetOutputDtypesFloats2Floats(self):
-    x = tf.constant([1., 2., 3.])
+    x = tf.constant([1.0, 2.0, 3.0])
     mean_x = mean(x)
-    self.assertEqual(self.evaluate(mean_x), 2.)
+    self.assertEqual(self.evaluate(mean_x), 2.0)
 
   @test_util.run_in_graph_and_eager_modes()
   def testIdentityDtypes(self):
     x = tf.constant([1])
     self.assertAllEqual(self.evaluate(repeat(x)), ([1], [1]))
-    y = tf.constant([1.])
-    self.assertAllEqual(self.evaluate(repeat(y)), ([1.], [1.]))
+    y = tf.constant([1.0])
+    self.assertAllEqual(self.evaluate(repeat(y)), ([1.0], [1.0]))
 
   @test_util.run_in_graph_and_eager_modes()
   def testInline(self):
     square = eager_utils.np_function(np.square)
     x = tf.constant([1, 2, 3])
     self.assertAllEqual([1, 4, 9], self.evaluate(square(x)))
-    y = tf.constant([1., 2., 3.])
-    self.assertAllEqual([1., 4., 9.], self.evaluate(square(y)))
+    y = tf.constant([1.0, 2.0, 3.0])
+    self.assertAllEqual([1.0, 4.0, 9.0], self.evaluate(square(y)))
 
   @test_util.run_in_graph_and_eager_modes()
   def testOutputDictionary(self):
     x = tf.constant([1])
-    y = tf.constant([1.])
+    y = tf.constant([1.0])
     outputs = dictionary(x, y)
     self.assertAllEqual([1], self.evaluate(outputs['x']))
-    self.assertAllEqual([1.], self.evaluate(outputs['y']))
+    self.assertAllEqual([1.0], self.evaluate(outputs['y']))
 
 
 @eager_utils.np_function(output_dtypes=np.float32)
@@ -618,8 +628,7 @@ class DatasetIteratorTest(test_utils.TestCase):
     ds = tf.data.Dataset.from_tensor_slices(data)
     itr = eager_utils.dataset_iterator(ds)
     for d in data:
-      self.assertEqual(np.array([d]),
-                       self.evaluate(eager_utils.get_next(itr)))
+      self.assertEqual(np.array([d]), self.evaluate(eager_utils.get_next(itr)))
 
 
 if __name__ == '__main__':

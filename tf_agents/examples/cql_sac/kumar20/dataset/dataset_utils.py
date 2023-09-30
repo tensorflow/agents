@@ -33,8 +33,7 @@ EpisodeDictType = Dict[str, np.ndarray]
 
 
 def create_collect_data_spec(
-    dataset_dict: EpisodeDictType,
-    use_trajectories: bool = True
+    dataset_dict: EpisodeDictType, use_trajectories: bool = True
 ) -> Union[trajectory.Transition, trajectory.Trajectory]:
   """Create a spec that describes the data collected by agent.collect_policy."""
   reward = dataset_dict['rewards'][0]
@@ -51,30 +50,36 @@ def create_collect_data_spec(
         policy_info=(),
         next_step_type=ArraySpec(shape=step_type.shape, dtype=step_type.dtype),
         reward=ArraySpec(shape=reward.shape, dtype=reward.dtype),
-        discount=ArraySpec(shape=discount.shape, dtype=discount.dtype))
+        discount=ArraySpec(shape=discount.shape, dtype=discount.dtype),
+    )
   else:
     time_step_spec = time_step.TimeStep(
         step_type=ArraySpec(shape=step_type.shape, dtype=step_type.dtype),
         reward=ArraySpec(shape=reward.shape, dtype=reward.dtype),
         discount=ArraySpec(shape=discount.shape, dtype=discount.dtype),
-        observation=ArraySpec(shape=observation.shape, dtype=observation.dtype))
+        observation=ArraySpec(shape=observation.shape, dtype=observation.dtype),
+    )
     action_spec = policy_step.PolicyStep(
         action=ArraySpec(shape=action.shape, dtype=action.dtype),
         state=(),
-        info=())
+        info=(),
+    )
     return trajectory.Transition(
         time_step=time_step_spec,
         action_step=action_spec,
-        next_time_step=time_step_spec)
+        next_time_step=time_step_spec,
+    )
 
 
-def create_episode_dataset(
+def create_episode_dataset(  # pytype: disable=annotation-type-mismatch  # numpy-scalars
     d4rl_dataset: Dict[str, D4RLListType],
     exclude_timeouts: bool,
-    observation_dtype: np.dtype = np.float32) -> EpisodeDictType:
+    observation_dtype: np.dtype = np.float32,
+) -> EpisodeDictType:
   """Create a dataset of episodes."""
   dataset = dict(
-      states=[], actions=[], rewards=[], discounts=[], episode_start_index=[])
+      states=[], actions=[], rewards=[], discounts=[], episode_start_index=[]
+  )
 
   new_episode = True
   for i in range(len(d4rl_dataset['observations'])):

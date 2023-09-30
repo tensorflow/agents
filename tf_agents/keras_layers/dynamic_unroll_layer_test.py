@@ -20,10 +20,8 @@ from __future__ import division
 from __future__ import print_function
 
 from absl.testing import parameterized
-
 import numpy as np
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
-
 from tf_agents.keras_layers import dynamic_unroll_layer
 
 
@@ -48,13 +46,18 @@ class DynamicUnrollTest(parameterized.TestCase, tf.test.TestCase):
 
   def testFromConfigLSTM(self):
     l1 = dynamic_unroll_layer.DynamicUnroll(
-        tf.keras.layers.LSTMCell(units=3), parallel_iterations=10)
+        tf.keras.layers.LSTMCell(units=3), parallel_iterations=10
+    )
     l2 = dynamic_unroll_layer.DynamicUnroll.from_config(l1.get_config())
     self.assertEqual(l1.get_config(), l2.get_config())
 
   @parameterized.named_parameters(
-      ('WithMask', True,),
-      ('NoMask', False))
+      (
+          'WithMask',
+          True,
+      ),
+      ('NoMask', False),
+  )
   def testDynamicUnrollMatchesDynamicRNNWhenNoReset(self, with_mask):
     cell = tf.compat.v1.nn.rnn_cell.LSTMCell(3)
     batch_size = 4
@@ -67,19 +70,27 @@ class DynamicUnrollTest(parameterized.TestCase, tf.test.TestCase):
       reset_mask = None
     outputs_dun, final_state_dun = layer(inputs, reset_mask=reset_mask)
     outputs_drnn, final_state_drnn = tf.compat.v1.nn.dynamic_rnn(
-        cell, inputs, dtype=tf.float32)
+        cell, inputs, dtype=tf.float32
+    )
     self.evaluate(tf.compat.v1.global_variables_initializer())
     outputs_dun, final_state_dun, outputs_drnn, final_state_drnn = (
         self.evaluate(
-            (outputs_dun, final_state_dun, outputs_drnn, final_state_drnn)))
+            (outputs_dun, final_state_dun, outputs_drnn, final_state_drnn)
+        )
+    )
     self.assertAllClose(outputs_dun, outputs_drnn)
     self.assertAllClose(final_state_dun, final_state_drnn)
 
   @parameterized.named_parameters(
-      ('WithMask', True,),
-      ('NoMask', False))
+      (
+          'WithMask',
+          True,
+      ),
+      ('NoMask', False),
+  )
   def testDynamicUnrollMatchesDynamicRNNWhenNoResetSingleTimeStep(
-      self, with_mask):
+      self, with_mask
+  ):
     cell = tf.compat.v1.nn.rnn_cell.LSTMCell(3)
     batch_size = 4
     max_time = 1
@@ -91,11 +102,14 @@ class DynamicUnrollTest(parameterized.TestCase, tf.test.TestCase):
       reset_mask = None
     outputs_dun, final_state_dun = layer(inputs, reset_mask=reset_mask)
     outputs_drnn, final_state_drnn = tf.compat.v1.nn.dynamic_rnn(
-        cell, inputs, dtype=tf.float32)
+        cell, inputs, dtype=tf.float32
+    )
     self.evaluate(tf.compat.v1.global_variables_initializer())
     outputs_dun, final_state_dun, outputs_drnn, final_state_drnn = (
         self.evaluate(
-            (outputs_dun, final_state_dun, outputs_drnn, final_state_drnn)))
+            (outputs_dun, final_state_dun, outputs_drnn, final_state_drnn)
+        )
+    )
     self.assertAllClose(outputs_dun, outputs_drnn)
     self.assertAllClose(final_state_dun, final_state_drnn)
 
@@ -111,13 +125,19 @@ class DynamicUnrollTest(parameterized.TestCase, tf.test.TestCase):
     outputs_no_time, next_state_no_time = layer(inputs_no_time)
     self.evaluate(tf.compat.v1.global_variables_initializer())
     outputs_squeezed_time, next_state, outputs_no_time, next_state_no_time = (
-        self.evaluate((outputs_squeezed_time, next_state,
-                       outputs_no_time, next_state_no_time)))
+        self.evaluate((
+            outputs_squeezed_time,
+            next_state,
+            outputs_no_time,
+            next_state_no_time,
+        ))
+    )
     self.assertAllEqual(outputs_squeezed_time, outputs_no_time)
     self.assertAllEqual(next_state, next_state_no_time)
 
   def testDynamicUnrollResetsStateOnReset(self):
     if hasattr(tf, 'contrib'):
+
       class AddInputAndStateRNNCell(tf.contrib.rnn.LayerRNNCell):
 
         @property
@@ -132,18 +152,16 @@ class DynamicUnrollTest(parameterized.TestCase, tf.test.TestCase):
           s = input_ + state
           return s, s
 
-      self._testDynamicUnrollResetsStateOnReset(
-          AddInputAndStateRNNCell)
+      self._testDynamicUnrollResetsStateOnReset(AddInputAndStateRNNCell)
 
-    self._testDynamicUnrollResetsStateOnReset(
-        AddInputAndStateKerasRNNCell)
+    self._testDynamicUnrollResetsStateOnReset(AddInputAndStateKerasRNNCell)
 
   def _testDynamicUnrollResetsStateOnReset(self, cell_type):
     cell = cell_type()
     batch_size = 4
     max_time = 7
     inputs = tf.random.uniform((batch_size, max_time, 1))
-    reset_mask = (tf.random.normal((batch_size, max_time)) > 0)
+    reset_mask = tf.random.normal((batch_size, max_time)) > 0
 
     layer = dynamic_unroll_layer.DynamicUnroll(cell, dtype=tf.float32)
     outputs, final_state = layer(inputs, reset_mask=reset_mask)
@@ -152,7 +170,8 @@ class DynamicUnrollTest(parameterized.TestCase, tf.test.TestCase):
     tf.nest.assert_same_structure(final_state, cell.state_size)
 
     reset_mask, inputs, outputs, final_state = self.evaluate(
-        (reset_mask, inputs, outputs, final_state))
+        (reset_mask, inputs, outputs, final_state)
+    )
 
     self.assertAllClose(outputs[:, -1, :], final_state)
 

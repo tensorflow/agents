@@ -20,7 +20,6 @@ r"""Generate docs for TF-Agents.
 ```
 python build_docs.py --output_dir=/path/to/output
 ```
-
 """
 
 from __future__ import absolute_import
@@ -54,18 +53,23 @@ from tf_agents import trajectories
 from tf_agents import utils
 # pylint: enable=unused-import
 
-flags.DEFINE_string('output_dir', '/tmp/agents_api/',
-                    'The path to output the files to')
+flags.DEFINE_string(
+    'output_dir', '/tmp/agents_api/', 'The path to output the files to'
+)
 
-flags.DEFINE_string('code_url_prefix',
-                    'https://github.com/tensorflow/agents/blob/master/',
-                    'The url prefix for links to code.')
+flags.DEFINE_string(
+    'code_url_prefix',
+    'https://github.com/tensorflow/agents/blob/master/',
+    'The url prefix for links to code.',
+)
 
-flags.DEFINE_bool('search_hints', True,
-                  'Include metadata search hints in the generated files')
+flags.DEFINE_bool(
+    'search_hints', True, 'Include metadata search hints in the generated files'
+)
 
-flags.DEFINE_string('site_path', 'agents/api_docs/python',
-                    'Path prefix in the _toc.yaml')
+flags.DEFINE_string(
+    'site_path', 'agents/api_docs/python', 'Path prefix in the _toc.yaml'
+)
 
 FLAGS = flags.FLAGS
 
@@ -75,7 +79,8 @@ def main(_):
     doc_controls.decorate_all_class_attributes(
         decorator=doc_controls.do_not_doc_in_subclasses,
         cls=cls,
-        skip=['__init__'])
+        skip=['__init__'],
+    )
 
   doc_generator = generate_lib.DocGenerator(
       root_title='TF-Agents',
@@ -85,7 +90,8 @@ def main(_):
       search_hints=FLAGS.search_hints,
       site_path=FLAGS.site_path,
       private_map={},
-      callbacks=[public_api.local_definitions_filter])
+      callbacks=[public_api.local_definitions_filter],
+  )
 
   sys.exit(doc_generator.build(output_dir=FLAGS.output_dir))
 

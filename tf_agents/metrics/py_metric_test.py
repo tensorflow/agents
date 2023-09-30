@@ -24,7 +24,6 @@ import os
 import tempfile
 
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
-
 from tf_agents.metrics import py_metric
 
 
@@ -73,8 +72,7 @@ class PyMetricSummariesTest(tf.test.TestCase):
         continue
       self.assertEqual(value, tf.make_ndarray(record.summary.value[0].tensor))
       return
-    self.fail(
-        'Could not find record for tag {} and step {}'.format(tag, step))
+    self.fail('Could not find record for tag {} and step {}'.format(tag, step))
 
   def get_records(self):
     files = os.listdir(self.summary_dir)
@@ -138,9 +136,11 @@ class PyMetricSummariesTest(tf.test.TestCase):
       self.skipTest('b/123881100')
     with tf.compat.v2.summary.record_if(True):
       self.metric1.tf_summaries(
-          train_step=self.global_step, step_metrics=(self.metric2,))
+          train_step=self.global_step, step_metrics=(self.metric2,)
+      )
       self.metric2.tf_summaries(
-          train_step=self.global_step, step_metrics=(self.metric2,))
+          train_step=self.global_step, step_metrics=(self.metric2,)
+      )
 
     with self.cached_session() as sess:
       sess.run(tf.compat.v1.global_variables_initializer())
@@ -165,9 +165,11 @@ class PyMetricSummariesTest(tf.test.TestCase):
       self.skipTest('b/123881100')
     with tf.compat.v2.summary.record_if(True):
       self.metric1.tf_summaries(
-          train_step=self.global_step, step_metrics=(self.metric2,))
+          train_step=self.global_step, step_metrics=(self.metric2,)
+      )
       self.metric2.tf_summaries(
-          train_step=self.global_step, step_metrics=(self.metric2,))
+          train_step=self.global_step, step_metrics=(self.metric2,)
+      )
 
     with self.cached_session() as sess:
       sess.run(tf.compat.v1.global_variables_initializer())
@@ -193,14 +195,14 @@ class PyMetricSummariesTest(tf.test.TestCase):
       self.skipTest('b/123881100')
     with tf.compat.v2.summary.record_if(True):
       self.metric1.tf_summaries(
-          train_step=self.global_step,
-          step_metrics=(self.metric2, self.metric3))
+          train_step=self.global_step, step_metrics=(self.metric2, self.metric3)
+      )
       self.metric2.tf_summaries(
-          train_step=self.global_step,
-          step_metrics=(self.metric2, self.metric3))
+          train_step=self.global_step, step_metrics=(self.metric2, self.metric3)
+      )
       self.metric3.tf_summaries(
-          train_step=self.global_step,
-          step_metrics=(self.metric2, self.metric3))
+          train_step=self.global_step, step_metrics=(self.metric2, self.metric3)
+      )
 
     with self.cached_session() as sess:
       sess.run(tf.compat.v1.global_variables_initializer())

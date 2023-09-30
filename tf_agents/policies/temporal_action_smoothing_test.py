@@ -22,7 +22,6 @@ from absl.testing import parameterized
 import numpy as np
 from six.moves import range
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
-
 from tf_agents.policies import temporal_action_smoothing
 from tf_agents.policies import tf_policy
 from tf_agents.specs import tensor_spec
@@ -40,11 +39,11 @@ class StateIncrementPolicy(tf_policy.TFPolicy):
         policy_state_spec=action_spec,
     )
 
-  def _action(self, time_step, policy_state, seed):
+  def _action(self, time_step, policy_state, seed):  # pytype: disable=signature-mismatch  # overriding-parameter-count-checks
     actions = tf.nest.map_structure(lambda t: t + 1, policy_state)
     return policy_step.PolicyStep(actions, actions, ())
 
-  def _distribution(self):
+  def _distribution(self):  # pytype: disable=signature-mismatch  # overriding-parameter-count-checks
     return policy_step.PolicyStep(())
 
 
@@ -58,8 +57,9 @@ class TemporalActionSmoothingTest(parameterized.TestCase, test_utils.TestCase):
 
   @property
   def _time_step(self):
-    return ts.transition(tf.constant([[1, 2]], dtype=tf.float32),
-                         reward=tf.constant([1.]))
+    return ts.transition(
+        tf.constant([[1, 2]], dtype=tf.float32), reward=tf.constant([1.0])
+    )
 
   def testStateIncrementPolicy(self):
     policy = StateIncrementPolicy(self._time_step_spec, self._action_spec)
@@ -70,22 +70,24 @@ class TemporalActionSmoothingTest(parameterized.TestCase, test_utils.TestCase):
     self.assertEqual(2, self.evaluate(step.action))
 
   @parameterized.named_parameters(
-      ('0p0', 0.0, [1., 2., 3., 4., 5.]),
+      ('0p0', 0.0, [1.0, 2.0, 3.0, 4.0, 5.0]),
       ('0p5', 0.5, [0.5, 1.25, 2.125, 3.0625, 4.03125]),
-      ('1p0', 1.0, [0., 0., 0., 0., 0.]),
+      ('1p0', 1.0, [0.0, 0.0, 0.0, 0.0, 0.0]),
   )
   def testSmoothedActions(self, smoothing_coefficient, expected_actions):
     # Set up the smoothing policy.
     policy = StateIncrementPolicy(self._time_step_spec, self._action_spec)
     smoothed_policy = temporal_action_smoothing.TemporalActionSmoothing(
-        policy, smoothing_coefficient)
+        policy, smoothing_coefficient
+    )
 
     # Create actions sampled in time order.
     policy_state = smoothed_policy.get_initial_state(batch_size=1)
     smoothed_actions = []
     for _ in range(5):
       action, policy_state, unused_policy_info = smoothed_policy.action(
-          self._time_step, policy_state=policy_state)
+          self._time_step, policy_state=policy_state
+      )
       smoothed_actions.append(action)
 
     # Make sure smoothed actions are as expected.
@@ -96,7 +98,8 @@ class TemporalActionSmoothingTest(parameterized.TestCase, test_utils.TestCase):
     # Set up the smoothing policy.
     policy = StateIncrementPolicy(self._time_step_spec, self._action_spec)
     smoothed_policy = temporal_action_smoothing.TemporalActionSmoothing(
-        policy, smoothing_coefficient=0.5)
+        policy, smoothing_coefficient=0.5
+    )
 
     # Create actions sampled in time order.
     policy_state = smoothed_policy.get_initial_state(batch_size=1)

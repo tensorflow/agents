@@ -21,7 +21,6 @@ from __future__ import print_function
 
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 import tensorflow_probability as tfp
-
 from tf_agents.bandits.environments import non_stationary_stochastic_environment as nsse
 from tf_agents.specs import tensor_spec
 
@@ -37,26 +36,24 @@ class DummyDynamics(nsse.EnvironmentDynamics):
   @property
   def observation_spec(self):
     return tensor_spec.TensorSpec(
-        shape=[3],
-        dtype=tf.float32,
-        name='observation_spec')
+        shape=[3], dtype=tf.float32, name='observation_spec'
+    )
 
   @property
   def action_spec(self):
     return tensor_spec.BoundedTensorSpec(
-        shape=(),
-        dtype=tf.int32,
-        minimum=0,
-        maximum=5,
-        name='action')
+        shape=(), dtype=tf.int32, minimum=0, maximum=5, name='action'
+    )
 
   def observation(self, t):
-    return (tf.constant([[1.0, 2.0, 3.0], [0.0, 4.0, 5.0]], dtype=tf.float32) +
-            tf.reshape(tf.cast(t, dtype=tf.float32), [1, 1]))
+    return tf.constant(
+        [[1.0, 2.0, 3.0], [0.0, 4.0, 5.0]], dtype=tf.float32
+    ) + tf.reshape(tf.cast(t, dtype=tf.float32), [1, 1])
 
   def reward(self, observation, t):
-    return (tf.concat([observation, tf.zeros([2, 2])], axis=1) -
-            tf.reshape(tf.cast(t, dtype=tf.float32), [1, 1]))
+    return tf.concat([observation, tf.zeros([2, 2])], axis=1) - tf.reshape(
+        tf.cast(t, dtype=tf.float32), [1, 1]
+    )
 
 
 class NonStationaryStochasticEnvironmentTest(tf.test.TestCase):
@@ -78,7 +75,8 @@ class NonStationaryStochasticEnvironmentTest(tf.test.TestCase):
         reward = env.step(tf.zeros([2])).reward
 
         [observation_sample, reward_sample, env_time_sample] = self.evaluate(
-            [observation, reward, env_time])
+            [observation, reward, env_time]
+        )
         observation_samples.append(observation_sample)
         reward_samples.append(reward_sample)
         self.assertEqual(env_time_sample, (t + 1) * dynamics.batch_size)
@@ -102,10 +100,15 @@ class NonStationaryStochasticEnvironmentTest(tf.test.TestCase):
 
     for t in range(0, 10):
       t_b = t * dynamics.batch_size
-      self.assertAllClose(observation_samples[t],
-                          [[1.0 + t_b, 2.0 + t_b, 3.0 + t_b],
-                           [0.0 + t_b, 4.0 + t_b, 5.0 + t_b]])
+      self.assertAllClose(
+          observation_samples[t],
+          [
+              [1.0 + t_b, 2.0 + t_b, 3.0 + t_b],
+              [0.0 + t_b, 4.0 + t_b, 5.0 + t_b],
+          ],
+      )
       self.assertAllClose(reward_samples[t], [1, 0])
+
 
 if __name__ == '__main__':
   tf.test.main()

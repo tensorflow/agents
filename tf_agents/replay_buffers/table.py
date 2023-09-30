@@ -26,7 +26,6 @@ from __future__ import division
 from __future__ import print_function
 
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
-
 from tf_agents.utils import common
 
 
@@ -41,6 +40,7 @@ class Table(tf.Module):
         stored in the table.
       capacity: Maximum number of values the table can store.
       scope: Variable scope for the Table.
+
     Raises:
       ValueError: If the names in tensor_spec are empty or not unique.
     """
@@ -51,8 +51,9 @@ class Table(tf.Module):
     def _create_unique_slot_name(spec):
       return tf.compat.v1.get_default_graph().unique_name(spec.name or 'slot')
 
-    self._slots = tf.nest.map_structure(_create_unique_slot_name,
-                                        self._tensor_spec)
+    self._slots = tf.nest.map_structure(
+        _create_unique_slot_name, self._tensor_spec
+    )
 
     def _create_storage(spec, slot_name):
       """Create storage for a slot, track it."""
@@ -62,15 +63,18 @@ class Table(tf.Module):
           initializer=tf.zeros(shape, dtype=spec.dtype),
           shape=None,
           dtype=spec.dtype,
-          unique_name=False)
+          unique_name=False,
+      )
       return new_storage
 
     with tf.compat.v1.variable_scope(scope):
-      self._storage = tf.nest.map_structure(_create_storage, self._tensor_spec,
-                                            self._slots)
+      self._storage = tf.nest.map_structure(
+          _create_storage, self._tensor_spec, self._slots
+      )
 
     self._slot2storage_map = dict(
-        zip(tf.nest.flatten(self._slots), tf.nest.flatten(self._storage)))
+        zip(tf.nest.flatten(self._slots), tf.nest.flatten(self._storage))
+    )
 
   @property
   def slots(self):
@@ -112,12 +116,11 @@ class Table(tf.Module):
       rows: A scalar/list/tensor of location(s) to write values at.
       values: A nest of Tensors to write. If rows has more than one element,
         values can have an extra first dimension representing the batch size.
-        Values must have the same structure as the tensor_spec of this class
-        if `slots` is None, otherwise it must have the same structure as
-        `slots`.
-      slots: Optional list/tuple/nest of slots to write. If None, all tensors
-        in the table are updated. Otherwise, only tensors with names matching
-        the slots are updated.
+        Values must have the same structure as the tensor_spec of this class if
+        `slots` is None, otherwise it must have the same structure as `slots`.
+      slots: Optional list/tuple/nest of slots to write. If None, all tensors in
+        the table are updated. Otherwise, only tensors with names matching the
+        slots are updated.
 
     Returns:
       Ops for writing values at rows.
@@ -126,8 +129,9 @@ class Table(tf.Module):
     flattened_slots = tf.nest.flatten(slots)
     flattened_values = tf.nest.flatten(values)
     write_ops = [
-        tf.compat.v1.scatter_update(self._slot2storage_map[slot], rows,
-                                    value).op
+        tf.compat.v1.scatter_update(
+            self._slot2storage_map[slot], rows, value
+        ).op
         for (slot, value) in zip(flattened_slots, flattened_values)
     ]
     return tf.group(*write_ops)

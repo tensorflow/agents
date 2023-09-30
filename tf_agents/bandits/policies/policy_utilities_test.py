@@ -21,7 +21,6 @@ from __future__ import print_function
 
 from absl.testing import parameterized
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
-
 from tf_agents.policies import utils as policy_utilities
 from tf_agents.specs import tensor_spec
 from tf_agents.trajectories import policy_step
@@ -38,15 +37,19 @@ class PolicyUtilitiesTest(test_utils.TestCase, parameterized.TestCase):
       dict(
           input_tensor=[[4, 8, 2, -3], [0, 5, -234, 64]],
           mask=[[1, 0, 0, 1], [0, 1, 1, 1]],
-          expected=[0, 3]),
+          expected=[0, 3],
+      ),
       dict(
           input_tensor=[[3, 0.2, -3.3], [987, -2.5, 64], [0, 0, 0], [4, 3, 8]],
           mask=[[1, 0, 0], [1, 0, 1], [1, 1, 1], [0, 1, 1]],
-          expected=[0, 0, 0, 2]),
-      dict(input_tensor=[[1, 2]], mask=[[1, 0]], expected=[0]))
+          expected=[0, 0, 0, 2],
+      ),
+      dict(input_tensor=[[1, 2]], mask=[[1, 0]], expected=[0]),
+  )
   def testMaskedArgmax(self, input_tensor, mask, expected):
     actual = policy_utilities.masked_argmax(
-        tf.constant(input_tensor, dtype=tf.float32), tf.constant(mask))
+        tf.constant(input_tensor, dtype=tf.float32), tf.constant(mask)
+    )
     self.assertAllEqual(actual, expected)
 
   def testBadMask(self):
@@ -54,30 +57,35 @@ class PolicyUtilitiesTest(test_utils.TestCase, parameterized.TestCase):
     mask = [[1, 0, 0, 1], [0, 0, 0, 0], [1, 0, 1, 1]]
     expected = [3, -1, 3]
     actual = self.evaluate(
-        policy_utilities.masked_argmax(input_tensor, tf.constant(mask)))
+        policy_utilities.masked_argmax(input_tensor, tf.constant(mask))
+    )
     self.assertAllEqual(actual, expected)
 
   def testNumActionsFromTensorSpecGoodSpec(self):
     action_spec = tensor_spec.BoundedTensorSpec(
-        dtype=tf.int32, shape=(), minimum=0, maximum=15)
+        dtype=tf.int32, shape=(), minimum=0, maximum=15
+    )
     num_actions = policy_utilities.get_num_actions_from_tensor_spec(action_spec)
     self.assertEqual(num_actions, 16)
 
   def testNumActionsFromTensorSpecWrongRank(self):
     action_spec = tensor_spec.BoundedTensorSpec(
-        dtype=tf.int32, shape=(2, 3), minimum=0, maximum=15)
+        dtype=tf.int32, shape=(2, 3), minimum=0, maximum=15
+    )
 
     with self.assertRaisesRegex(ValueError, r'Action spec must be a scalar'):
       policy_utilities.get_num_actions_from_tensor_spec(action_spec)
 
   def testSetBanditPolicyType(self):
     dims = (10, 1)
-    bandit_policy_spec = (
-        policy_utilities.create_bandit_policy_type_tensor_spec(dims))
+    bandit_policy_spec = policy_utilities.create_bandit_policy_type_tensor_spec(
+        dims
+    )
     info = policy_utilities.set_bandit_policy_type(None, bandit_policy_spec)
     self.assertIsInstance(info, policy_utilities.PolicyInfo)
-    self.assertIsInstance(info.bandit_policy_type,
-                          tensor_spec.BoundedTensorSpec)
+    self.assertIsInstance(
+        info.bandit_policy_type, tensor_spec.BoundedTensorSpec
+    )
     self.assertEqual(info.bandit_policy_type.shape, dims)
     self.assertEqual(info.bandit_policy_type.dtype, tf.int32)
     # Set to tensor.
@@ -101,10 +109,9 @@ class PolicyUtilitiesTest(test_utils.TestCase, parameterized.TestCase):
     dims = (10, 1)
     input_tensor = tf.fill(dims, value=_GREEDY)
     # Overwrite some values with UNIFORM.
-    mask_idx = (range(dims[0])[1:dims[0]:2])
+    mask_idx = range(dims[0])[1 : dims[0] : 2]
     mask = [[True if idx in mask_idx else False] for idx in range(dims[0])]
-    expected = [[_UNIFORM if mask_value[0]  else _GREEDY]
-                for mask_value in mask]
+    expected = [[_UNIFORM if mask_value[0] else _GREEDY] for mask_value in mask]
     result = policy_utilities.bandit_policy_uniform_mask(input_tensor, mask)
     self.assertAllEqual(result, expected)
 

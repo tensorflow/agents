@@ -26,7 +26,8 @@ class KerasLayersNet(network.Network):
 
   def __init__(self, observation_spec, action_spec, layer, name=None):
     super(KerasLayersNet, self).__init__(
-        observation_spec, state_spec=(), name=name)
+        observation_spec, state_spec=(), name=name
+    )
     self._layer = layer
 
   def call(self, inputs, step_type=None, network_state=()):

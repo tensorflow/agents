@@ -38,15 +38,16 @@ class FixedPolicyTest(test_utils.TestCase):
     self._time_step_spec = ts.time_step_spec(self._obs_spec)
     self._num_actions = 4
     self._action_spec = tensor_spec.BoundedTensorSpec(
-        shape=(1,), dtype=tf.int32,
-        minimum=0, maximum=self._num_actions - 1)
+        shape=(1,), dtype=tf.int32, minimum=0, maximum=self._num_actions - 1
+    )
 
     # The policy always outputs the same action.
     self._fixed_action = 1
     self._policy = fixed_policy.FixedPolicy(
         np.asarray([self._fixed_action], dtype=np.int32),
         self._time_step_spec,
-        self._action_spec)
+        self._action_spec,
+    )
 
   def testFixedPolicySingle(self):
     observations = tf.constant([1, 2], dtype=tf.float32)
@@ -56,8 +57,7 @@ class FixedPolicyTest(test_utils.TestCase):
     mode = distribution_step.action.mode()
 
     self.evaluate(tf.compat.v1.global_variables_initializer())
-    self.assertAllEqual(self.evaluate(action_step.action),
-                        [self._fixed_action])
+    self.assertAllEqual(self.evaluate(action_step.action), [self._fixed_action])
     self.assertAllEqual(self.evaluate(mode), [self._fixed_action])
 
   def testFixedPolicyBatched(self):
@@ -70,35 +70,43 @@ class FixedPolicyTest(test_utils.TestCase):
 
     self.evaluate(tf.compat.v1.global_variables_initializer())
     self.assertAllEqual(
-        self.evaluate(action_step.action), [[self._fixed_action]] * batch_size)
+        self.evaluate(action_step.action), [[self._fixed_action]] * batch_size
+    )
     self.assertAllEqual(
-        self.evaluate(mode), [[self._fixed_action]] * batch_size)
+        self.evaluate(mode), [[self._fixed_action]] * batch_size
+    )
 
   def testFixedPolicyBatchedOnNestedObservations(self):
     batch_size = 2
     observations = tf.constant([[1, 2], [3, 4]], dtype=tf.float32)
     time_step = ts.restart(observations, batch_size=batch_size)
-    action_spec = (tensor_spec.TensorSpec(shape=(2,), dtype=tf.float32),
-                   (tensor_spec.TensorSpec(shape=(1,), dtype=tf.int64), {
-                       'dict': tensor_spec.TensorSpec(shape=(), dtype=tf.int32)
-                   }))
-    fixed_action = (np.array([100, 200],
-                             dtype=np.float32), (np.array([300],
-                                                          dtype=np.int64), {
-                                                              'dict': 400
-                                                          }))
-    policy = fixed_policy.FixedPolicy(fixed_action, self._time_step_spec,
-                                      action_spec)  # pytype: disable=wrong-arg-types
+    action_spec = (
+        tensor_spec.TensorSpec(shape=(2,), dtype=tf.float32),
+        (
+            tensor_spec.TensorSpec(shape=(1,), dtype=tf.int64),
+            {'dict': tensor_spec.TensorSpec(shape=(), dtype=tf.int32)},
+        ),
+    )
+    fixed_action = (
+        np.array([100, 200], dtype=np.float32),
+        (np.array([300], dtype=np.int64), {'dict': 400}),
+    )
+    policy = fixed_policy.FixedPolicy(
+        fixed_action, self._time_step_spec, action_spec
+    )  # pytype: disable=wrong-arg-types
     action = policy.action(time_step).action
     distribution_mode = tf.nest.map_structure(
-        lambda t: t.mode(),
-        policy.distribution(time_step).action)
+        lambda t: t.mode(), policy.distribution(time_step).action
+    )
 
     self.evaluate(tf.compat.v1.global_variables_initializer())
-    expected = (tf.constant([[100, 200]] * batch_size, dtype=tf.float32),
-                (tf.constant([[300]] * batch_size, dtype=tf.int64), {
-                    'dict': tf.constant([400] * batch_size, dtype=tf.int32)
-                }))
+    expected = (
+        tf.constant([[100, 200]] * batch_size, dtype=tf.float32),
+        (
+            tf.constant([[300]] * batch_size, dtype=tf.int64),
+            {'dict': tf.constant([400] * batch_size, dtype=tf.int32)},
+        ),
+    )
     tf.nest.map_structure(self.assertAllEqual, action, expected)
     tf.nest.map_structure(self.assertAllEqual, distribution_mode, expected)
 

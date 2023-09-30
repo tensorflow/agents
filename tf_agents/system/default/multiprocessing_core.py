@@ -17,7 +17,6 @@
 
 import abc
 import multiprocessing as _multiprocessing
-
 from typing import Any, Text
 
 from absl import app
@@ -65,8 +64,8 @@ def handle_main(parent_main_fn, *args, **kwargs):
   Args:
     parent_main_fn: A callable.
     *args: rgs for `parent_main_fn`.
-    **kwargs: kwargs for `parent_main_fn`.
-      This may also include `extra_state_savers` kwarg.
+    **kwargs: kwargs for `parent_main_fn`. This may also include
+      `extra_state_savers` kwarg.
 
   Returns:
     Output of `parent_main_fn`.
@@ -88,8 +87,8 @@ def handle_test_main(parent_main_fn, *args, **kwargs):
   Args:
     parent_main_fn: A callable.
     *args: rgs for `parent_main_fn`.
-    **kwargs: kwargs for `parent_main_fn`.
-      This may also include `extra_state_savers` kwarg.
+    **kwargs: kwargs for `parent_main_fn`. This may also include
+      `extra_state_savers` kwarg.
 
   Returns:
     Output of `parent_main_fn`.

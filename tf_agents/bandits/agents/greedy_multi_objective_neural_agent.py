@@ -24,7 +24,6 @@ from typing import Callable, Optional, Sequence, Text, Tuple
 from absl import logging
 import gin
 import tensorflow as tf
-
 from tf_agents.agents import data_converter
 from tf_agents.agents import tf_agent
 from tf_agents.bandits.agents import utils as bandit_utils
@@ -56,8 +55,9 @@ class GreedyMultiObjectiveNeuralAgent(tf_agent.TFAgent):
       time_step_spec: Optional[ts.TimeStep],
       action_spec: Optional[types.NestedBoundedTensorSpec],
       scalarizer: multi_objective_scalarizer.Scalarizer,
-      objective_network_and_loss_fn_sequence: Sequence[Tuple[Network, Callable[
-          ..., tf.Tensor]]],
+      objective_network_and_loss_fn_sequence: Sequence[
+          Tuple[Network, Callable[..., tf.Tensor]]
+      ],
       optimizer: tf.keras.optimizers.Optimizer,
       observation_and_action_constraint_splitter: types.Splitter = None,
       accepts_per_arm_features: bool = False,
@@ -71,25 +71,25 @@ class GreedyMultiObjectiveNeuralAgent(tf_agent.TFAgent):
       train_step_counter: Optional[tf.Variable] = None,
       laplacian_matrix: Optional[types.Float] = None,
       laplacian_smoothing_weights: Optional[Sequence[float]] = None,
-      name: Optional[Text] = None):
+      name: Optional[Text] = None,
+  ):
     """Creates a Greedy Multi-objective Neural Agent.
 
     Args:
       time_step_spec: A `TimeStep` spec of the expected time_steps.
       action_spec: A nest of `BoundedTensorSpec` representing the actions.
       scalarizer: A
-       `tf_agents.bandits.multi_objective.multi_objective_scalarizer.Scalarizer`
+        `tf_agents.bandits.multi_objective.multi_objective_scalarizer.Scalarizer`
         object that implements scalarization of multiple objectives into a
         single scalar reward.
       objective_network_and_loss_fn_sequence: A Sequence of Tuples
         (`tf_agents.network.Network`, error loss function) to be used by the
-        agent. Each network `net` will be called as
-        `net(observation, training=...)` and is expected to output a
-        `tf.Tensor` of predicted values for a specific objective for all
-        actions, shaped as [batch-size, number-of-actions]. Each network will be
-        trained via minimizing the accompanying error loss function, which takes
-        parameters labels, predictions, and weights (any function from tf.losses
-        would work).
+        agent. Each network `net` will be called as `net(observation,
+        training=...)` and is expected to output a `tf.Tensor` of predicted
+        values for a specific objective for all actions, shaped as [batch-size,
+        number-of-actions]. Each network will be trained via minimizing the
+        accompanying error loss function, which takes parameters labels,
+        predictions, and weights (any function from tf.losses would work).
       optimizer: A 'tf.keras.optimizers.Optimizer' object, the optimizer to use
         for training.
       observation_and_action_constraint_splitter: A function used for masking
@@ -114,14 +114,14 @@ class GreedyMultiObjectiveNeuralAgent(tf_agent.TFAgent):
         `policy_utilities.PolicyInfo`.
       train_step_counter: An optional `tf.Variable` to increment every time the
         train op is run.  Defaults to the `global_step`.
-      laplacian_matrix: A float `Tensor` or a numpy array shaped
-        `[num_actions, num_actions]`. This holds the Laplacian matrix used to
-        regularize the smoothness of the estimated expected reward function.
-        This only applies to problems where the actions have a graph structure.
-        If `None`, the regularization is not applied.
+      laplacian_matrix: A float `Tensor` or a numpy array shaped `[num_actions,
+        num_actions]`. This holds the Laplacian matrix used to regularize the
+        smoothness of the estimated expected reward function. This only applies
+        to problems where the actions have a graph structure. If `None`, the
+        regularization is not applied.
       laplacian_smoothing_weights: A Sequence of floats that determines the
-        per-objective weight of the regularization term. Note
-        that this has no effect if `laplacian_matrix` above is `None`.
+        per-objective weight of the regularization term. Note that this has no
+        effect if `laplacian_matrix` above is `None`.
       name: Python str name of this agent. All variables in this module will
         fall under that name. Defaults to the class name.
 
@@ -136,18 +136,22 @@ class GreedyMultiObjectiveNeuralAgent(tf_agent.TFAgent):
     tf.Module.__init__(self, name=name)
     common.tf_agents_gauge.get_cell('TFABandit').set(True)
     self._observation_and_action_constraint_splitter = (
-        observation_and_action_constraint_splitter)
+        observation_and_action_constraint_splitter
+    )
     self._num_actions = policy_utilities.get_num_actions_from_tensor_spec(
-        action_spec)
+        action_spec
+    )
     self._accepts_per_arm_features = accepts_per_arm_features
 
     self._num_objectives = len(objective_network_and_loss_fn_sequence)
     if self._num_objectives < 2:
       raise ValueError(
           'Number of objectives should be at least two, but found to be {}'
-          .format(self._num_objectives))
+          .format(self._num_objectives)
+      )
     self._objective_networks, self._error_loss_fns = tuple(
-        zip(*objective_network_and_loss_fn_sequence))
+        zip(*objective_network_and_loss_fn_sequence)
+    )
     self._optimizer = optimizer
     self._gradient_clipping = gradient_clipping
     self._heteroscedastic = [
@@ -158,24 +162,34 @@ class GreedyMultiObjectiveNeuralAgent(tf_agent.TFAgent):
     self._laplacian_matrix = None
     if laplacian_matrix is not None:
       self._laplacian_matrix = tf.convert_to_tensor(
-          laplacian_matrix, dtype=tf.float32)
+          laplacian_matrix, dtype=tf.float32
+      )
       # Check the validity of the laplacian matrix.
       tf.debugging.assert_near(
-          0.0, tf.norm(tf.reduce_sum(self._laplacian_matrix, 1)))
+          0.0, tf.norm(tf.reduce_sum(self._laplacian_matrix, 1))
+      )
       tf.debugging.assert_near(
-          0.0, tf.norm(tf.reduce_sum(self._laplacian_matrix, 0)))
+          0.0, tf.norm(tf.reduce_sum(self._laplacian_matrix, 0))
+      )
       tf.debugging.assert_near(
           0.0,
-          tf.norm(self._laplacian_matrix -
-                  tf.linalg.matrix_transpose(self._laplacian_matrix)))
+          tf.norm(
+              self._laplacian_matrix
+              - tf.linalg.matrix_transpose(self._laplacian_matrix)
+          ),
+      )
       if self._laplacian_smoothing_weights is None:
-        raise ValueError('laplacian_smoothing_weights cannot be None when the '
-                         'Laplacian matrix is provided.')
+        raise ValueError(
+            'laplacian_smoothing_weights cannot be None when the '
+            'Laplacian matrix is provided.'
+        )
       if self._num_objectives != len(self._laplacian_smoothing_weights):
-        raise ValueError('The length of laplacian smoothing weights: {} '
-                         'does not equal the number of objectives: {}'.format(
-                             len(self._laplacian_smoothing_weights),
-                             self._num_objectives))
+        raise ValueError(
+            'The length of laplacian smoothing weights: {} '
+            'does not equal the number of objectives: {}'.format(
+                len(self._laplacian_smoothing_weights), self._num_objectives
+            )
+        )
 
     policy = greedy_multi_objective_policy.GreedyMultiObjectiveNeuralPolicy(
         time_step_spec,
@@ -184,11 +198,13 @@ class GreedyMultiObjectiveNeuralAgent(tf_agent.TFAgent):
         self._objective_networks,
         observation_and_action_constraint_splitter,
         accepts_per_arm_features=accepts_per_arm_features,
-        emit_policy_info=emit_policy_info)
+        emit_policy_info=emit_policy_info,
+    )
     training_data_spec = None
     if accepts_per_arm_features:
       training_data_spec = bandit_spec_utils.drop_arm_observation(
-          policy.trajectory_spec)
+          policy.trajectory_spec
+      )
 
     super(GreedyMultiObjectiveNeuralAgent, self).__init__(
         time_step_spec,
@@ -200,27 +216,28 @@ class GreedyMultiObjectiveNeuralAgent(tf_agent.TFAgent):
         debug_summaries=debug_summaries,
         summarize_grads_and_vars=summarize_grads_and_vars,
         enable_summaries=enable_summaries,
-        train_step_counter=train_step_counter)
+        train_step_counter=train_step_counter,
+    )
     self._as_trajectory = data_converter.AsTrajectory(
-        self.data_context, sequence_length=None)
+        self.data_context, sequence_length=None
+    )
 
   def _initialize(self):
     tf.compat.v1.variables_initializer(self.variables)
 
   def _variables_to_train(self):
     variables_to_train = tf.nest.flatten(
-        [net.trainable_variables for net in self._objective_networks])
+        [net.trainable_variables for net in self._objective_networks]
+    )
     return variables_to_train
 
-  def _train(self, experience: types.NestedTensor,
-             weights: types.Tensor) -> tf_agent.LossInfo:
+  def _train(
+      self, experience: types.NestedTensor, weights: types.Tensor
+  ) -> tf_agent.LossInfo:
     experience = self._as_trajectory(experience)
 
     with tf.GradientTape() as tape:
-      loss_info = self._loss(
-          experience,
-          weights=weights,
-          training=True)
+      loss_info = self._loss(experience, weights=weights, training=True)
 
     variables_to_train = self._variables_to_train()
     if not variables_to_train:
@@ -231,27 +248,32 @@ class GreedyMultiObjectiveNeuralAgent(tf_agent.TFAgent):
     # Tuple is used for py3, where zip is a generator producing values once.
     grads_and_vars = tuple(zip(grads, variables_to_train))
     if self._gradient_clipping is not None:
-      grads_and_vars = eager_utils.clip_gradient_norms(grads_and_vars,
-                                                       self._gradient_clipping)
+      grads_and_vars = eager_utils.clip_gradient_norms(
+          grads_and_vars, self._gradient_clipping
+      )
 
     if self._summarize_grads_and_vars:
-      eager_utils.add_variables_summaries(grads_and_vars,
-                                          self.train_step_counter)
-      eager_utils.add_gradients_summaries(grads_and_vars,
-                                          self.train_step_counter)
+      eager_utils.add_variables_summaries(
+          grads_and_vars, self.train_step_counter
+      )
+      eager_utils.add_gradients_summaries(
+          grads_and_vars, self.train_step_counter
+      )
 
     self._optimizer.apply_gradients(grads_and_vars)
     self.train_step_counter.assign_add(1)
 
     return loss_info
 
-  def _single_objective_loss(self,
-                             objective_idx: int,
-                             observations: tf.Tensor,
-                             actions: tf.Tensor,
-                             single_objective_values: tf.Tensor,
-                             weights: types.Tensor = None,
-                             training: bool = False) -> tf.Tensor:
+  def _single_objective_loss(
+      self,
+      objective_idx: int,
+      observations: tf.Tensor,
+      actions: tf.Tensor,
+      single_objective_values: tf.Tensor,
+      weights: types.Tensor = None,
+      training: bool = False,
+  ) -> tf.Tensor:
     """Computes loss for a single objective.
 
     Args:
@@ -276,7 +298,9 @@ class GreedyMultiObjectiveNeuralAgent(tf_agent.TFAgent):
     if objective_idx >= self._num_objectives or objective_idx < 0:
       raise ValueError(
           'objective_idx should be between 0 and {}, but is {}'.format(
-              self._num_objectives, objective_idx))
+              self._num_objectives, objective_idx
+          )
+      )
     with tf.name_scope('loss_for_objective_{}'.format(objective_idx)):
       objective_network = self._objective_networks[objective_idx]
       sample_weights = weights if weights is not None else 1
@@ -285,9 +309,11 @@ class GreedyMultiObjectiveNeuralAgent(tf_agent.TFAgent):
         predicted_values = predictions.q_value_logits
         predicted_log_variance = predictions.log_variance
         action_predicted_log_variance = common.index_with_actions(
-            predicted_log_variance, tf.cast(actions, dtype=tf.int32))
-        sample_weights = sample_weights * 0.5 * tf.exp(
-            -action_predicted_log_variance)
+            predicted_log_variance, tf.cast(actions, dtype=tf.int32)
+        )
+        sample_weights = (
+            sample_weights * 0.5 * tf.exp(-action_predicted_log_variance)
+        )
         loss = 0.5 * tf.reduce_mean(action_predicted_log_variance)
         # loss = 1/(2 * var(x)) * (y - f(x))^2 + 1/2 * log var(x)
         # Kendall, Alex, and Yarin Gal. "What Uncertainties Do We Need in
@@ -298,18 +324,19 @@ class GreedyMultiObjectiveNeuralAgent(tf_agent.TFAgent):
         loss = tf.constant(0.0)
 
       action_predicted_values = common.index_with_actions(
-          predicted_values,
-          tf.cast(actions, dtype=tf.int32))
+          predicted_values, tf.cast(actions, dtype=tf.int32)
+      )
 
       # Apply Laplacian smoothing on the estimated rewards, if applicable.
       if self._laplacian_matrix is not None:
         smoothness_batched = tf.reduce_sum(
-            predicted_values *
-            tf.matmul(predicted_values, self._laplacian_matrix),
-            axis=1)
-        loss += (
-            self._laplacian_smoothing_weights[objective_idx] *
-            tf.reduce_mean(smoothness_batched * sample_weights))
+            predicted_values
+            * tf.matmul(predicted_values, self._laplacian_matrix),
+            axis=1,
+        )
+        loss += self._laplacian_smoothing_weights[
+            objective_idx
+        ] * tf.reduce_mean(smoothness_batched * sample_weights)
 
       # Reduction is done outside of the loss function because non-scalar
       # weights with unknown shapes may trigger shape validation that fails
@@ -319,15 +346,20 @@ class GreedyMultiObjectiveNeuralAgent(tf_agent.TFAgent):
               self._error_loss_fns[objective_idx](
                   single_objective_values,
                   action_predicted_values,
-                  reduction=tf.compat.v1.losses.Reduction.NONE),
-              sample_weights))
+                  reduction=tf.compat.v1.losses.Reduction.NONE,
+              ),
+              sample_weights,
+          )
+      )
 
     return loss
 
-  def _loss(self,
-            experience: types.NestedTensor,
-            weights: types.Tensor = None,
-            training: bool = False) -> tf_agent.LossInfo:
+  def _loss(
+      self,
+      experience: types.NestedTensor,
+      weights: types.Tensor = None,
+      training: bool = False,
+  ) -> tf_agent.LossInfo:
     """Computes loss for training the objective networks.
 
     Args:
@@ -347,29 +379,41 @@ class GreedyMultiObjectiveNeuralAgent(tf_agent.TFAgent):
         - If the number of columns in `objectives` does not equal
           `self._num_objectives`.
     """
-    (observations, actions,
-     objective_values) = bandit_utils.process_experience_for_neural_agents(
-         experience, self._accepts_per_arm_features, self.training_data_spec)
+    (observations, actions, objective_values) = (
+        bandit_utils.process_experience_for_neural_agents(
+            experience, self._accepts_per_arm_features, self.training_data_spec
+        )
+    )
     if self._observation_and_action_constraint_splitter is not None:
       observations, _ = self._observation_and_action_constraint_splitter(
-          observations)
+          observations
+      )
     if objective_values.shape.rank != 2:
       raise ValueError(
           'The objectives tensor should be rank-2 [batch_size, num_objectives],'
-          ' but found to be rank-{}'.format(objective_values.shape.rank))
+          ' but found to be rank-{}'.format(objective_values.shape.rank)
+      )
     if objective_values.shape[1] != self._num_objectives:
       raise ValueError(
           'The number of objectives in the objective_values tensor: {} '
           'is different from the number of objective networks: {}.'.format(
-              objective_values.shape[1], self._num_objectives))
+              objective_values.shape[1], self._num_objectives
+          )
+      )
 
     objective_losses = []
     for idx in range(self._num_objectives):
       single_objective_values = objective_values[:, idx]
       objective_losses.append(
-          self._single_objective_loss(idx, observations, actions,
-                                      single_objective_values, weights,
-                                      training))
+          self._single_objective_loss(
+              idx,
+              observations,
+              actions,
+              single_objective_values,
+              weights,
+              training,
+          )
+      )
 
     self.compute_summaries(objective_losses)
     total_loss = tf.reduce_sum(objective_losses)
@@ -377,9 +421,10 @@ class GreedyMultiObjectiveNeuralAgent(tf_agent.TFAgent):
 
   def compute_summaries(self, losses: Sequence[tf.Tensor]):
     if self._num_objectives != len(losses):
-      raise ValueError('The number of losses: {} does not equal the number '
-                       'of objectives: {}'.format(
-                           len(losses), self._num_objectives))
+      raise ValueError(
+          'The number of losses: {} does not equal the number '
+          'of objectives: {}'.format(len(losses), self._num_objectives)
+      )
     if self.summaries_enabled:
       with tf.name_scope('Losses/'):
         for idx in range(self._num_objectives):
@@ -387,7 +432,8 @@ class GreedyMultiObjectiveNeuralAgent(tf_agent.TFAgent):
           if not name_of_loss:
             name_of_loss = 'loss_{}'.format(idx)
           tf.compat.v2.summary.scalar(
-              name=name_of_loss, data=losses[idx], step=self.train_step_counter)
+              name=name_of_loss, data=losses[idx], step=self.train_step_counter
+          )
 
       if self._summarize_grads_and_vars:
         with tf.name_scope('Variables/'):
@@ -395,4 +441,5 @@ class GreedyMultiObjectiveNeuralAgent(tf_agent.TFAgent):
             tf.compat.v2.summary.histogram(
                 name=var.name.replace(':', '_'),
                 data=var,
-                step=self.train_step_counter)
+                step=self.train_step_counter,
+            )

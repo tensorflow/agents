@@ -23,31 +23,37 @@ import os
 from absl import app
 from absl import flags
 from absl import logging
-
 import gin
-
 import tensorflow.compat.v2 as tf
-
 from tf_agents.examples.ppo.schulman17 import train_eval_lib
 
 FLAGS = flags.FLAGS
 
-flags.DEFINE_string('root_dir', os.getenv('TEST_UNDECLARED_OUTPUTS_DIR'),
-                    'Root directory for writing logs/summaries/checkpoints.')
+flags.DEFINE_string(
+    'root_dir',
+    os.getenv('TEST_UNDECLARED_OUTPUTS_DIR'),
+    'Root directory for writing logs/summaries/checkpoints.',
+)
 flags.DEFINE_integer(
-    'reverb_port', None,
-    'Port for reverb server, if None, use a randomly chosen unused port.')
-flags.DEFINE_integer('num_iterations', 1600,
-                     'Total number train/eval iterations to perform.')
+    'reverb_port',
+    None,
+    'Port for reverb server, if None, use a randomly chosen unused port.',
+)
 flags.DEFINE_integer(
-    'eval_interval', 10000,
-    'Number of train steps between evaluations. Set to 0 to skip.')
+    'num_iterations', 1600, 'Total number train/eval iterations to perform.'
+)
+flags.DEFINE_integer(
+    'eval_interval',
+    10000,
+    'Number of train steps between evaluations. Set to 0 to skip.',
+)
 flags.DEFINE_multi_string('gin_file', None, 'Paths to the gin-config files.')
 flags.DEFINE_multi_string('gin_bindings', None, 'Gin binding parameters.')
 
 
-def ppo_clip_train_eval(root_dir, num_iterations, reverb_port=None,
-                        eval_interval=0):
+def ppo_clip_train_eval(
+    root_dir, num_iterations, reverb_port=None, eval_interval=0
+):
   """Executes train and eval for ppo_clip.
 
   gin is used to configure parameters related to the agent and environment.
@@ -71,7 +77,8 @@ def ppo_clip_train_eval(root_dir, num_iterations, reverb_port=None,
       # Replay params
       reverb_port=reverb_port,
       # Others
-      eval_interval=eval_interval)
+      eval_interval=eval_interval,
+  )
 
 
 def main(_):
@@ -80,10 +87,12 @@ def main(_):
 
   gin.parse_config_files_and_bindings(FLAGS.gin_file, FLAGS.gin_bindings)
 
-  ppo_clip_train_eval(FLAGS.root_dir,
-                      num_iterations=FLAGS.num_iterations,
-                      reverb_port=FLAGS.reverb_port,
-                      eval_interval=FLAGS.eval_interval)
+  ppo_clip_train_eval(
+      FLAGS.root_dir,
+      num_iterations=FLAGS.num_iterations,
+      reverb_port=FLAGS.reverb_port,
+      eval_interval=FLAGS.eval_interval,
+  )
 
 
 if __name__ == '__main__':

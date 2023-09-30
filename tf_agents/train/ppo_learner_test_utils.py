@@ -17,7 +17,6 @@
 
 import numpy as np
 import tensorflow as tf
-
 from tf_agents.agents import tf_agent
 from tf_agents.agents.ppo import ppo_agent
 from tf_agents.networks import actor_distribution_network
@@ -33,21 +32,22 @@ class FakePPOAgent(ppo_agent.PPOAgent):
   """A fake PPO agent that tracks input trajectories into agent.train."""
 
   def __init__(self, strategy=None):
-
     self._strategy = strategy
 
     actor_net = actor_distribution_network.ActorDistributionNetwork(
         tensor_spec.TensorSpec(shape=[], dtype=tf.float32),
         tensor_spec.BoundedTensorSpec([1], tf.float32, -1, 1),
         fc_layer_params=(1,),
-        activation_fn=tf.nn.tanh)
+        activation_fn=tf.nn.tanh,
+    )
     value_net = value_network.ValueNetwork(
-        tensor_spec.TensorSpec(shape=[], dtype=tf.float32),
-        fc_layer_params=(1,))
+        tensor_spec.TensorSpec(shape=[], dtype=tf.float32), fc_layer_params=(1,)
+    )
 
     super(FakePPOAgent, self).__init__(
         time_step_spec=ts.time_step_spec(
-            tensor_spec.TensorSpec(shape=[], dtype=tf.float32)),
+            tensor_spec.TensorSpec(shape=[], dtype=tf.float32)
+        ),
         action_spec=tensor_spec.BoundedTensorSpec([1], tf.float32, -1, 1),
         actor_net=actor_net,
         value_net=value_net,
@@ -65,9 +65,9 @@ class FakePPOAgent(ppo_agent.PPOAgent):
     print(experience)
     self.experiences.append(experience)
     if self._strategy is None:
-      return tf_agent.LossInfo(0., 0.)
+      return tf_agent.LossInfo(0.0, 0.0)
     else:
-      batch_zero = tf.constant([0.] * 10, dtype=tf.float32)
+      batch_zero = tf.constant([0.0] * 10, dtype=tf.float32)
       return tf_agent.LossInfo(batch_zero, batch_zero)
 
   def reset(self):
@@ -85,32 +85,42 @@ def create_trajectories(n_time_steps, batch_size):
   #  [ ...                       ],
   #  [10*batch_size., ... 10*batch_size+n_time_steps.]]
   observation_array = np.asarray(
-      [np.arange(n_time_steps) + 10 * i for i in range(batch_size)])
+      [np.arange(n_time_steps) + 10 * i for i in range(batch_size)]
+  )
   observations = tf.convert_to_tensor(observation_array, dtype=tf.float32)
 
   default_tensor = tf.constant(
-      [[1] * n_time_steps] * batch_size, dtype=tf.float32)
+      [[1] * n_time_steps] * batch_size, dtype=tf.float32
+  )
   mid_time_step_val = ts.StepType.MID.tolist()
   time_steps = ts.TimeStep(
       step_type=tf.constant(
-          [[mid_time_step_val] * n_time_steps] * batch_size, dtype=tf.int32),
+          [[mid_time_step_val] * n_time_steps] * batch_size, dtype=tf.int32
+      ),
       reward=default_tensor,
       discount=default_tensor,
-      observation=observations)
+      observation=observations,
+  )
   actions = tf.constant([[[1]] * n_time_steps] * batch_size, dtype=tf.float32)
   policy_info = {
       'dist_params': {
-          'loc':
-              tf.constant(
-                  [[[1]] * n_time_steps] * batch_size, dtype=tf.float32),
-          'scale':
-              tf.constant(
-                  [[[1]] * n_time_steps] * batch_size, dtype=tf.float32)
+          'loc': tf.constant(
+              [[[1]] * n_time_steps] * batch_size, dtype=tf.float32
+          ),
+          'scale': tf.constant(
+              [[[1]] * n_time_steps] * batch_size, dtype=tf.float32
+          ),
       },
       'value_prediction': default_tensor,
       'return': default_tensor,
       'advantage': default_tensor,
   }
-  return trajectory.Trajectory(time_steps.step_type, observations, actions,
-                               policy_info, time_steps.step_type,
-                               time_steps.reward, time_steps.discount)
+  return trajectory.Trajectory(
+      time_steps.step_type,
+      observations,
+      actions,
+      policy_info,
+      time_steps.step_type,
+      time_steps.reward,
+      time_steps.discount,
+  )

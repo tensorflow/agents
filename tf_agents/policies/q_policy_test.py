@@ -32,14 +32,16 @@ class DummyNet(network.Network):
 
   def __init__(self, name=None, num_actions=2):
     super(DummyNet, self).__init__(
-        tensor_spec.TensorSpec([2], tf.float32), (), 'DummyNet')
+        tensor_spec.TensorSpec([2], tf.float32), (), 'DummyNet'
+    )
 
     # Store custom layers that can be serialized through the Checkpointable API.
     self._dummy_layers = [
         tf.keras.layers.Dense(
             num_actions,
             kernel_initializer=tf.constant_initializer([[1, 1.5], [1, 1.5]]),
-            bias_initializer=tf.constant_initializer([[1], [1]]))
+            bias_initializer=tf.constant_initializer([[1], [1]]),
+        )
     ]
 
   def call(self, inputs, step_type=None, network_state=()):
@@ -71,7 +73,8 @@ class QPolicyTest(test_utils.TestCase):
 
   def testBuild(self):
     policy = q_policy.QPolicy(
-        self._time_step_spec, self._action_spec, q_network=DummyNet())
+        self._time_step_spec, self._action_spec, q_network=DummyNet()
+    )
 
     self.assertEqual(policy.time_step_spec, self._time_step_spec)
     self.assertEqual(policy.action_spec, self._action_spec)
@@ -79,12 +82,12 @@ class QPolicyTest(test_utils.TestCase):
   def testMultipleActionsRaiseError(self):
     action_spec = [tensor_spec.BoundedTensorSpec([], tf.int32, 0, 1)] * 2
     with self.assertRaisesRegexp(ValueError, 'Only scalar actions'):
-      q_policy.QPolicy(
-          self._time_step_spec, action_spec, q_network=DummyNet())
+      q_policy.QPolicy(self._time_step_spec, action_spec, q_network=DummyNet())
 
   def testAction(self):
     policy = q_policy.QPolicy(
-        self._time_step_spec, self._action_spec, q_network=DummyNet())
+        self._time_step_spec, self._action_spec, q_network=DummyNet()
+    )
 
     observations = tf.constant([[1, 2], [3, 4]], dtype=tf.float32)
     time_step = ts.restart(observations, batch_size=2)
@@ -97,19 +100,20 @@ class QPolicyTest(test_utils.TestCase):
     self.assertTrue(np.all(action >= 0) and np.all(action <= 1))
 
   def testActionWithinBounds(self):
-    bounded_action_spec = tensor_spec.BoundedTensorSpec([],
-                                                        tf.int32,
-                                                        minimum=-6,
-                                                        maximum=-5)
+    bounded_action_spec = tensor_spec.BoundedTensorSpec(
+        [], tf.int32, minimum=-6, maximum=-5
+    )
 
     with self.assertRaisesRegex(ValueError, 'minimum of 0'):
       q_policy.QPolicy(
-          self._time_step_spec, bounded_action_spec, q_network=DummyNet())
+          self._time_step_spec, bounded_action_spec, q_network=DummyNet()
+      )
 
   def testActionScalarSpec(self):
     action_spec = tensor_spec.BoundedTensorSpec((), tf.int32, 0, 1)
     policy = q_policy.QPolicy(
-        self._time_step_spec, action_spec, q_network=DummyNet())
+        self._time_step_spec, action_spec, q_network=DummyNet()
+    )
 
     observations = tf.constant([[1, 2], [3, 4]], dtype=tf.float32)
     time_step = ts.restart(observations, batch_size=2)
@@ -124,7 +128,8 @@ class QPolicyTest(test_utils.TestCase):
   def testActionList(self):
     action_spec = [tensor_spec.BoundedTensorSpec([], tf.int32, 0, 1)]
     policy = q_policy.QPolicy(
-        self._time_step_spec, action_spec, q_network=DummyNet())
+        self._time_step_spec, action_spec, q_network=DummyNet()
+    )
     observations = tf.constant([[1, 2], [3, 4]], dtype=tf.float32)
     time_step = ts.restart(observations, batch_size=2)
     action_step = policy.action(time_step, seed=1)
@@ -138,7 +143,8 @@ class QPolicyTest(test_utils.TestCase):
 
   def testDistribution(self):
     policy = q_policy.QPolicy(
-        self._time_step_spec, self._action_spec, q_network=DummyNet())
+        self._time_step_spec, self._action_spec, q_network=DummyNet()
+    )
 
     observations = tf.constant([[1, 2]], dtype=tf.float32)
     time_step = ts.restart(observations, batch_size=1)
@@ -151,9 +157,11 @@ class QPolicyTest(test_utils.TestCase):
 
   def testUpdate(self):
     policy = q_policy.QPolicy(
-        self._time_step_spec, self._action_spec, q_network=DummyNet())
+        self._time_step_spec, self._action_spec, q_network=DummyNet()
+    )
     new_policy = q_policy.QPolicy(
-        self._time_step_spec, self._action_spec, q_network=DummyNet())
+        self._time_step_spec, self._action_spec, q_network=DummyNet()
+    )
     self.assertEqual(len(policy.variables()), 2)
     self.assertEqual(len(new_policy.variables()), 2)
 
@@ -167,7 +175,8 @@ class QPolicyTest(test_utils.TestCase):
     new_distribution = new_policy.distribution(time_step).action.parameters
     self.assertAllEqual(
         self.evaluate(distribution['logits']),
-        self.evaluate(new_distribution['logits']))
+        self.evaluate(new_distribution['logits']),
+    )
 
   def testActionSpecsCompatible(self):
     q_net = DummyNetWithActionSpec(self._action_spec)
@@ -178,8 +187,8 @@ class QPolicyTest(test_utils.TestCase):
     q_net = DummyNetWithActionSpec(network_action_spec)
 
     with self.assertRaisesRegexp(
-        ValueError,
-        'action_spec must be compatible with q_network.action_spec'):
+        ValueError, 'action_spec must be compatible with q_network.action_spec'
+    ):
       q_policy.QPolicy(self._time_step_spec, self._action_spec, q_net)
 
   def testMasking(self):
@@ -190,7 +199,8 @@ class QPolicyTest(test_utils.TestCase):
     time_step = ts.restart(observations, batch_size=batch_size)
     input_tensor_spec = tensor_spec.TensorSpec([num_state_dims], tf.float32)
     action_spec = tensor_spec.BoundedTensorSpec(
-        [], tf.int32, 0, num_actions - 1)
+        [], tf.int32, 0, num_actions - 1
+    )
 
     # We create a fixed mask here for testing purposes. Normally the mask would
     # be part of the observation.
@@ -199,9 +209,13 @@ class QPolicyTest(test_utils.TestCase):
     tf_mask = tf.constant([mask for _ in range(batch_size)])
     q_net = q_network.QNetwork(input_tensor_spec, action_spec)
     policy = q_policy.QPolicy(
-        ts.time_step_spec(input_tensor_spec), action_spec, q_net,
+        ts.time_step_spec(input_tensor_spec),
+        action_spec,
+        q_net,
         observation_and_action_constraint_splitter=(
-            lambda observation: (observation, tf_mask)))
+            lambda observation: (observation, tf_mask)
+        ),
+    )
 
     # Force creation of variables before global_variables_initializer.
     policy.variables()

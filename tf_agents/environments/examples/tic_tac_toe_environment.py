@@ -17,7 +17,6 @@
 
 import copy
 import numpy as np
-
 from tf_agents.environments import py_environment
 from tf_agents.specs import BoundedArraySpec
 from tf_agents.trajectories.time_step import StepType
@@ -34,11 +33,12 @@ class TicTacToeEnvironment(py_environment.PyEnvironment):
   The states are a 3 x 3 array where 0 = empty, 1 = player, 2 = opponent.
   The action is a 2-d vector to indicate the position for the player's move.
   """
-  REWARD_WIN = np.asarray(1., dtype=np.float32)
-  REWARD_LOSS = np.asarray(-1., dtype=np.float32)
-  REWARD_DRAW_OR_NOT_FINAL = np.asarray(0., dtype=np.float32)
+
+  REWARD_WIN = np.asarray(1.0, dtype=np.float32)
+  REWARD_LOSS = np.asarray(-1.0, dtype=np.float32)
+  REWARD_DRAW_OR_NOT_FINAL = np.asarray(0.0, dtype=np.float32)
   # A very small number such that it does not affect the value calculation.
-  REWARD_ILLEGAL_MOVE = np.asarray(-.001, dtype=np.float32)
+  REWARD_ILLEGAL_MOVE = np.asarray(-0.001, dtype=np.float32)
 
   REWARD_WIN.setflags(write=False)
   REWARD_LOSS.setflags(write=False)
@@ -66,8 +66,12 @@ class TicTacToeEnvironment(py_environment.PyEnvironment):
 
   def _reset(self):
     self._states = np.zeros((3, 3), np.int32)
-    return TimeStep(StepType.FIRST, np.asarray(0.0, dtype=np.float32),
-                    self._discount, self._states)
+    return TimeStep(
+        StepType.FIRST,
+        np.asarray(0.0, dtype=np.float32),
+        self._discount,
+        self._states,
+    )
 
   def _legal_actions(self, states: np.ndarray):
     return list(zip(*np.where(states == 0)))
@@ -94,15 +98,18 @@ class TicTacToeEnvironment(py_environment.PyEnvironment):
   def _step(self, action: np.ndarray):
     action = tuple(action)
     if self._states[action] != 0:
-      return TimeStep(StepType.LAST, TicTacToeEnvironment.REWARD_ILLEGAL_MOVE,
-                      self._discount, self._states)
+      return TimeStep(
+          StepType.LAST,
+          TicTacToeEnvironment.REWARD_ILLEGAL_MOVE,
+          self._discount,
+          self._states,
+      )
 
     self._states[action] = 1
 
     is_final, reward = self._check_states(self._states)
     if is_final:
-      return TimeStep(StepType.LAST, reward, self._discount,
-                      self._states)
+      return TimeStep(StepType.LAST, reward, self._discount, self._states)
 
     # TODO(b/152638947): handle multiple agents properly.
     # Opponent places '2' on the board.
@@ -132,9 +139,13 @@ class TicTacToeEnvironment(py_environment.PyEnvironment):
     """
     seqs = np.array([
         # each row
-        states[0, :], states[1, :], states[2, :],
+        states[0, :],
+        states[1, :],
+        states[2, :],
         # each column
-        states[:, 0], states[:, 1], states[:, 2],
+        states[:, 0],
+        states[:, 1],
+        states[:, 2],
         # diagonal
         states[(0, 1, 2), (0, 1, 2)],
         states[(2, 1, 0), (0, 1, 2)],

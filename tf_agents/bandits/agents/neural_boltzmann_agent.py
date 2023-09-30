@@ -17,18 +17,16 @@
 
 Implements an agent based on a neural network that predicts arm rewards.
 The policy adds Boltzmann exploration.
-
 """
 
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-from typing import Iterable, Optional, Text, Tuple, Sequence
+from typing import Iterable, Optional, Sequence, Text, Tuple
 
 import gin
 import tensorflow as tf
-
 from tf_agents.bandits.agents import greedy_reward_prediction_agent
 from tf_agents.bandits.policies import boltzmann_reward_prediction_policy as boltzmann_policy
 from tf_agents.bandits.policies import constraints as constr
@@ -37,7 +35,8 @@ from tf_agents.typing import types
 
 @gin.configurable
 class NeuralBoltzmannAgent(
-    greedy_reward_prediction_agent.GreedyRewardPredictionAgent):
+    greedy_reward_prediction_agent.GreedyRewardPredictionAgent
+):
   """A neural network based Boltzmann agent.
 
   This agent receives a neural network that it trains to predict rewards. The
@@ -53,7 +52,8 @@ class NeuralBoltzmannAgent(
       temperature: types.FloatOrReturningFloat = 1.0,
       boltzmann_gumbel_exploration_constant: Optional[types.Float] = None,
       observation_and_action_constraint_splitter: Optional[
-          types.Splitter] = None,
+          types.Splitter
+      ] = None,
       accepts_per_arm_features: bool = False,
       constraints: Iterable[constr.NeuralConstraint] = (),
       # Params for training.
@@ -68,7 +68,8 @@ class NeuralBoltzmannAgent(
       num_samples_list: Sequence[tf.Variable] = (),
       laplacian_matrix: Optional[types.Float] = None,
       laplacian_smoothing_weight: float = 0.001,
-      name: Optional[Text] = None):
+      name: Optional[Text] = None,
+  ):
     """Creates a Neural Boltzmann Agent.
 
     Args:
@@ -76,10 +77,10 @@ class NeuralBoltzmannAgent(
       action_spec: A nest of `BoundedTensorSpec` representing the actions.
       reward_network: A `tf_agents.network.Network` to be used by the agent. The
         network will be called with call(observation, step_type) and it is
-        expected to provide a reward prediction for all actions.
-        *Note*: when using `observation_and_action_constraint_splitter`, make
-        sure the `reward_network` is compatible with the network-specific half
-        of the output of the `observation_and_action_constraint_splitter`. In
+        expected to provide a reward prediction for all actions. *Note*: when
+        using `observation_and_action_constraint_splitter`, make sure the
+        `reward_network` is compatible with the network-specific half of the
+        output of the `observation_and_action_constraint_splitter`. In
         particular, `observation_and_action_constraint_splitter` will be called
         on the observation before passing to the network.
       optimizer: The optimizer to use for training.
@@ -87,8 +88,8 @@ class NeuralBoltzmannAgent(
         in the Boltzmann exploration.
       boltzmann_gumbel_exploration_constant: optional positive float. When
         provided, the agent implements Neural Bandit with Boltzmann-Gumbel
-        exploration from the paper:
-        N. Cesa-Bianchi et al., "Boltzmann Exploration Done Right", NIPS 2017.
+        exploration from the paper: N. Cesa-Bianchi et al., "Boltzmann
+        Exploration Done Right", NIPS 2017.
       observation_and_action_constraint_splitter: A function used for masking
         valid/invalid actions with each state of the environment. The function
         takes in a full observation and returns a tuple consisting of 1) the
@@ -118,11 +119,11 @@ class NeuralBoltzmannAgent(
         train op is run.  Defaults to the `global_step`.
       num_samples_list: list or tuple of tf.Variable's. Used only in
         Boltzmann-Gumbel exploration. Otherwise, empty.
-      laplacian_matrix: A float `Tensor` or a numpy array shaped
-        `[num_actions, num_actions]`. This holds the Laplacian matrix used to
-        regularize the smoothness of the estimated expected reward function.
-        This only applies to problems where the actions have a graph structure.
-        If `None`, the regularization is not applied.
+      laplacian_matrix: A float `Tensor` or a numpy array shaped `[num_actions,
+        num_actions]`. This holds the Laplacian matrix used to regularize the
+        smoothness of the estimated expected reward function. This only applies
+        to problems where the actions have a graph structure. If `None`, the
+        regularization is not applied.
       laplacian_smoothing_weight: A float that determines the weight of the
         regularization term. Note that this has no effect if `laplacian_matrix`
         above is `None`.
@@ -139,7 +140,8 @@ class NeuralBoltzmannAgent(
         reward_network=reward_network,
         optimizer=optimizer,
         observation_and_action_constraint_splitter=(
-            observation_and_action_constraint_splitter),
+            observation_and_action_constraint_splitter
+        ),
         accepts_per_arm_features=accepts_per_arm_features,
         constraints=constraints,
         error_loss_fn=error_loss_fn,
@@ -152,7 +154,8 @@ class NeuralBoltzmannAgent(
         num_samples_list=num_samples_list,
         laplacian_matrix=laplacian_matrix,
         laplacian_smoothing_weight=laplacian_smoothing_weight,
-        name=name)
+        name=name,
+    )
     self._policy = boltzmann_policy.BoltzmannRewardPredictionPolicy(
         time_step_spec,
         action_spec,
@@ -163,6 +166,7 @@ class NeuralBoltzmannAgent(
         constraints=constraints,
         accepts_per_arm_features=accepts_per_arm_features,
         emit_policy_info=emit_policy_info,
-        num_samples_list=num_samples_list)
+        num_samples_list=num_samples_list,
+    )
 
     self._collect_policy = self._policy
