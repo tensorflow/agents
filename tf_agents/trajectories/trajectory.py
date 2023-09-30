@@ -113,7 +113,7 @@ class Trajectory(
   def __repr__(self):
     return (
         'Trajectory(\n'
-        + print.pformat(dict(self._asdict()), sort_dicts=False)
+        + pprint.pformat(dict(self._asdict()), sort_dicts=False)
         + ')'
     )
 
