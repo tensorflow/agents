@@ -246,6 +246,8 @@ class ActionRepeat(PyEnvironmentBaseWrapper):
     Args:
       env: Environment to wrap.
       times: Number of times the action should be repeated.
+      handle_auto_reset: When `True` the base class will handle auto_reset of
+        the Environment.
 
     Raises:
       ValueError: If the times parameter is not greater than 1.
@@ -288,6 +290,8 @@ class FlattenActionWrapper(PyEnvironmentBaseWrapper):
       env: Environment to wrap.
       flat_dtype: Optional, if set to a np.dtype the flat action_spec uses this
         dtype.
+      handle_auto_reset: When `True` the base class will handle auto_reset of
+        the Environment.   
 
     Raises:
       ValueError: If any of the action_spec shapes ndim > 1.
@@ -380,6 +384,8 @@ class ObservationFilterWrapper(PyEnvironmentBaseWrapper):
     Args:
       env: Environment to wrap.
       idx: Array of indexes pointing to elements to include in output.
+      handle_auto_reset: When `True` the base class will handle auto_reset of
+        the Environment.  
 
     Raises:
       ValueError: If observation spec is nested.
@@ -495,6 +501,8 @@ class ActionDiscretizeWrapper(PyEnvironmentBaseWrapper):
       num_actions: A np.array of the same shape as the environment's
         action_spec. Elements in the array specify the number of actions to
         discretize to for each dimension.
+      handle_auto_reset: When `True` the base class will handle auto_reset of
+        the Environment.          
 
     Raises:
       ValueError: IF the action_spec shape and the limits shape are not equal.
@@ -721,6 +729,8 @@ class FlattenObservationsWrapper(PyEnvironmentBaseWrapper):
         filtered out.  If not provided, all observations will be kept.
         Additionally, if this is provided, the environment is expected to return
         a dictionary of observations.
+      handle_auto_reset: When `True` the base class will handle auto_reset of
+        the Environment.          
 
     Raises:
       ValueError: If the current environment does not return a dictionary of
@@ -919,6 +929,8 @@ class GoalReplayEnvWrapper(PyEnvironmentBaseWrapper):
 
     Args:
       env: A `py_environment.PyEnvironment` environment to wrap.
+      handle_auto_reset: When `True` the base class will handle auto_reset of
+        the Environment.        
 
     Raises:
       ValueError: If environment observation is not a dict
@@ -998,6 +1010,8 @@ class HistoryWrapper(PyEnvironmentBaseWrapper):
       include_actions: Whether actions should be included in the history.
       tile_first_step_obs: If True the observation on reset is tiled to fill the
         history.
+      handle_auto_reset: When `True` the base class will handle auto_reset of
+        the Environment.          
     """
     super(HistoryWrapper, self).__init__(env, handle_auto_reset)
     self._history_length = history_length
@@ -1156,6 +1170,8 @@ class ExtraDisabledActionsWrapper(PyEnvironmentBaseWrapper):
     Args:
       env: The environment to wrap.
       num_extra_actions: The number of extra actions to add.
+      handle_auto_reset: When `True` the base class will handle auto_reset of
+        the Environment.        
     """
     super(ExtraDisabledActionsWrapper, self).__init__(env, handle_auto_reset)
     orig_action_spec = env.action_spec()
