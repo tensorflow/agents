@@ -99,7 +99,12 @@ class PyEnvironmentBaseWrapper(py_environment.PyEnvironment):
 class TimeLimit(PyEnvironmentBaseWrapper):
   """End episodes after specified number of steps."""
 
-  def __init__(self, env: py_environment.PyEnvironment, duration: types.Int, handle_auto_reset: bool = False):
+  def __init__(
+      self,
+      env: py_environment.PyEnvironment,
+      duration: types.Int,
+      handle_auto_reset: bool = False,
+  ):
     super(TimeLimit, self).__init__(env, handle_auto_reset)
     self._duration = duration
     self._num_steps = None
@@ -135,7 +140,12 @@ class FixedLength(PyEnvironmentBaseWrapper):
   If the episode is short it will pad with the last step and set discount to 0.
   """
 
-  def __init__(self, env: py_environment.PyEnvironment, fix_length: types.Int, handle_auto_reset: bool = False):
+  def __init__(
+      self,
+      env: py_environment.PyEnvironment,
+      fix_length: types.Int,
+      handle_auto_reset: bool = False,
+  ):
     super(FixedLength, self).__init__(env, handle_auto_reset)
     self._fix_length = fix_length
     self._num_steps = None
@@ -240,7 +250,12 @@ class PerformanceProfiler(PyEnvironmentBaseWrapper):
 class ActionRepeat(PyEnvironmentBaseWrapper):
   """Repeates actions over n-steps while acummulating the received reward."""
 
-  def __init__(self, env: py_environment.PyEnvironment, times: types.Int, handle_auto_reset: bool = False):
+  def __init__(
+      self,
+      env: py_environment.PyEnvironment,
+      times: types.Int,
+      handle_auto_reset: bool = False,
+  ):
     """Creates an action repeat wrapper.
 
     Args:
@@ -283,7 +298,12 @@ class ActionRepeat(PyEnvironmentBaseWrapper):
 class FlattenActionWrapper(PyEnvironmentBaseWrapper):
   """Flattens the action."""
 
-  def __init__(self, env: py_environment.PyEnvironment, flat_dtype=None, handle_auto_reset: bool = False):
+  def __init__(
+      self,
+      env: py_environment.PyEnvironment,
+      flat_dtype=None,
+      handle_auto_reset: bool = False,
+  ):
     """Creates a FlattenActionWrapper.
 
     Args:
@@ -291,7 +311,7 @@ class FlattenActionWrapper(PyEnvironmentBaseWrapper):
       flat_dtype: Optional, if set to a np.dtype the flat action_spec uses this
         dtype.
       handle_auto_reset: When `True` the base class will handle auto_reset of
-        the Environment.   
+        the Environment.
 
     Raises:
       ValueError: If any of the action_spec shapes ndim > 1.
@@ -385,7 +405,7 @@ class ObservationFilterWrapper(PyEnvironmentBaseWrapper):
       env: Environment to wrap.
       idx: Array of indexes pointing to elements to include in output.
       handle_auto_reset: When `True` the base class will handle auto_reset of
-        the Environment.  
+        the Environment.
 
     Raises:
       ValueError: If observation spec is nested.
@@ -490,7 +510,10 @@ class ActionDiscretizeWrapper(PyEnvironmentBaseWrapper):
   """Wraps an environment with continuous actions and discretizes them."""
 
   def __init__(
-      self, env: py_environment.PyEnvironment, num_actions: np.ndarray, handle_auto_reset: bool = False
+      self,
+      env: py_environment.PyEnvironment,
+      num_actions: np.ndarray,
+      handle_auto_reset: bool = False,
   ):
     """Constructs a wrapper for discretizing the action space.
 
@@ -502,7 +525,7 @@ class ActionDiscretizeWrapper(PyEnvironmentBaseWrapper):
         action_spec. Elements in the array specify the number of actions to
         discretize to for each dimension.
       handle_auto_reset: When `True` the base class will handle auto_reset of
-        the Environment.          
+        the Environment.
 
     Raises:
       ValueError: IF the action_spec shape and the limits shape are not equal.
@@ -658,7 +681,9 @@ class ActionOffsetWrapper(PyEnvironmentBaseWrapper):
   negative-valued actions.
   """
 
-  def __init__(self, env: py_environment.PyEnvironment, handle_auto_reset: bool = False):
+  def __init__(
+      self, env: py_environment.PyEnvironment, handle_auto_reset: bool = False
+  ):
     super(ActionOffsetWrapper, self).__init__(env, handle_auto_reset)
     if tf.nest.is_nested(self._env.action_spec()):
       raise ValueError(
@@ -730,7 +755,7 @@ class FlattenObservationsWrapper(PyEnvironmentBaseWrapper):
         Additionally, if this is provided, the environment is expected to return
         a dictionary of observations.
       handle_auto_reset: When `True` the base class will handle auto_reset of
-        the Environment.          
+        the Environment.
 
     Raises:
       ValueError: If the current environment does not return a dictionary of
@@ -924,13 +949,15 @@ class GoalReplayEnvWrapper(PyEnvironmentBaseWrapper):
   class.
   """
 
-  def __init__(self, env: py_environment.PyEnvironment, handle_auto_reset: bool = False):
+  def __init__(
+      self, env: py_environment.PyEnvironment, handle_auto_reset: bool = False
+  ):
     """Initializes a wrapper to add a goal to the observation.
 
     Args:
       env: A `py_environment.PyEnvironment` environment to wrap.
       handle_auto_reset: When `True` the base class will handle auto_reset of
-        the Environment.        
+        the Environment.
 
     Raises:
       ValueError: If environment observation is not a dict
@@ -1011,7 +1038,7 @@ class HistoryWrapper(PyEnvironmentBaseWrapper):
       tile_first_step_obs: If True the observation on reset is tiled to fill the
         history.
       handle_auto_reset: When `True` the base class will handle auto_reset of
-        the Environment.          
+        the Environment.
     """
     super(HistoryWrapper, self).__init__(env, handle_auto_reset)
     self._history_length = history_length
@@ -1098,7 +1125,9 @@ class HistoryWrapper(PyEnvironmentBaseWrapper):
 class OneHotActionWrapper(PyEnvironmentBaseWrapper):
   """Converts discrete action to one_hot format."""
 
-  def __init__(self, env: py_environment.PyEnvironment, handle_auto_reset: bool = False):
+  def __init__(
+      self, env: py_environment.PyEnvironment, handle_auto_reset: bool = False
+  ):
     super(OneHotActionWrapper, self).__init__(env, handle_auto_reset)
 
     def convert_to_one_hot(spec):
@@ -1164,14 +1193,19 @@ class ExtraDisabledActionsWrapper(PyEnvironmentBaseWrapper):
   example does not include the batch dimension.
   """
 
-  def __init__(self, env: py_environment.PyEnvironment, num_extra_actions: int, handle_auto_reset: bool = False):
+  def __init__(
+      self,
+      env: py_environment.PyEnvironment,
+      num_extra_actions: int,
+      handle_auto_reset: bool = False,
+  ):
     """Initializes an instance of `ExtraDisabledActionsWrapper`.
 
     Args:
       env: The environment to wrap.
       num_extra_actions: The number of extra actions to add.
       handle_auto_reset: When `True` the base class will handle auto_reset of
-        the Environment.        
+        the Environment.
     """
     super(ExtraDisabledActionsWrapper, self).__init__(env, handle_auto_reset)
     orig_action_spec = env.action_spec()
