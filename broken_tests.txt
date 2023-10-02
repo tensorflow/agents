@@ -3,4 +3,3 @@ environments.suite_atari_test # b/201537188
 examples.cql_sac.kumar20.dataset.file_utils_test  # b/199583100
 examples.cql_sac.kumar20.dataset.dataset_utils_test  # b/199583100
 examples.cql_sac.kumar20.cql_sac_train_eval_test  # b/199583100
-bandits.agents.linear_bandit_agent_test  # b/302734159
