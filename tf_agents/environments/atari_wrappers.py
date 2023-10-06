@@ -38,6 +38,8 @@ class FrameStack4(gym.Wrapper):
     self._env = env
     self._frames = collections.deque(maxlen=FrameStack4.STACK_SIZE)
     space = self._env.observation_space
+    if space is None:
+      raise ValueError('Observation space not initialized.')
     shape = space.shape[0:2] + (FrameStack4.STACK_SIZE,)
     self.observation_space = gym.spaces.Box(
         low=0, high=255, shape=shape, dtype=np.uint8

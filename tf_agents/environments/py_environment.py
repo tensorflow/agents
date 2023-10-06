@@ -178,6 +178,8 @@ class PyEnvironment(object):
 
   def current_time_step(self) -> ts.TimeStep:
     """Returns the current timestep."""
+    if self._current_time_step is None:
+      raise ValueError('Current timestep not initialized.')
     return self._current_time_step
 
   def reset(self) -> ts.TimeStep:
