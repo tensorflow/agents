@@ -117,7 +117,11 @@ class Trajectory(
     return self._replace(**kwargs)
 
   def __repr__(self):
-    return 'Trajectory(\n' + pprint.pformat(dict(self._asdict())) + ')'
+    return (
+        'Trajectory(\n'
+        + pprint.pformat(dict(self._asdict()), sort_dicts=False)
+        + ')'
+    )
 
 
 # TODO(b/162101981): Move to its own file.
