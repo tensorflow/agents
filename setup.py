@@ -178,13 +178,14 @@ def get_required_packages():
       'cloudpickle >= 1.3',
       'gin-config >= 0.4.0',
       'gym >= 0.17.0, <=0.23.0',
+      'gymnasium >= 0.29.0',
       'numpy >= 1.19.0',
       'pillow',
       'six >= 1.10.0',
       'protobuf >= 3.11.3',
       'wrapt >= 1.11.1',
       'typing-extensions >= 3.7.4.3',
-      # Used by gym >= 0.22.0. Only installed as a dependency when gym[all] is
+      # Used by gym / gymnasium >= 0.22.0. Only installed as a dependency when gym[all] is
       # installed or if gym[*] (where * is an environment which lists pygame as
       # a dependency).
       'pygame == 2.1.3',

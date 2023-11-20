@@ -102,6 +102,8 @@ Trajectory = ForwardRef('tf_agents.trajectories.trajectory.Trajectory')  # pylin
 
 GymEnv = ForwardRef('gym.Env')  # pylint: disable=invalid-name
 GymEnvWrapper = Callable[[GymEnv], GymEnv]
+GymnasiumEnv = ForwardRef('gymnasium.Env')  # pylint: disable=invalid-name
+GymnasiumEnvWrapper = Callable[[GymnasiumEnv], GymnasiumEnv]
 
 PyEnv = ForwardRef('tf_agents.environments.py_environment.PyEnvironment')  # pylint: disable=invalid-name
 PyEnvWrapper = Callable[[PyEnv], PyEnv]
