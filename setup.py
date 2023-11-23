@@ -174,21 +174,21 @@ def get_required_packages():
   """Returns list of required packages."""
 
   required_packages = [
-      'absl-py >= 0.6.1',
-      'cloudpickle >= 1.3',
-      'gin-config >= 0.4.0',
-      'gym >= 0.17.0, <=0.23.0',
-      'gymnasium >= 0.29.0',
-      'numpy >= 1.19.0',
-      'pillow',
-      'six >= 1.10.0',
-      'protobuf >= 3.11.3',
-      'wrapt >= 1.11.1',
-      'typing-extensions >= 3.7.4.3',
+      'absl-py >= 2.0.0',
+      'cloudpickle >= 3.0.0',
+      'gin-config >= 0.5.0',
+      'gym >= 0.17.0, <= 0.23.1',
+      'gymnasium[Box2D] >= 0.29.0',
+      'numpy >= 1.26.2',
+      'pillow >= 10.1.0',
+      'six >= 1.16.0',
+      'protobuf >= 3.11.3, <= 4.23.4',
+      'wrapt >= 1.16.1',
+      'typing-extensions == 3.7.4.3',
       # Used by gym / gymnasium >= 0.22.0. Only installed as a dependency when gym[all] is
       # installed or if gym[*] (where * is an environment which lists pygame as
       # a dependency).
-      'pygame == 2.1.3',
+      'pygame == 2.5.2',
   ]
   add_additional_packages(required_packages)
   return required_packages
