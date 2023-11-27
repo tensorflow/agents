@@ -29,7 +29,9 @@ from tf_agents.environments import wrappers
 # pylint: disable=g-import-not-at-top
 try:
   from tf_agents.environments import gym_wrapper
+  from tf_agents.environments import gymnasium_wrapper
   from tf_agents.environments import suite_gym
+  from tf_agents.environments import suite_gymnasium
   from tf_agents.environments import suite_atari
   from tf_agents.environments import suite_dm_control
   from tf_agents.environments import suite_mujoco
