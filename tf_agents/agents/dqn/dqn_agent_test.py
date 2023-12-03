@@ -19,6 +19,8 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+import unittest
+
 from absl.testing import parameterized
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 from tf_agents.agents.dqn import dqn_agent
@@ -82,7 +84,7 @@ class ComputeTDTargetsTest(test_utils.TestCase):
 
 
 @parameterized.named_parameters(
-    ('DqnAgent', dqn_agent.DqnAgent), ('DdqnAgent', dqn_agent.DdqnAgent)
+    ('DqnAgent', dqn_agent.DqnAgent), ('DdqnAgent', dqn_agent.DdqnAgent), ('D3qnAgent', dqn_agent.D3qnAgent),
 )
 class DqnAgentTest(test_utils.TestCase):
 
@@ -216,6 +218,10 @@ class DqnAgentTest(test_utils.TestCase):
     self.assertAllClose(self.evaluate(loss), expected_loss)
 
   def testLossWithChangedOptimalActions(self, agent_class):
+
+    # if 'D3qnAgent' in agent_class.__name__:
+    #     self.skipTest('invalid for dueling networks')
+
     q_net = DummyNet(self._observation_spec, self._action_spec)
     agent = agent_class(
         self._time_step_spec, self._action_spec, q_network=q_net, optimizer=None
@@ -475,6 +481,10 @@ class DqnAgentTest(test_utils.TestCase):
     self.assertAllClose(self.evaluate(loss), expected_loss)
 
   def testLossWithMaskedActions(self, agent_class):
+
+    # if 'D3qnAgent' in agent_class.__name__:
+    #     self.skipTest('invalid for dueling networks')
+
     # Observations are now a tuple of the usual observation and an action mask.
     observation_spec_with_mask = (
         self._observation_spec,
@@ -529,10 +539,22 @@ class DqnAgentTest(test_utils.TestCase):
     # Target Q-value for second next_observation (only action 0 is valid):
     # 2 * 7 + 1 * 8 + 1 = 23
     # TD targets: 10 + 0.9 * 12 = 20.8 and 20 + 0.9 * 23 = 40.7
-    # TD errors: 20.8 - 5 = 15.8 and 40.7 - 8 = 32.7
-    # TD loss: 15.3 and 32.2 (Huber loss subtracts 0.5)
+    # TD errors: 20.8 - 5 = 20.3 and 40.7 - 8 = 32.7
+    # TD loss: 19.8 and 32.2 (Huber loss subtracts 0.5)
     # Overall loss: (15.3 + 32.2) / 2 = 23.75
     expected_loss = 23.75
+    if 'D3qnAgent' in agent_class.__name__:
+        # Using Q-values for next_observations only for D3qnAgent.
+        # Q-value for first next_observation/action pair:
+        # 2 * 5 + 1 * 6 + 1 = 17
+        # Q-value for second next_observation/action pair:
+        # 1 * 7 + 1 * 8 + 1 = 16
+        # TD targets: 10 + 0.9 * 17 = 25.3 and 20 + 0.9 * 23 = 40.7
+        # TD errors: 25.3 - 5 = 20.3 and 40.7 - 8 = 32.7
+        # TD loss: 19.8 and 32.2 (Huber loss subtracts 0.5)
+        # Overall loss: (19.8 + 32.2) / 2 = 26.0
+        expected_loss = 26.0
+
     loss, _ = agent._loss(experience)
 
     self.evaluate(tf.compat.v1.global_variables_initializer())
