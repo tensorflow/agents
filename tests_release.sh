@@ -104,6 +104,8 @@ while [[ $# -gt -0 ]]; do
 done
 
 install_optional_dependencies() {
+
+
   if [ "$TF_INSTALL" != "false" ]; then
     $PYTHON_VERSION -mpip install $TF_INSTALL
   else
