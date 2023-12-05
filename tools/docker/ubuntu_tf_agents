@@ -87,8 +87,7 @@ RUN $python_version -m pip install wheel \
       protobuf==4.21.12 \
       google-api-core \
       google-cloud-bigquery \
-      psutil \
-      tf-keras
+      psutil
 
 ######################################################
 # Installs Jupyter notebook.

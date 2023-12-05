@@ -189,7 +189,6 @@ def get_required_packages():
       # installed or if gym[*] (where * is an environment which lists pygame as
       # a dependency).
       'pygame == 2.1.3',
-      'tf-keras >= 2.15.0',
   ]
   add_additional_packages(required_packages)
   return required_packages
