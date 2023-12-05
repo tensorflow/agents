@@ -63,7 +63,7 @@ flags.DEFINE_integer(
     'Port for reverb server, if None, use a randomly chosen unused port.',
 )
 flags.DEFINE_integer(
-    'num_iterations', 100000, 'Total number train/eval iterations to perform.'
+    'num_iterations', 200000, 'Total number train/eval iterations to perform.'
 )
 flags.DEFINE_integer(
     'eval_interval',
@@ -83,11 +83,12 @@ def train_eval(
     env_name='LunarLander-v2',
     # Training params
     initial_collect_steps=1000,
-    num_iterations=100000,
+    num_iterations=200000,
     fc_layer_params=(128, 128),
     # Agent params
     epsilon_greedy=0.1,
     min_epsilon=0.0001,
+    num_decay_steps=40000,
     batch_size=64,
     learning_rate=1e-3,
     n_step_update=1,
@@ -129,7 +130,7 @@ def train_eval(
   epsilon_decay = tf.compat.v1.train.polynomial_decay(
       learning_rate=epsilon_greedy,
       global_step=train_step,
-      decay_steps=num_iterations * 0.5,
+      decay_steps=num_decay_steps,
       end_learning_rate=min_epsilon,
       power=0.5
   )
@@ -157,6 +158,7 @@ def train_eval(
       table_name,
       max_size=replay_capacity,
       sampler=reverb.selectors.Uniform(),
+      # sampler=reverb.selectors.Prioritized(priority_exponent=0.5),
       remover=reverb.selectors.Fifo(),
       rate_limiter=reverb.rate_limiters.MinSize(1),
   )
@@ -257,6 +259,10 @@ def train_eval(
     if eval_interval and dqn_learner.train_step_numpy % eval_interval == 0:
       logging.info('Evaluating (epsilon: {}).'.format(epsilon_decay()))
       eval_actor.run_and_log()
+      average_return = eval_actor.metrics[0].result()
+      # LunarLander-v2 goal is 200.0
+      if average_return > 200.0:
+          break
 
   rb_observer.close()
   reverb_server.stop()
