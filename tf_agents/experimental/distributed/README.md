@@ -11,7 +11,7 @@ machines and distributed training across workers and accelerators.
 In distributed collection, we can run multiple (10s-1000s) Actor workers each
 collecting experience data given a policy. In distributed training, in the
 Learner we use data-parallelism to split a batch of training data across
-multiple accelerator devices, such as GPUs or TPU cores, one one machine (and
+multiple accelerator devices, such as GPUs or TPU cores, on one machine (and
 in the future across multiple workers as well). Using
 both parallel training and data collection can significantly improve time to
 convergence when training RL models.
@@ -57,6 +57,8 @@ serving both the replay buffer and variable container tables. Here is an example
 of setting up a separate reverb server:
 
 ```python
+  from tf_agents.experimental.distributed import reverb_variable_container
+
   port = 8008
   min_table_size_before_sampling = 1
   replay_buffer_capacity = 1000
@@ -74,6 +76,7 @@ of setting up a separate reverb server:
       reverb_variable_container.POLICY_KEY: collect_policy.variables(),
       reverb_variable_container.TRAIN_STEP_KEY: train_step
   }
+
   # variables signature for variable container table
   variable_container_signature = tf.nest.map_structure(
       lambda variable: tf.TensorSpec(variable.shape, dtype=variable.dtype),
@@ -108,14 +111,8 @@ And now we can create a variable container that connects to the reverb server
 via the `variable_container_server_address` (and similarly to the replay buffer):
 
 ```python
-  from tf_agents.experimental.distributed import reverb_variable_container
-
-  variables = {
-      reverb_variable_container.POLICY_KEY: collect_policy.variables(),
-      reverb_variable_container.TRAIN_STEP_KEY: train_step
-  }
   variable_container = reverb_variable_container.ReverbVariableContainer(
-      variable_container_server_address,
+      variable_container_server_address, # e.g. 'localhost:8008'
       table_names=[reverb_variable_container.DEFAULT_TABLE])
 ```
 
@@ -213,7 +210,7 @@ training across a GPU on one machine:
       root_dir,
       train_step,
       agent,
-      experience_dataset_fn,
+      experience_dataset_fn=experience_dataset_fn,
       triggers=learning_triggers,
       strategy=strategy)
 

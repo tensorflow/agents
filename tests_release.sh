@@ -19,7 +19,7 @@ TFP_INSTALL=false
 TFP_DEP_OVERRIDE=false
 RLDS_INSTALL=false
 RLDS_DEP_OVERRIDE=false
-PYTHON_VERSION=python3
+PYTHON_VERSION=python3.9
 BROKEN_TESTS=false
 
 if [[ $# -lt 1 ]] ; then

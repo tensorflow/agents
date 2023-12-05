@@ -361,7 +361,7 @@ class TFUniformReplayBuffer(replay_buffer.ReplayBuffer):
     def get_next(_):
       return self.get_next(sample_batch_size, num_steps, time_stacked=True)
 
-    dataset = tf.data.experimental.Counter().map(
+    dataset = tf.data.Dataset.counter().map(
         get_next, num_parallel_calls=num_parallel_calls
     )
     return dataset

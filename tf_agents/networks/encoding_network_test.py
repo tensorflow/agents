@@ -26,8 +26,6 @@ from tf_agents.networks import encoding_network
 from tf_agents.specs import tensor_spec
 from tf_agents.utils import test_utils
 
-keras_preprocessing = tf.keras.layers.experimental.preprocessing
-
 
 class EncodingNetworkTest(test_utils.TestCase, parameterized.TestCase):
 
@@ -312,7 +310,7 @@ class EncodingNetworkTest(test_utils.TestCase, parameterized.TestCase):
     vocab_list = [2, 3, 4]
 
     keras_input = tf.keras.Input(shape=(1,), name=key, dtype=tf.dtypes.int32)
-    id_input = keras_preprocessing.IntegerLookup(
+    id_input = tf.keras.layers.IntegerLookup(
         vocabulary=vocab_list, num_oov_indices=0, output_mode='multi_hot'
     )
 
@@ -344,7 +342,7 @@ class EncodingNetworkTest(test_utils.TestCase, parameterized.TestCase):
     inputs[indicator_key] = tf.keras.Input(
         shape=(1,), dtype=tf.dtypes.int32, name=indicator_key
     )
-    features[indicator_key] = keras_preprocessing.IntegerLookup(
+    features[indicator_key] = tf.keras.layers.IntegerLookup(
         vocabulary=vocab_list, num_oov_indices=0, output_mode='multi_hot'
     )(inputs[indicator_key])
     state_input = [3, 2, 2, 4, 3]
@@ -358,7 +356,7 @@ class EncodingNetworkTest(test_utils.TestCase, parameterized.TestCase):
     inputs[embedding_key] = tf.keras.Input(
         shape=(1,), dtype=tf.dtypes.int32, name=embedding_key
     )
-    id_input = keras_preprocessing.IntegerLookup(
+    id_input = tf.keras.layers.IntegerLookup(
         vocabulary=vocab_list, num_oov_indices=0
     )(inputs[embedding_key])
     embedding_input = tf.keras.layers.Embedding(

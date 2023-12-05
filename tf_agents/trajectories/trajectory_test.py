@@ -18,6 +18,8 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+import sys
+
 import numpy as np
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 from tf_agents.drivers import dynamic_episode_driver
@@ -125,6 +127,21 @@ class TrajectoryTest(test_utils.TestCase):
     self.assertFalse(tf.is_tensor(traj.step_type))
     self.assertAllEqual(traj.step_type, [ts.StepType.FIRST] * 3)
     self.assertAllEqual(traj.next_step_type, [ts.StepType.LAST] * 3)
+
+  def testPrintFormat(self):
+    observation = ()
+    action = ()
+    policy_info = ()
+    reward = tf.constant([2.0, 2.0, 2.0])
+    discount = tf.constant([0.9, 0.9, 0.9])
+
+    traj = trajectory.first(observation, action, policy_info, reward, discount)
+    with self.captureWritesToStream(sys.stdout) as printed:
+      print_op = tf.print(traj, output_stream=sys.stdout)
+      self.evaluate(print_op)
+
+    expected = "'discount': [0.9 0.9 0.9]"
+    self.assertIn(expected, printed.contents())
 
   def testFromEpisodeTensor(self):
     observation = tf.random.uniform((4, 5))

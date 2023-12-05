@@ -14,6 +14,7 @@
 # limitations under the License.
 
 """Build, test, and install tf_agents."""
+
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
@@ -213,7 +214,6 @@ def get_test_packages():
       'opencv-python >= 3.4.1.15',
       'pybullet',
       'scipy >= 1.1.0',
-      #'tensorflow-datasets >= 4.9.3',
   ]
   return test_packages
 
@@ -329,25 +329,31 @@ if __name__ == '__main__':
       '--tf-version',
       type=str,
       default=None,
-      help='Overrides TF version required when Reverb is installed, e.g.'
-      'tensorflow~=2.13.0')
+      help=(
+          'Overrides TF version required when Reverb is installed, e.g.'
+          'tensorflow~=2.13.0'
+      ),
+  )
   parser.add_argument(
       '--reverb-version',
       type=str,
       default=None,
-      help='Overrides Reverb version required, e.g. dm-reverb~=0.12.0')
+      help='Overrides Reverb version required, e.g. dm-reverb~=0.12.0',
+  )
   parser.add_argument(
       '--tfp-version',
       type=str,
       default=None,
-      help='Overrides tfp version required, e.g. '
-      'tensorflow-probability~=0.20.0')
+      help=(
+          'Overrides tfp version required, e.g. tensorflow-probability~=0.20.0'
+      ),
+  )
   parser.add_argument(
       '--rlds-version',
       type=str,
       default=None,
-      help='Overrides rlds version required, e.g. '
-      'rlds==0.1.8')
+      help='Overrides rlds version required, e.g. rlds==0.1.8',
+  )
   parser.add_argument(
       '--broken_tests',
       type=str,

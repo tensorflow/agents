@@ -226,7 +226,7 @@ class Learner(tf.Module):
         _create_variables.get_concrete_function(batched_specs)
       else:
         # TODO(b/186052656) Update clients.
-        logging.warn('run_optimizer_variable_init = False is Deprecated')
+        logging.warning('run_optimizer_variable_init = False is Deprecated')
 
       self._checkpointer = common.Checkpointer(
           checkpoint_dir,
