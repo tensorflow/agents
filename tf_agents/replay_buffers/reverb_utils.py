@@ -117,6 +117,11 @@ class ReverbAddEpisodeObserver(object):
     self._overflow_episode = False
     self._writer_has_data = False
 
+  def _get_writer(self):
+    if self._writer is None:
+      raise ValueError("Could not obtain writer from py_client.")
+    return self._writer
+
   def update_priority(self, priority: Union[float, int]) -> None:
     """Update the table priority.
 
@@ -181,7 +186,7 @@ class ReverbAddEpisodeObserver(object):
       return
 
     if not self._overflow_episode:
-      self._writer.append(trajectory)
+      self._get_writer().append(trajectory)
       self._writer_has_data = True
       self._cached_steps += 1
 
@@ -197,9 +202,11 @@ class ReverbAddEpisodeObserver(object):
     # Only writes to Reverb when the writer has cached trajectories.
     if self._writer_has_data:
       # No need to truncate since the truncation is done in the class.
-      trajectory = tf.nest.map_structure(lambda h: h[:], self._writer.history)
+      trajectory = tf.nest.map_structure(
+          lambda h: h[:], self._get_writer().history
+      )
       for table_name in self._table_names:
-        self._writer.create_item(
+        self._get_writer().create_item(
             table=table_name, trajectory=trajectory, priority=self._priority
         )
       self._writer_has_data = False
@@ -214,7 +221,7 @@ class ReverbAddEpisodeObserver(object):
     By calling this method before the `learner.run()`, we ensure that there is
     enough data to be consumed.
     """
-    self._writer.flush()
+    self._get_writer().flush()
 
   def reset(self, write_cached_steps: bool = True) -> None:
     """Resets the state of the observer.
@@ -347,6 +354,11 @@ class ReverbAddTrajectoryObserver(object):
     self._cached_steps = 0
     self._last_trajectory = None
 
+  def _get_writer(self):
+    if self._writer is None:
+      raise ValueError("Could not obtain writer from py_client.")
+    return self._writer
+
   @property
   def py_client(self) -> types.ReverbClient:
     return self._py_client
@@ -367,7 +379,7 @@ class ReverbAddTrajectoryObserver(object):
         there is *no* batch dimension.
     """
     self._last_trajectory = trajectory
-    self._writer.append(trajectory)
+    self._get_writer().append(trajectory)
     self._cached_steps += 1
 
     # If the fixed sequence length is reached, write the sequence.
@@ -395,10 +407,10 @@ class ReverbAddTrajectoryObserver(object):
 
     if self._sequence_lengths_reached():
       trajectory = tf.nest.map_structure(
-          lambda d: d[-self._sequence_length :], self._writer.history
+          lambda d: d[-self._sequence_length :], self._get_writer().history
       )
       for table_name in self._table_names:
-        self._writer.create_item(
+        self._get_writer().create_item(
             table=table_name, trajectory=trajectory, priority=self._priority
         )
 
@@ -412,7 +424,7 @@ class ReverbAddTrajectoryObserver(object):
     By calling this method before the `learner.run()`, we ensure that there is
     enough data to be consumed.
     """
-    self._writer.flush()
+    self._get_writer().flush()
 
   def _get_padding_step(
       self, example_trajectory: trajectory_lib.Trajectory
@@ -452,7 +464,7 @@ class ReverbAddTrajectoryObserver(object):
           pad_range = range(self._sequence_length - self._cached_steps)
 
         for _ in pad_range:
-          self._writer.append(zero_step)
+          self._get_writer().append(zero_step)
           self._cached_steps += 1
           self._write_cached_steps()
       # Write the cached trajectories without padding, if the cache contains
@@ -522,7 +534,7 @@ class ReverbTrajectorySequenceObserver(ReverbAddTrajectoryObserver):
     # We record the last step called to generate the padding step when padding
     # is enabled.
     self._last_trajectory = trajectory
-    self._writer.append(trajectory)
+    self._get_writer().append(trajectory)
     self._cached_steps += 1
 
     self._write_cached_steps()
