@@ -176,6 +176,7 @@ but can have issues due to upstream libraries being in flux. The table below
 lists the version(s) of TensorFlow that align with each TF Agents' release.
 Release versions of interest:
 
+  * 0.19.0 supports tensorflow-2.15.0.
   * 0.18.0 dropped Python 3.8 support.
   * 0.16.0 is the first version to support Python 3.11.
   * 0.15.0 is the last release compatible with Python 3.7.
@@ -186,6 +187,7 @@ Release versions of interest:
 Release | Branch / Tag                                               | TensorFlow Version | dm-reverb Version
 ------- | ---------------------------------------------------------- | ------------------ | -----------
 Nightly | [master](https://github.com/tensorflow/agents)             | tf-nightly         | dm-reverb-nightly
+0.19.0  | [v0.19.0](https://github.com/tensorflow/agents/tree/v0.19.0) | 2.15.0           | 0.14.0
 0.18.0  | [v0.18.0](https://github.com/tensorflow/agents/tree/v0.18.0) | 2.14.0           | 0.13.0
 0.17.0  | [v0.17.0](https://github.com/tensorflow/agents/tree/v0.17.0) | 2.13.0           | 0.12.0
 0.16.0  | [v0.16.0](https://github.com/tensorflow/agents/tree/v0.16.0) | 2.12.0           | 0.11.0
