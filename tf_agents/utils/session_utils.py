@@ -96,7 +96,7 @@ class SessionUser(object):
   """
 
   @property
-  def session(self):
+  def session(self) -> tf.compat.v1.Session:
     """Returns the TensorFlow session-like object used by this object.
 
     Returns:

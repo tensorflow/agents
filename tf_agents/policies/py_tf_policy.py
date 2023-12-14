@@ -14,6 +14,7 @@
 # limitations under the License.
 
 """Converts TensorFlow Policies into Python Policies."""
+
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
@@ -76,7 +77,7 @@ class PyTFPolicy(py_policy.PyPolicy, session_utils.SessionUser):
     )
 
     self._tf_policy = policy
-    self.session = None
+    self.session: tf.compat.v1.Session = None
 
     self._policy_state_spec = tensor_spec.to_nest_array_spec(
         self._tf_policy.policy_state_spec
