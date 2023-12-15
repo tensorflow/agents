@@ -8,3 +8,4 @@ replay_buffers.episodic_replay_buffer_test  # b/199587793
 networks.q_rnn_network_test # b/237573967
 networks.actor_distribution_rnn_network_test  # b/237573967
 agents.ddpg.critic_rnn_network_test  # b/237573967
+policies.policy_saver_test  # b/315708156
