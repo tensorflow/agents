@@ -289,7 +289,7 @@ class FixedLengthWrapperTest(test_utils.TestCase):
         time_step = env.step(np.array(1, dtype=np.int32))
         num_steps += 1
       # Verify episode length.
-      self.assertTrue(num_steps, env.fix_length)
+      self.assertEqual(num_steps, env.fix_length + 1)
 
       # it should automatically reset.
       self.assertTrue(time_step.is_first())
