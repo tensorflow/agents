@@ -19,6 +19,7 @@ from tf_agents.networks import actor_distribution_network
 from tf_agents.networks import actor_distribution_rnn_network
 from tf_agents.networks import categorical_projection_network
 from tf_agents.networks import categorical_q_network
+from tf_agents.networks import dueling_q_network
 from tf_agents.networks import encoding_network
 from tf_agents.networks import expand_dims_layer
 from tf_agents.networks import lstm_encoding_network

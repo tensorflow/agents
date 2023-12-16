@@ -120,9 +120,13 @@ class QPolicy(tf_policy.TFPolicy):
         )
 
       num_actions = spec.maximum - spec.minimum + 1
-      network_utils.check_single_floating_network_output(
-          q_network.create_variables(), (num_actions,), str(q_network)
-      )
+      # enable checking of dueling Q networks
+      outputs = q_network.create_variables()
+      iterable = list(outputs) if isinstance(outputs, tuple) else [outputs]
+      for output in iterable:
+        network_utils.check_single_floating_network_output(
+            output, (num_actions,), str(q_network)
+        )
 
     # We need to maintain the flat action spec for dtype, shape and range.
     self._flat_action_spec = flat_action_spec[0]
@@ -165,7 +169,8 @@ class QPolicy(tf_policy.TFPolicy):
         step_type=time_step.step_type,
     )
 
-    logits = q_values
+    # use action values
+    logits = q_values[1] if isinstance(q_values, tuple) else q_values
 
     if observation_and_action_constraint_splitter is not None:
       # Overwrite the logits for invalid actions to logits.dtype.min.

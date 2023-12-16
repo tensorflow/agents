@@ -328,11 +328,14 @@ class DqnAgent(tf_agent.TFAgent):
       net: A `Network`.
       label: A label to print in case of a mismatch.
     """
-    network_utils.check_single_floating_network_output(
-        net.create_variables(),
-        expected_output_shape=(self._num_actions,),
-        label=label,
-    )
+    outputs = net.create_variables()
+    iterable = list(outputs) if isinstance(outputs, tuple) else [outputs]
+    for output in iterable:
+      network_utils.check_single_floating_network_output(
+          output,
+          expected_output_shape=(self._num_actions,),
+          label=label,
+      )
 
   def _setup_policy(
       self,
@@ -590,8 +593,10 @@ class DqnAgent(tf_agent.TFAgent):
     # param. Note: assumes len(tf.nest.flatten(action_spec)) == 1.
     action_spec = cast(tensor_spec.BoundedTensorSpec, self._action_spec)
     multi_dim_actions = action_spec.shape.rank > 0
+    # support for dueling networks
+    a_values = q_values[0] if isinstance(q_values, tuple) else q_values
     return common.index_with_actions(
-        q_values,
+        a_values,
         tf.cast(actions, dtype=tf.int32),
         multi_dim_actions=multi_dim_actions,
     )
@@ -614,8 +619,11 @@ class DqnAgent(tf_agent.TFAgent):
           network_observation
       )
 
-    next_target_q_values, _ = self._target_q_network(
+    q_next_target, _ = self._target_q_network(
         network_observation, step_type=next_time_steps.step_type
+    )
+    next_target_q_values = (
+        q_next_target[0] if isinstance(q_next_target, tuple) else q_next_target
     )
     batch_size = (
         next_target_q_values.shape[0] or tf.shape(next_target_q_values)[0]
@@ -668,8 +676,11 @@ class DdqnAgent(DqnAgent):
           network_observation
       )
 
-    next_target_q_values, _ = self._target_q_network(
+    q_next_target, _ = self._target_q_network(
         network_observation, step_type=next_time_steps.step_type
+    )
+    next_target_q_values = (
+        q_next_target[0] if isinstance(q_next_target, tuple) else q_next_target
     )
     batch_size = (
         next_target_q_values.shape[0] or tf.shape(next_target_q_values)[0]
@@ -678,6 +689,59 @@ class DdqnAgent(DqnAgent):
     # Find the greedy actions using our greedy policy. This ensures that action
     # constraints are respected and helps centralize the greedy logic.
     best_next_actions = self._policy.action(next_time_steps, dummy_state).action
+
+    # Handle action_spec.shape=(), and shape=(1,) by using the multi_dim_actions
+    # param. Note: assumes len(tf.nest.flatten(action_spec)) == 1.
+    multi_dim_actions = tf.nest.flatten(self._action_spec)[0].shape.rank > 0
+    return common.index_with_actions(
+        next_target_q_values,
+        best_next_actions,
+        multi_dim_actions=multi_dim_actions,
+    )
+
+
+@gin.configurable
+class D3qnAgent(DqnAgent):
+  """A Dueling DQN Agent.
+
+  Implements the Double Dueling DQN algorithm from
+
+  "Dueling Network Architectures for Deep Reinforcement Learning"
+   Wang et al., 2016
+   https://arxiv.org/abs/1511.06581
+  """
+
+  def _compute_next_q_values(self, next_time_steps, info):
+    """Compute the q value of the next state for TD error computation.
+
+    Args:
+      next_time_steps: A batch of next timesteps
+      info: PolicyStep.info that may be used by other agents inherited from
+        dqn_agent.
+
+    Returns:
+      A tensor of Q values for the given next state.
+    """
+    del info
+    # TODO(b/117175589): Add binary tests for DDQN.
+    network_observation = next_time_steps.observation
+
+    if self._observation_and_action_constraint_splitter is not None:
+      network_observation, _ = self._observation_and_action_constraint_splitter(
+          network_observation
+      )
+
+    q_next_target, _ = self._target_q_network(
+        network_observation, step_type=next_time_steps.step_type
+    )
+    next_target_q_values = (
+        q_next_target[0] if isinstance(q_next_target, tuple) else q_next_target
+    )
+    q_next, _ = self._q_network(
+        network_observation, step_type=next_time_steps.step_type
+    )
+    next_q_values = q_next[1] if isinstance(q_next, tuple) else q_next
+    best_next_actions = tf.math.argmax(next_q_values, axis=1)
 
     # Handle action_spec.shape=(), and shape=(1,) by using the multi_dim_actions
     # param. Note: assumes len(tf.nest.flatten(action_spec)) == 1.
