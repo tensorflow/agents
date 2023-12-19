@@ -37,7 +37,7 @@ try:
   from tf_agents.environments import suite_mujoco
   from tf_agents.environments import suite_pybullet
   from tf_agents.environments.gym_wrapper import GymWrapper
-except (ImportError, ModuleNotFoundError):
+except (ImportError, ModuleNotFoundError, FileNotFoundError):
   pass
 
 from tf_agents.environments.batched_py_environment import BatchedPyEnvironment
