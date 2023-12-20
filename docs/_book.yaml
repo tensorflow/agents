@@ -45,6 +45,8 @@ upper_tabs:
         path: /agents/tutorials/bandits_tutorial
       - title: Ranking Tutorial
         path: /agents/tutorials/ranking_tutorial
+      - title: Multi-Armed Bandits with Per-Arm
+        path: agents/tutorials/per_arm_bandits_tutorial
     - name: API
       skip_translation: true
       contents:
