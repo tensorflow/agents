@@ -52,7 +52,7 @@ def _ensure_tf_install():  # pylint: disable=g-statement-before-imports
   #
   # Update this whenever we need to depend on a newer TensorFlow release.
   #
-  required_tensorflow_version = "2.2.0"
+  required_tensorflow_version = "2.15.0"
 
   tf_version = tf.version.VERSION
   if distutils.version.LooseVersion(
