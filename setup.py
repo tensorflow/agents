@@ -48,6 +48,8 @@ TENSORFLOW_NIGHTLY = 'tf-nightly'
 REVERB_VERSION = 'dm-reverb'
 REVERB_NIGHTLY = 'dm-reverb-nightly'
 RLDS_VERSION = 'rlds'
+TF_KERAS_VERSION = 'tf-keras'
+TF_KERAS_NIGHTLY = 'tf-keras-nightly'
 # TODO(b/224850217): rlds does not have nightly builds yet.
 RLDS_NIGHTLY = 'rlds'
 
@@ -173,6 +175,14 @@ class BinaryDistribution(Distribution):
 
 def get_required_packages():
   """Returns list of required packages."""
+  if FLAGS.release:
+    tf_keras_version = TF_KERAS_VERSION
+  else:
+    tf_keras_version = TF_KERAS_NIGHTLY
+
+  # Overrides required versions if FLAGS are set.
+  if FLAGS.tf_keras_version:
+    tf_keras_version = FLAGS.tf_keras_version
 
   required_packages = [
       'absl-py >= 2.0.0',
@@ -184,7 +194,7 @@ def get_required_packages():
       'pillow >= 10.1.0',
       'six >= 1.16.0',
       'protobuf >= 3.11.3, <= 4.23.4',
-      'wrapt >= 1.16.0',
+      'wrapt >= 1.11.1',
       # Using an older version to avoid this bug
       # https://github.com/tensorflow/tensorflow/issues/62217
       # while using tf 2.15.0
@@ -193,6 +203,7 @@ def get_required_packages():
       # installed or if gym[*] (where * is an environment which lists pygame as
       # a dependency).
       'pygame == 2.5.2',
+      tf_keras_version,
   ]
   add_additional_packages(required_packages)
   return required_packages
@@ -321,6 +332,9 @@ def run_setup():
 
 
 if __name__ == '__main__':
+  # Keep using keras-2 (tf-keras) rather than keras-3 (keras).
+  os.environ['TF_USE_LEGACY_KERAS'] = '1'
+
   # Hide argparse help so `setuptools.setup` help prints. This pattern is an
   # improvement over using `sys.argv` and then `sys.argv.remove`, which also
   # did not provide help about custom arguments.
@@ -358,6 +372,14 @@ if __name__ == '__main__':
       type=str,
       default=None,
       help='Overrides rlds version required, e.g. rlds==0.1.8',
+  )
+  parser.add_argument(
+      '--tf-keras-version',
+      type=str,
+      default=None,
+      help=(
+          'Overrides tf-keras version required, e.g. tfk-keras~=2.13.0'
+      ),
   )
   parser.add_argument(
       '--broken_tests',

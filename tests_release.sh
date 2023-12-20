@@ -13,6 +13,8 @@ RELEASE_TYPE=nightly
 TEST_COLABS=false
 TF_INSTALL=false
 TF_DEP_OVERRIDE=false
+TF_KERAS_INSTALL=false
+TF_KERAS_DEP_OVERRIDE=false
 REVERB_INSTALL=false
 REVERB_DEP_OVERRIDE=false
 TFP_INSTALL=false
@@ -27,6 +29,8 @@ if [[ $# -lt 1 ]] ; then
   echo "--type [nightly|stable]"
   echo "--tf_dep_override     [Required tensorflow version to pass to setup.py."
   echo "                       Examples: tensorflow==2.3.0rc0  or tensorflow>=2.3.0]"
+  echo "--tf_keras_dep_override [Required tf-keras version to pass to setup.py."
+  echo "                       Examples: tf-keras==2.3.0rc0  or tf-keras>=2.3.0]"
   echo "--reverb_dep_override [Required reverb version to pass to setup.py."
   echo "                        Examples: dm-reverb==0.1.0rc0  or dm-reverb>=0.1.0]"
   echo "--tfp_dep_override    [Required tensorflow version to pass to setup.py."
@@ -34,6 +38,7 @@ if [[ $# -lt 1 ]] ; then
   echo "--rlds_dep_override   [Version of RLDS to install.]"
   echo "                       Examples: rlds==0.1.3]"
   echo "--tf_install          [Version of TensorFlow to install]"
+  echo "--tf_keras_install    [Version of tf-keras to install]"
   echo "--reverb_install      [Version of Reverb to install]"
   echo "--tfp_install         [Version of TensorFlow probability to install]"
   echo "--rlds_install         [Version of TensorFlow probability to install]"
@@ -62,6 +67,14 @@ while [[ $# -gt -0 ]]; do
       ;;
     --tf_dep_override)
       TF_DEP_OVERRIDE="$2"  # Setup.py is told this is the required tensorflow.
+      shift
+      ;;
+    --tf_keras_install)
+      TF_KERAS_INSTALL="$2"  # Install this version of tf-keras.
+      shift
+      ;;
+    --tf_keras_dep_override)
+      TF_KERAS_DEP_OVERRIDE="$2"  # Setup.py is told this is the required tf-keras.
       shift
       ;;
     --reverb_install)
@@ -127,6 +140,12 @@ install_optional_dependencies() {
   else
     $PYTHON_VERSION -mpip install $4
   fi
+
+  if [ "$TF_KERAS_INSTALL" != "false" ]; then
+    $PYTHON_VERSION -mpip install $TF_KERAS_INSTALL
+  else
+    $PYTHON_VERSION -mpip install $5
+  fi
 }
 
 run_tests() {
@@ -135,9 +154,11 @@ run_tests() {
   echo "    python_version:${PYTHON_VERSION}"
   echo "    test_colabs:${TEST_COLABS}"
   echo "    tf_installs:${TF_INSTALL}"
+  echo "    tf_keras_installs:${TF_KERAS_INSTALL}"
   echo "    reverb_install:${REVERB_INSTALL}"
   echo "    tfp_install:${TFP_INSTALL}"
-  echo "    tf_dep_override:${REVERB_DEP_OVERRIDE}"
+  echo "    tf_dep_override:${TF_DEP_OVERRIDE}"
+  echo "    tf_keras_dep_override:${TF_KERAS_DEP_OVERRIDE}"
   echo "    reverb_dep_override:${REVERB_DEP_OVERRIDE}"
   echo "    tfp_dep_override:${TFP_DEP_OVERRIDE}"
   echo "    broken_tests:${BROKEN_TESTS}"
@@ -167,6 +188,9 @@ run_tests() {
   if [ "$RLDS_DEP_OVERRIDE" != "false" ]; then
     EXTRA_ARGS="${EXTRA_ARGS} --rlds-version ${RLDS_DEP_OVERRIDE}"
   fi
+  if [ "$TF_KERAS_DEP_OVERRIDE" != "false" ]; then
+    EXTRA_ARGS="${EXTRA_ARGS} --tf-keras-version ${TF_KERAS_DEP_OVERRIDE}"
+  fi
   if [ "$BROKEN_TESTS" != "false" ]; then
     EXTRA_ARGS="${EXTRA_ARGS} --broken_tests ${BROKEN_TESTS}"
   fi
@@ -175,7 +199,7 @@ run_tests() {
   # different TensorFlow versions a user might want and installed.
   if [ "$RELEASE_TYPE" = "nightly" ]; then
     # rlds does not do nightly builds.
-    install_optional_dependencies "tf-nightly" "dm-reverb-nightly" "tfp-nightly" "rlds"
+    install_optional_dependencies "tf-nightly" "dm-reverb-nightly" "tfp-nightly" "rlds" "tf-keras-nightly"
 
     # Run the tests
     $PYTHON_VERSION setup.py test $EXTRA_ARGS
@@ -184,7 +208,7 @@ run_tests() {
     WHEEL_PATH=${TMP}/wheel/$1
     ./pip_pkg.sh ${WHEEL_PATH}/ $EXTRA_ARGS
   elif [ "$RELEASE_TYPE" = "stable" ]; then
-    install_optional_dependencies "tensorflow" "dm-reverb" "tensorflow-probability" "rlds"
+    install_optional_dependencies "tensorflow" "dm-reverb" "tensorflow-probability" "rlds" "tf-keras"
     # Run the tests
     $PYTHON_VERSION setup.py test --release $EXTRA_ARGS
 

@@ -108,6 +108,8 @@ documentation for the release is on
 ```shell
 $ pip install --user tf-agents[reverb]
 
+# Use keras-2
+$ export TF_USE_LEGACY_KERAS=1
 # Use this tag get the matching examples and colabs.
 $ git clone https://github.com/tensorflow/agents.git
 $ cd agents
@@ -120,6 +122,7 @@ by the pip dependency check, use the following pattern below at your own risk.
 
 ```shell
 $ pip install --user tensorflow
+$ pip install --user tf-keras
 $ pip install --user dm-reverb
 $ pip install --user tf-agents
 ```
@@ -143,8 +146,12 @@ tested against.
 To install the nightly build version, run the following:
 
 ```shell
+# Use keras-2
+$ export TF_USE_LEGACY_KERAS=1
+
 # `--force-reinstall helps guarantee the right versions.
 $ pip install --user --force-reinstall tf-nightly
+$ pip install --user --force-reinstall tf-keras-nightly
 $ pip install --user --force-reinstall tfp-nightly
 $ pip install --user --force-reinstall dm-reverb-nightly
 
