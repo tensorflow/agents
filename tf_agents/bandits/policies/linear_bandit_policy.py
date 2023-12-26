@@ -107,7 +107,7 @@ class LinearBanditPolicy(tf_policy.TFPolicy):
       num_samples: list of number of samples per arm, unless the policy accepts
         per-arm features, in which case this is just the number of samples seen.
       time_step_spec: A `TimeStep` spec of the expected time_steps.
-      exploration_strategy: An Enum of type ExplortionStrategy. The strategy
+      exploration_strategy: An Enum of type ExplorationStrategy. The strategy
         used for choosing the actions to incorporate exploration. Currently
         supported strategies are `optimistic` and `sampling`.
       alpha: a float value used to scale the confidence intervals.
