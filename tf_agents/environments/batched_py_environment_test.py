@@ -130,7 +130,6 @@ class BatchedPyEnvironmentTest(tf.test.TestCase, parameterized.TestCase):
   @parameterized.parameters(*COMMON_PARAMETERS)
   def test_seed_gym_env(self, multithreading):
     num_envs = 5
-    rng = np.random.RandomState()
     gym_env = self._make_batched_mock_gym_py_environment(
         multithreading, num_envs=num_envs
     )
@@ -144,7 +143,6 @@ class BatchedPyEnvironmentTest(tf.test.TestCase, parameterized.TestCase):
   @parameterized.parameters(*COMMON_PARAMETERS)
   def test_state_gym_env(self, multithreading):
     num_envs = 5
-    rng = np.random.RandomState()
     gym_env = self._make_batched_mock_gym_py_environment(
         multithreading, num_envs=num_envs
     )

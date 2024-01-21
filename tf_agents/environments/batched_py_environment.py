@@ -183,11 +183,7 @@ class BatchedPyEnvironment(py_environment.PyEnvironment):
       return nest_utils.stack_nested_arrays(time_steps)
 
   def seed(self, seed: types.Seed) -> Any:
-    """Seeds the environment.
-
-    Args:
-      seed: Value to use as seed for the environment.
-    """
+    """Seeds the environment."""
     return self._execute(lambda env: env.seed(seed), self._envs)
 
   def get_state(self) -> Any:
@@ -197,8 +193,8 @@ class BatchedPyEnvironment(py_environment.PyEnvironment):
   def set_state(self, state: Sequence[Any]) -> None:
     """Restores the environment to a given `state`."""
     self._execute(
-      lambda env_and_state: env_and_state[0].set_state(env_and_state[1]),
-      zip(self._envs, state)
+        lambda env_state: env_state[0].set_state(env_state[1]),
+        zip(self._envs, state)
     )
 
   def render(self, mode="rgb_array") -> Optional[types.NestedArray]:
