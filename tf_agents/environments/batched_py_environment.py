@@ -26,7 +26,7 @@ from __future__ import print_function
 from multiprocessing import dummy as mp_threads
 from multiprocessing import pool
 # pylint: enable=line-too-long
-from typing import Sequence, Optional
+from typing import Any, Optional, Sequence
 
 import gin
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
@@ -181,6 +181,21 @@ class BatchedPyEnvironment(py_environment.PyEnvironment):
           zip(self._envs, unstacked_actions),
       )
       return nest_utils.stack_nested_arrays(time_steps)
+
+  def seed(self, seed: types.Seed) -> Any:
+    """Seeds the environment."""
+    return self._execute(lambda env: env.seed(seed), self._envs)
+
+  def get_state(self) -> Any:
+    """Returns the `state` of the environment."""
+    return self._execute(lambda env: env.get_state(), self._envs)
+
+  def set_state(self, state: Sequence[Any]) -> None:
+    """Restores the environment to a given `state`."""
+    self._execute(
+        lambda env_state: env_state[0].set_state(env_state[1]),
+        zip(self._envs, state)
+    )
 
   def render(self, mode="rgb_array") -> Optional[types.NestedArray]:
     if self._num_envs == 1:

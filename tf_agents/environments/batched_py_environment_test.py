@@ -38,9 +38,20 @@ class GymWrapperEnvironmentMock(random_py_environment.RandomPyEnvironment):
   def __init__(self, *args, **kwargs):
     super(GymWrapperEnvironmentMock, self).__init__(*args, **kwargs)
     self._info = {}
+    self._state = {'seed': 0}
 
   def get_info(self):
     return self._info
+
+  def seed(self, seed):
+    self._state['seed'] = seed
+    return super(GymWrapperEnvironmentMock, self).seed(seed)
+
+  def get_state(self):
+    return self._state
+
+  def set_state(self, state):
+    self._state = state
 
   def _step(self, action):
     self._info['last_action'] = action
@@ -114,6 +125,32 @@ class BatchedPyEnvironmentTest(tf.test.TestCase, parameterized.TestCase):
     gym_env.step(action)
     info = gym_env.get_info()
     self.assertAllEqual(info['last_action'], action)
+    gym_env.close()
+
+  @parameterized.parameters(*COMMON_PARAMETERS)
+  def test_seed_gym_env(self, multithreading):
+    num_envs = 5
+    gym_env = self._make_batched_mock_gym_py_environment(
+        multithreading, num_envs=num_envs
+    )
+
+    gym_env.seed(42)
+
+    actual_seeds = [state['seed'] for state in gym_env.get_state()]
+    self.assertEqual(actual_seeds, [42] * num_envs)
+    gym_env.close()
+
+  @parameterized.parameters(*COMMON_PARAMETERS)
+  def test_state_gym_env(self, multithreading):
+    num_envs = 5
+    gym_env = self._make_batched_mock_gym_py_environment(
+        multithreading, num_envs=num_envs
+    )
+    state = [{'value': i * 10} for i in range(num_envs)]
+
+    gym_env.set_state(state)
+
+    self.assertEqual(gym_env.get_state(), state)
     gym_env.close()
 
   @parameterized.parameters(*COMMON_PARAMETERS)
