@@ -116,6 +116,19 @@ class FeedbackModel(enum.Enum):
   SCORE_VECTOR = 2
 
 
+class PositionalBiasType(enum.Enum):
+  """Enumeration of positional bias types."""
+
+  UNSET = 0
+  # The bias weight for each slot position is `k^s`, where `s` is the bias
+  # severity and `k` is the position.
+  BASE = 1
+  # The weights are `s^k`. These bias adjustment types are inspired by Ovaisi
+  # et al. `Correcting for Selection Bias in Learning-to-rank Systems`
+  # (WWW 2020).
+  EXPONENT = 2
+
+
 class RankingAgent(tf_agent.TFAgent):
   """Ranking agent class."""
 
@@ -129,7 +142,7 @@ class RankingAgent(tf_agent.TFAgent):
       error_loss_fn: types.LossFn = tf.compat.v1.losses.mean_squared_error,
       feedback_model: FeedbackModel = FeedbackModel.CASCADING,
       non_click_score: Optional[float] = None,
-      positional_bias_type: Optional[Text] = None,
+      positional_bias_type: PositionalBiasType = PositionalBiasType.UNSET,
       positional_bias_severity: Optional[float] = None,
       positional_bias_positive_only: bool = False,
       logits_temperature: float = 1.0,
@@ -162,16 +175,9 @@ class RankingAgent(tf_agent.TFAgent):
       non_click_score: (float) For the cascading feedback model, this is the
         score value for items lying "before" the clicked item. If not set, -1 is
         used. It is recommended (but not enforced) to use a negative value.
-      positional_bias_type: (string) If not set (or set to `None`), the agent
-        does not apply bias adjustment. If set to either `base` or `exponent`,
-        it parameter determines what way the positional bias is accounted for.
-        `base`: The bias weight for each slot position is `k^s`, where `s` is
-        the bias severity (set in the next parameter), and `k` is the position.
-        `exponent`: The weights are `s^k`. These bias adjustment types are
-        inspired by Ovaisi et al. `Correcting for Selection Bias in
-        Learning-to-rank Systems` (WWW 2020).
-      positional_bias_severity: (float) The severity `s`, used as explained
-        above. If `positional_bias_type` is unset, this parameter has no effect.
+      positional_bias_type: Type of positional bias to use when training.
+      positional_bias_severity: (float) The severity `s`, used for the `BASE`
+        positional bias type.
       positional_bias_positive_only: Whether to use the above defined bias
         weights only for positives (that is, clicked items). If
         `positional_bias_type` is unset, this parameter has no effect.
@@ -403,21 +409,19 @@ class RankingAgent(tf_agent.TFAgent):
           chosen_index + 1, self._num_slots, dtype=tf.float32
       )
       weights = multiplier * weights
-    if self._positional_bias_type is not None:
+    if self._positional_bias_type != PositionalBiasType.UNSET:
       batched_range = tf.broadcast_to(
           tf.range(self._num_slots, dtype=tf.float32), tf.shape(weights)
       )
-      if self._positional_bias_type == 'base':
+      if self._positional_bias_type == PositionalBiasType.BASE:
         position_bias_multipliers = tf.pow(
             batched_range + 1, self._positional_bias_severity
         )
-      elif self._positional_bias_type == 'exponent':
+      elif self._positional_bias_type == PositionalBiasType.EXPONENT:
         position_bias_multipliers = tf.pow(
             self._positional_bias_severity, batched_range
         )
       else:
-        raise ValueError(
-            'non-existing bias type: ' + self._positional_bias_type
-        )
+        raise ValueError('non-existing positional bias type')
       weights = position_bias_multipliers * weights
     return weights

@@ -308,7 +308,7 @@ class RankingAgentTest(test_utils.TestCase, parameterized.TestCase):
           'item_dim': 3,
           'num_items': 10,
           'num_slots': 5,
-          'positional_bias_type': 'base',
+          'positional_bias_type': ranking_agent.PositionalBiasType.BASE,
           'positional_bias_severity': 1.2,
           'positional_bias_positive_only': False,
       },
@@ -320,7 +320,7 @@ class RankingAgentTest(test_utils.TestCase, parameterized.TestCase):
           'item_dim': 5,
           'num_items': 21,
           'num_slots': 17,
-          'positional_bias_type': 'exponent',
+          'positional_bias_type': ranking_agent.PositionalBiasType.EXPONENT,
           'positional_bias_severity': 1.3,
           'positional_bias_positive_only': False,
       },
@@ -332,19 +332,7 @@ class RankingAgentTest(test_utils.TestCase, parameterized.TestCase):
           'item_dim': 4,
           'num_items': 13,
           'num_slots': 11,
-          'positional_bias_type': 'base',
-          'positional_bias_severity': 1.0,
-          'positional_bias_positive_only': True,
-      },
-      {
-          'feedback_model': ranking_agent.FeedbackModel.SCORE_VECTOR,
-          'policy_type': ranking_agent.RankingPolicyType.DESCENDING_SCORES,
-          'batch_size': 2,
-          'global_dim': 3,
-          'item_dim': 4,
-          'num_items': 13,
-          'num_slots': 11,
-          'positional_bias_type': 'invalid',
+          'positional_bias_type': ranking_agent.PositionalBiasType.BASE,
           'positional_bias_severity': 1.0,
           'positional_bias_positive_only': True,
       },
@@ -435,19 +423,15 @@ class RankingAgentTest(test_utils.TestCase, parameterized.TestCase):
         ),
     )
     experience = _get_experience(initial_step, action_step, final_step)
-    if positional_bias_type == 'invalid':
-      with self.assertRaisesRegex(ValueError, 'non-existing bias type'):
-        agent.train(experience)
-    else:
-      agent.train(experience)
-      weights = agent._construct_sample_weights(scores, observations, None)
-      self.assertAllEqual(weights.shape, [batch_size, num_slots])
-      expected = (
-          2**positional_bias_severity
-          if positional_bias_type == 'base'
-          else positional_bias_severity
-      )
-      self.assertAllClose(weights[-1, 1], expected)
+    agent.train(experience)
+    weights = agent._construct_sample_weights(scores, observations, None)
+    self.assertAllEqual(weights.shape, [batch_size, num_slots])
+    expected = (
+        2**positional_bias_severity
+        if positional_bias_type == ranking_agent.PositionalBiasType.BASE
+        else positional_bias_severity
+    )
+    self.assertAllClose(weights[-1, 1], expected)
 
 
 if __name__ == '__main__':

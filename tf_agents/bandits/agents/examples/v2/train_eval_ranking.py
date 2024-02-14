@@ -170,7 +170,17 @@ def main(unused_argv):
     raise NotImplementedError(
         'Policy type {} is not implemented'.format(FLAGS.policy_type)
     )
-  positional_bias_type = FLAGS.bias_type or None
+  if FLAGS.positional_bias_type == 'base':
+    positional_bias_type = ranking_agent.PositionalBiasType.BASE
+  elif FLAGS.positional_bias_type == 'exponent':
+    positional_bias_type = ranking_agent.PositionalBiasType.EXPONENT
+  else:
+    raise NotImplementedError(
+        'Positional bias type {} is not implemented'.format(
+            FLAGS.positional_bias_type
+        )
+    )
+
   agent = ranking_agent.RankingAgent(
       time_step_spec=environment.time_step_spec(),
       action_spec=environment.action_spec(),
