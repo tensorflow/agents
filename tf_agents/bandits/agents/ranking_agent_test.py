@@ -311,6 +311,8 @@ class RankingAgentTest(test_utils.TestCase, parameterized.TestCase):
           'positional_bias_type': ranking_agent.PositionalBiasType.BASE,
           'positional_bias_severity': 1.2,
           'positional_bias_positive_only': False,
+          'positional_bias_weights': None,
+          'expected_second_weight': 2.2974,  # 2**positional_bias_severity
       },
       {
           'feedback_model': ranking_agent.FeedbackModel.SCORE_VECTOR,
@@ -323,6 +325,8 @@ class RankingAgentTest(test_utils.TestCase, parameterized.TestCase):
           'positional_bias_type': ranking_agent.PositionalBiasType.EXPONENT,
           'positional_bias_severity': 1.3,
           'positional_bias_positive_only': False,
+          'positional_bias_weights': None,
+          'expected_second_weight': 1.3,  # positional_bias_severity
       },
       {
           'feedback_model': ranking_agent.FeedbackModel.SCORE_VECTOR,
@@ -335,6 +339,36 @@ class RankingAgentTest(test_utils.TestCase, parameterized.TestCase):
           'positional_bias_type': ranking_agent.PositionalBiasType.BASE,
           'positional_bias_severity': 1.0,
           'positional_bias_positive_only': True,
+          'positional_bias_weights': None,
+          'expected_second_weight': 2.0,  # 2**positional_bias_severity
+      },
+      {
+          'feedback_model': ranking_agent.FeedbackModel.SCORE_VECTOR,
+          'policy_type': ranking_agent.RankingPolicyType.DESCENDING_SCORES,
+          'batch_size': 2,
+          'global_dim': 3,
+          'item_dim': 4,
+          'num_items': 13,
+          'num_slots': 11,
+          'positional_bias_type': (
+              ranking_agent.PositionalBiasType.FIXED_BIAS_WEIGHTS
+          ),
+          'positional_bias_severity': None,
+          'positional_bias_positive_only': True,
+          'positional_bias_weights': [
+              0.1,
+              0.2,
+              0.3,
+              0.4,
+              0.5,
+              0.6,
+              0.7,
+              0.8,
+              0.9,
+              1.0,
+              1.1,
+          ],
+          'expected_second_weight': 0.2,  # positional_bias_weights[1]
       },
   ])
   def testPositionalBiasParams(
@@ -349,6 +383,8 @@ class RankingAgentTest(test_utils.TestCase, parameterized.TestCase):
       positional_bias_type,
       positional_bias_severity,
       positional_bias_positive_only,
+      positional_bias_weights,
+      expected_second_weight,
   ):
     if not tf.executing_eagerly():
       self.skipTest('Only works in eager mode.')
@@ -386,6 +422,7 @@ class RankingAgentTest(test_utils.TestCase, parameterized.TestCase):
         positional_bias_type=positional_bias_type,
         positional_bias_severity=positional_bias_severity,
         positional_bias_positive_only=positional_bias_positive_only,
+        positional_bias_weights=positional_bias_weights,
         optimizer=optimizer,
     )
     global_obs = tf.reshape(
@@ -426,12 +463,7 @@ class RankingAgentTest(test_utils.TestCase, parameterized.TestCase):
     agent.train(experience)
     weights = agent._construct_sample_weights(scores, observations, None)
     self.assertAllEqual(weights.shape, [batch_size, num_slots])
-    expected = (
-        2**positional_bias_severity
-        if positional_bias_type == ranking_agent.PositionalBiasType.BASE
-        else positional_bias_severity
-    )
-    self.assertAllClose(weights[-1, 1], expected)
+    self.assertAllClose(weights[-1, 1], expected_second_weight)
 
 
 if __name__ == '__main__':

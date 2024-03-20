@@ -38,8 +38,9 @@ slots (as explained above), the policy receives the items that are available for
 recommendation. The user is responsible for converting the observation to the
 syntax required by the agent.
 """
+
 import enum
-from typing import Optional, Text
+from typing import List, Optional, Text
 
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 from tf_agents.agents import tf_agent
@@ -127,6 +128,9 @@ class PositionalBiasType(enum.Enum):
   # et al. `Correcting for Selection Bias in Learning-to-rank Systems`
   # (WWW 2020).
   EXPONENT = 2
+  # The bias weight for each slot position is `bias_weights[k]`, where
+  # `bias_weights` is the given bias weight array and `k` is the position.
+  FIXED_BIAS_WEIGHTS = 3
 
 
 class RankingAgent(tf_agent.TFAgent):
@@ -144,6 +148,7 @@ class RankingAgent(tf_agent.TFAgent):
       non_click_score: Optional[float] = None,
       positional_bias_type: PositionalBiasType = PositionalBiasType.UNSET,
       positional_bias_severity: Optional[float] = None,
+      positional_bias_weights: Optional[List[float]] = None,
       positional_bias_positive_only: bool = False,
       logits_temperature: float = 1.0,
       summarize_grads_and_vars: bool = False,
@@ -178,6 +183,8 @@ class RankingAgent(tf_agent.TFAgent):
       positional_bias_type: Type of positional bias to use when training.
       positional_bias_severity: (float) The severity `s`, used for the `BASE`
         positional bias type.
+      positional_bias_weights: (float array) The positional bias weight for each
+        slot position.
       positional_bias_positive_only: Whether to use the above defined bias
         weights only for positives (that is, clicked items). If
         `positional_bias_type` is unset, this parameter has no effect.
@@ -230,6 +237,22 @@ class RankingAgent(tf_agent.TFAgent):
         )
     self._positional_bias_type = positional_bias_type
     self._positional_bias_severity = positional_bias_severity
+    # Validate positional_bias_weights for FIXED_BIAS_WEIGHTS PositionalBiasType
+    if self._positional_bias_type == PositionalBiasType.FIXED_BIAS_WEIGHTS:
+      if positional_bias_weights is None:
+        raise ValueError(
+            'positional_bias_weights is None but should never be for'
+            ' FIXED_BIAS_WEIGHTS PositionalBiasType.'
+        )
+      elif len(positional_bias_weights) != self._num_slots:
+        raise ValueError(
+            'The length of positional_bias_weights should be the same as the'
+            ' number of slots. The length of positional_bias_weights is {} and'
+            ' the number of slots is {}.'.format(
+                len(positional_bias_weights), self._num_slots
+            )
+        )
+    self._positional_bias_weights = positional_bias_weights
     self._positional_bias_positive_only = positional_bias_positive_only
     if policy_type == RankingPolicyType.UNKNOWN:
       policy_type = RankingPolicyType.COSINE_DISTANCE
@@ -409,19 +432,27 @@ class RankingAgent(tf_agent.TFAgent):
           chosen_index + 1, self._num_slots, dtype=tf.float32
       )
       weights = multiplier * weights
-    if self._positional_bias_type != PositionalBiasType.UNSET:
-      batched_range = tf.broadcast_to(
-          tf.range(self._num_slots, dtype=tf.float32), tf.shape(weights)
+
+    if self._positional_bias_type == PositionalBiasType.UNSET:
+      return weights
+
+    batched_range = tf.broadcast_to(
+        tf.range(self._num_slots, dtype=tf.float32), tf.shape(weights)
+    )
+    if self._positional_bias_type == PositionalBiasType.BASE:
+      position_bias_multipliers = tf.pow(
+          batched_range + 1, self._positional_bias_severity
       )
-      if self._positional_bias_type == PositionalBiasType.BASE:
-        position_bias_multipliers = tf.pow(
-            batched_range + 1, self._positional_bias_severity
-        )
-      elif self._positional_bias_type == PositionalBiasType.EXPONENT:
-        position_bias_multipliers = tf.pow(
-            self._positional_bias_severity, batched_range
-        )
-      else:
-        raise ValueError('non-existing positional bias type')
-      weights = position_bias_multipliers * weights
+    elif self._positional_bias_type == PositionalBiasType.EXPONENT:
+      position_bias_multipliers = tf.pow(
+          self._positional_bias_severity, batched_range
+      )
+    elif self._positional_bias_type == PositionalBiasType.FIXED_BIAS_WEIGHTS:
+      position_bias_multipliers = tf.tile(
+          tf.expand_dims(self._positional_bias_weights, axis=0),
+          [batch_size, 1],
+      )
+    else:
+      raise ValueError('non-existing positional bias type')
+    weights = position_bias_multipliers * weights
     return weights

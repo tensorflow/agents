@@ -64,11 +64,18 @@ flags.DEFINE_string(
     'bias_type',
     '',
     'Whether the agent models the positional '
-    'bias with the basis or the exponent changes. If unset, the'
+    'bias with the basis, the exponent or fixed bias weights. If unset, the'
     ' agent applies no positional bias.',
 )
 flags.DEFINE_float(
     'bias_severity', 1.0, 'The severity of the bias adjustment by the agent.'
+)
+flags.DEFINE_list(
+    'bias_weights',
+    [],
+    'The positional bias weights. For FIXED_BIAS_WEIGHTS type, the agent will'
+    ' use these weights to adjust the rewards. The length of the list must be'
+    ' equal to the number of slots.',
 )
 flags.DEFINE_bool(
     'bias_positive_only',
@@ -174,12 +181,15 @@ def main(unused_argv):
     positional_bias_type = ranking_agent.PositionalBiasType.BASE
   elif FLAGS.positional_bias_type == 'exponent':
     positional_bias_type = ranking_agent.PositionalBiasType.EXPONENT
+  elif FLAGS.positional_bias_type == 'fixed_bias_weights':
+    positional_bias_type = ranking_agent.PositionalBiasType.FIXED_BIAS_WEIGHTS
   else:
     raise NotImplementedError(
         'Positional bias type {} is not implemented'.format(
             FLAGS.positional_bias_type
         )
     )
+  positional_bias_weights = [float(w) for w in FLAGS.positional_bias_weights]
 
   agent = ranking_agent.RankingAgent(
       time_step_spec=environment.time_step_spec(),
@@ -190,6 +200,7 @@ def main(unused_argv):
       feedback_model=feedback_model,
       positional_bias_type=positional_bias_type,
       positional_bias_severity=FLAGS.bias_severity,
+      positional_bias_weights=positional_bias_weights,
       positional_bias_positive_only=FLAGS.bias_positive_only,
       summarize_grads_and_vars=True,
   )
