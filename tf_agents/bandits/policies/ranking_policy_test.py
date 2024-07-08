@@ -14,7 +14,9 @@
 # limitations under the License.
 
 """Tests for ranking_policy."""
+
 from absl.testing import parameterized
+import numpy as np
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 from tf_agents.bandits.networks import global_and_arm_feature_network as arm_net
 from tf_agents.bandits.policies import ranking_policy
@@ -84,8 +86,13 @@ class RankingPolicyTest(test_utils.TestCase, parameterized.TestCase):
     )
     time_spec = ts.restart(observation, batch_size=batch_size)
     action_step = policy.action(time_spec)
+    unique_item_counts = tf.map_fn(
+        lambda action: tf.unique_with_counts(action)[2], action_step.action
+    )
     self.evaluate(tf.compat.v1.global_variables_initializer())
     self.assertAllEqual(action_step.action.shape, [batch_size, num_slots])
+    # All ranked items should appear exactly once in the ranked list.
+    self.assertAllEqual(unique_item_counts, np.ones((batch_size, num_slots)))
 
   def testTemperature(self):
     if not tf.executing_eagerly():
