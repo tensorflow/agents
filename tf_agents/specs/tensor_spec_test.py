@@ -444,7 +444,7 @@ class FromSpecTest(tf.test.TestCase):
       self.assertEqual(expected_spec, spec)
 
   def testFromStringSpec(self):
-    spec = tensor_spec.from_spec(array_spec.ArraySpec([1], np.string_))
+    spec = tensor_spec.from_spec(array_spec.ArraySpec([1], np.bytes_))
     self.assertEqual(tf.string, spec.dtype)
 
 
