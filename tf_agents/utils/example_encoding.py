@@ -283,7 +283,7 @@ def _get_feature_encoder(shape, dtype, compress_image=False, image_quality=95):
 
     return _encode_to_int64_list
   else:  # Serialize anything else to BytesList in little endian order.
-    le_dtype = dtype.as_numpy_dtype(0).newbyteorder('L')
+    le_dtype = np.dtype(dtype.as_numpy_dtype(0)).newbyteorder('L')
 
     def _encode_to_bytes_list(value):
       value = np.asarray(value)
