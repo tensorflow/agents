@@ -293,7 +293,7 @@ def sample_bounded_spec(spec, seed=None, outer_dims=None):
     # behavior.
     # However +1 will cause overflow, in such cases we use the original maxval.
     if sampling_dtype.is_integer and maxval < sampling_dtype.max:
-      maxval = maxval + 1
+      maxval = int(maxval) + 1
 
     shape = tf.convert_to_tensor(spec.shape, dtype=tf.int32)
     full_shape = tf.concat((outer_dims, shape), axis=0)
