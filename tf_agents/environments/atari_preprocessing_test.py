@@ -55,7 +55,7 @@ class MockEnvironment(gym_core.Env):
     self.game_over = False
 
   def reset(self):
-    self.ale.screen_value = 10
+    self.ale.screen_value = 20
     self.num_steps = 0
     return self.get_observation()
 
@@ -118,7 +118,7 @@ class AtariPreprocessingTest(tf.test.TestCase):
 
     # The first observation is 2, the second 0; max is 2.
     observation, _, _, _ = env.step(0)
-    self.assertTrue((observation == 8).all())
+    self.assertTrue((observation == 18).all())
 
 
 if __name__ == '__main__':
