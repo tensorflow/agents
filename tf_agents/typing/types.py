@@ -22,6 +22,7 @@ from __future__ import print_function
 import sys
 import typing
 from typing import Callable, Iterable, Mapping, Optional, Sequence, Text, TypeVar, Union
+import warnings
 
 import numpy as np
 import tensorflow as tf
@@ -29,6 +30,9 @@ import tensorflow_probability as tfp
 # pylint:disable=g-direct-tensorflow-import
 from tensorflow.python.framework.ops import EagerTensor  # TF internal
 # pylint:enable=g-direct-tensorflow-import
+
+# Filter warnings about comparing literals with "is" (b/229309809).
+warnings.filterwarnings('ignore', '.*literal.*', category=SyntaxWarning)
 
 if sys.version_info < (3, 7):
   ForwardRef = typing._ForwardRef  # pylint: disable=protected-access
