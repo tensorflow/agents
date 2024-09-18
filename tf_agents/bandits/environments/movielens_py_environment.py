@@ -73,7 +73,7 @@ class MovieLensPyEnvironment(bandit_py_environment.BanditPyEnvironment):
     )
     # Keep only the first items.
     self._data_matrix = self._data_matrix[:, :num_movies]
-    # Filter the users with no iterm rated.
+    # Filter the users with no item rated.
     nonzero_users = list(np.nonzero(np.sum(self._data_matrix, axis=1) > 0.0)[0])
     self._data_matrix = self._data_matrix[nonzero_users, :]
     self._effective_num_users = len(nonzero_users)
