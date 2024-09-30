@@ -67,6 +67,9 @@ def create_feed_forward_common_tower_network(
     activation_fn: Callable[
         [types.Tensor], types.Tensor
     ] = tf.keras.activations.relu,
+    final_activation_fn_for_q_network: (
+        Callable[[types.Tensor], types.Tensor] | None
+    ) = None,
     name: Optional[str] = None,
 ) -> types.Network:
   """Creates a common tower network with feedforward towers.
@@ -92,6 +95,9 @@ def create_feed_forward_common_tower_network(
     arm_preprocessing_combiner: Preprocessing combiner for the arm features.
     activation_fn: A keras activation, specifying the activation function used
       in all layers. Defaults to relu.
+    final_activation_fn_for_q_network: Only used when `output_dim=1`, a Callable
+      specifying the activation function for the final layer of the common
+      tower. Defaults to None, which means no activation function.
     name: The network name to use. Shows up in Tensorboard losses.
 
   Returns:
@@ -145,6 +151,7 @@ def create_feed_forward_common_tower_network(
         ),
         fc_layer_params=common_layers,
         activation_fn=activation_fn,
+        q_layer_activation_fn=final_activation_fn_for_q_network,
     )
   else:
     common_network = encoding_network.EncodingNetwork(

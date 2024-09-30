@@ -70,6 +70,29 @@ class GlobalAndArmFeatureNetworkTest(
     self.assertAllEqual(output.shape, (batch_size, num_actions))
 
   @parameters
+  def testCreateFeedForwardCommonTowerNetworkWithFinalActivation(
+      self, batch_size, feature_dim, num_actions
+  ):
+    obs_spec = bandit_spec_utils.create_per_arm_observation_spec(
+        7, feature_dim, num_actions
+    )
+    net = gafn.create_feed_forward_common_tower_network(
+        obs_spec,
+        global_layers=(4, 3, 2),
+        arm_layers=(6, 5, 4),
+        common_layers=(7, 6, 5),
+        final_activation_fn_for_q_network=tf.exp,
+    )
+    input_nest = tensor_spec.sample_spec_nest(
+        obs_spec, outer_dims=(batch_size,)
+    )
+    output, _ = net(input_nest)
+    self.evaluate(tf.compat.v1.global_variables_initializer())
+    output = self.evaluate(output)
+    self.assertAllEqual(output.shape, (batch_size, num_actions))
+    self.assertAllGreaterEqual(output, 0.0)
+
+  @parameters
   def testCreateFeedForwardCommonTowerNetworkWithEmptyLayers(
       self, batch_size, feature_dim, num_actions
   ):
