@@ -195,7 +195,9 @@ class Exp3MixtureAgentTest(test_utils.TestCase, parameterized.TestCase):
     reward_aggregates = self.evaluate(
         mixed_agent._variable_collection.reward_aggregates
     )
-    self.assertAllInSet(reward_aggregates[: num_agents - 1], [0.999])
+    self.assertAllClose(
+        reward_aggregates[: num_agents - 1], [0.999] * (num_agents - 1)
+    )
     agent_prob = 1 / num_agents
     est_rewards = 0.5 / agent_prob
     per_step_update = est_rewards
