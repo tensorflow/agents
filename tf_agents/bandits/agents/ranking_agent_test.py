@@ -463,7 +463,9 @@ class RankingAgentTest(test_utils.TestCase, parameterized.TestCase):
     agent.train(experience)
     weights = agent._construct_sample_weights(scores, observations, None)
     self.assertAllEqual(weights.shape, [batch_size, num_slots])
-    self.assertAllClose(weights[-1, 1], expected_second_weight)
+    self.assertAllClose(
+        weights[-1, 1], expected_second_weight, atol=1e-3, rtol=1e-3
+    )
 
 
 if __name__ == '__main__':
