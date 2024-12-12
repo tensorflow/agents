@@ -314,14 +314,14 @@ class GreedyMultiObjectiveNeuralAgent(tf_agent.TFAgent):
         sample_weights = (
             sample_weights * 0.5 * tf.exp(-action_predicted_log_variance)
         )
-        loss = 0.5 * tf.reduce_mean(action_predicted_log_variance)
+        loss = 0.5 * action_predicted_log_variance
         # loss = 1/(2 * var(x)) * (y - f(x))^2 + 1/2 * log var(x)
         # Kendall, Alex, and Yarin Gal. "What Uncertainties Do We Need in
         # Bayesian Deep Learning for Computer Vision?." Advances in Neural
         # Information Processing Systems. 2017. https://arxiv.org/abs/1703.04977
       else:
         predicted_values, _ = objective_network(observations, training=training)
-        loss = tf.constant(0.0)
+        loss = tf.zeros_like(single_objective_values)
 
       action_predicted_values = common.index_with_actions(
           predicted_values, tf.cast(actions, dtype=tf.int32)
@@ -338,18 +338,13 @@ class GreedyMultiObjectiveNeuralAgent(tf_agent.TFAgent):
             objective_idx
         ] * tf.reduce_mean(smoothness_batched * sample_weights)
 
-      # Reduction is done outside of the loss function because non-scalar
-      # weights with unknown shapes may trigger shape validation that fails
-      # XLA compilation.
-      loss += tf.reduce_mean(
-          tf.multiply(
-              self._error_loss_fns[objective_idx](
-                  single_objective_values,
-                  action_predicted_values,
-                  reduction=tf.compat.v1.losses.Reduction.NONE,
-              ),
-              sample_weights,
-          )
+      loss += tf.multiply(
+          self._error_loss_fns[objective_idx](
+              single_objective_values,
+              action_predicted_values,
+              reduction=tf.compat.v1.losses.Reduction.NONE,
+          ),
+          sample_weights,
       )
 
     return loss
@@ -401,10 +396,10 @@ class GreedyMultiObjectiveNeuralAgent(tf_agent.TFAgent):
           )
       )
 
-    objective_losses = []
+    per_example_objective_losses = []
     for idx in range(self._num_objectives):
       single_objective_values = objective_values[:, idx]
-      objective_losses.append(
+      per_example_objective_losses.append(
           self._single_objective_loss(
               idx,
               observations,
@@ -414,10 +409,17 @@ class GreedyMultiObjectiveNeuralAgent(tf_agent.TFAgent):
               training,
           )
       )
+    per_example_loss = tf.reduce_sum(
+        tf.stack(per_example_objective_losses), axis=0
+    )
+    objective_losses = [
+        tf.reduce_mean(per_example_objective_losses[idx])
+        for idx in range(self._num_objectives)
+    ]
 
     self.compute_summaries(objective_losses)
     total_loss = tf.reduce_sum(objective_losses)
-    return tf_agent.LossInfo(total_loss, extra=())
+    return tf_agent.LossInfo(total_loss, extra=per_example_loss)
 
   def compute_summaries(self, losses: Sequence[tf.Tensor]):
     if self._num_objectives != len(losses):

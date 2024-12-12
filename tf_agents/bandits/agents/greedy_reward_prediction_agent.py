@@ -287,7 +287,7 @@ class GreedyRewardPredictionAgent(tf_agent.TFAgent):
 
     return loss_info
 
-  def reward_loss(
+  def per_example_reward_loss(
       self,
       observations: types.NestedTensor,
       actions: types.Tensor,
@@ -325,7 +325,7 @@ class GreedyRewardPredictionAgent(tf_agent.TFAgent):
             sample_weights * 0.5 * tf.exp(-action_predicted_log_variance)
         )
 
-        loss = 0.5 * tf.reduce_mean(action_predicted_log_variance)
+        loss = 0.5 * action_predicted_log_variance
         # loss = 1/(2 * var(x)) * (y - f(x))^2 + 1/2 * log var(x)
         # Kendall, Alex, and Yarin Gal. "What Uncertainties Do We Need in
         # Bayesian Deep Learning for Computer Vision?." Advances in Neural
@@ -334,7 +334,7 @@ class GreedyRewardPredictionAgent(tf_agent.TFAgent):
         predicted_values, _ = self._reward_network(
             observations, training=training
         )
-        loss = tf.constant(0.0)
+        loss = tf.zeros_like(rewards)
 
       action_predicted_values = common.index_with_actions(
           predicted_values, tf.cast(actions, dtype=tf.int32)
@@ -348,24 +348,18 @@ class GreedyRewardPredictionAgent(tf_agent.TFAgent):
                 self._laplacian_matrix, predicted_values, transpose_b=True
             ),
         )
-        loss += self._laplacian_smoothing_weight * tf.reduce_mean(
+        loss += self._laplacian_smoothing_weight * (
             tf.linalg.tensor_diag_part(smoothness_batched) * sample_weights
         )
 
-      # Reduction is done outside of the loss function because non-scalar
-      # weights with unknown shapes may trigger shape validation that fails
-      # XLA compilation.
-      loss += tf.reduce_mean(
-          tf.multiply(
-              self._error_loss_fn(
-                  rewards,
-                  action_predicted_values,
-                  reduction=tf.compat.v1.losses.Reduction.NONE,
-              ),
-              sample_weights,
-          )
+      loss += tf.multiply(
+          self._error_loss_fn(
+              rewards,
+              action_predicted_values,
+              reduction=tf.compat.v1.losses.Reduction.NONE,
+          ),
+          sample_weights,
       )
-
     return loss
 
   def _loss(
@@ -404,9 +398,10 @@ class GreedyRewardPredictionAgent(tf_agent.TFAgent):
       rewards_tensor = rewards[bandit_spec_utils.REWARD_SPEC_KEY]
     else:
       rewards_tensor = rewards
-    reward_loss = self.reward_loss(
+    per_example_reward_loss = self.per_example_reward_loss(
         observations, actions, rewards_tensor, weights, training
     )
+    reward_loss = tf.reduce_mean(per_example_reward_loss)
 
     constraint_loss = tf.constant(0.0)
     for i, c in enumerate(self._constraints, 0):
@@ -424,7 +419,7 @@ class GreedyRewardPredictionAgent(tf_agent.TFAgent):
     total_loss = reward_loss
     if self._constraints:
       total_loss += constraint_loss
-    return tf_agent.LossInfo(total_loss, extra=())
+    return tf_agent.LossInfo(total_loss, extra=per_example_reward_loss)
 
   def compute_summaries(
       self, loss: types.Tensor, constraint_loss: Optional[types.Tensor] = None
