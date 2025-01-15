@@ -26,18 +26,18 @@ import tree
 
 
 def _convert_timestep(timestep: ts.TimeStep) -> dm_env.TimeStep:
-  if timestep.step_type.is_first():
+  if timestep.is_first():
     step_type = dm_env.StepType.FIRST
-  elif timestep.step_type.is_last():
+  elif timestep.is_last():
     step_type = dm_env.StepType.LAST
-  elif timestep.step_type.is_mid():
+  elif timestep.is_mid():
     step_type = dm_env.StepType.MID
   else:
     raise ValueError(f'Invalid Step type: {timestep.step_type}')
   return dm_env.TimeStep(
       step_type=step_type,
-      reward=None if step_type.first() else timestep.reward,
-      discount=None if step_type.first() else timestep.discount,
+      reward=0.0 if timestep.is_first() else timestep.reward,
+      discount=1.0 if timestep.is_first() else timestep.discount,
       observation=timestep.observation,
   )
 
