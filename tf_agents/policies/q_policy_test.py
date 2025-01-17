@@ -81,7 +81,7 @@ class QPolicyTest(test_utils.TestCase):
 
   def testMultipleActionsRaiseError(self):
     action_spec = [tensor_spec.BoundedTensorSpec([], tf.int32, 0, 1)] * 2
-    with self.assertRaisesRegexp(ValueError, 'Only scalar actions'):
+    with self.assertRaisesRegex(ValueError, 'Only scalar actions'):
       q_policy.QPolicy(self._time_step_spec, action_spec, q_network=DummyNet())
 
   def testAction(self):
@@ -186,7 +186,7 @@ class QPolicyTest(test_utils.TestCase):
     network_action_spec = tensor_spec.BoundedTensorSpec([2], tf.int32, 0, 1)
     q_net = DummyNetWithActionSpec(network_action_spec)
 
-    with self.assertRaisesRegexp(
+    with self.assertRaisesRegex(
         ValueError, 'action_spec must be compatible with q_network.action_spec'
     ):
       q_policy.QPolicy(self._time_step_spec, self._action_spec, q_net)

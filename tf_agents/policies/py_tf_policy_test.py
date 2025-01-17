@@ -134,7 +134,7 @@ class PyTFPolicyTest(test_utils.TestCase, parameterized.TestCase):
     if tf.executing_eagerly():
       self.skipTest('b/123770140: Handling sessions with eager mode is buggy')
     policy = py_tf_policy.PyTFPolicy(self._tf_policy)
-    with self.assertRaisesRegexp(
+    with self.assertRaisesRegex(
         AttributeError,
         "No TensorFlow session-like object was set on this 'PyTFPolicy'.*",
     ):
@@ -376,7 +376,7 @@ class PyTFPolicyTest(test_utils.TestCase, parameterized.TestCase):
       )
       # 3). Restoring the actor policy while checking that all variables in
       # the checkpoint were found in the graph should fail.
-      with self.assertRaisesRegexp(
+      with self.assertRaisesRegex(
           AssertionError, 'not bound to checkpointed values*'
       ):
         policy_restored.restore(

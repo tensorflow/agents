@@ -254,7 +254,7 @@ class TfPolicyTest(test_utils.TestCase, parameterized.TestCase):
     self.assertAllEqual([[1], [1], [1], [1]], action)
 
   def testMismatchedDtypes(self):
-    with self.assertRaisesRegexp(TypeError, ".*dtype that doesn't match.*"):
+    with self.assertRaisesRegex(TypeError, ".*dtype that doesn't match.*"):
       policy = TFPolicyMismatchedDtypes()
       observation = tf.constant([[1, 2], [3, 4]], dtype=tf.float32)
       time_step = ts.restart(observation)
@@ -271,7 +271,7 @@ class TfPolicyTest(test_utils.TestCase, parameterized.TestCase):
     policy.action(time_step)
 
   def testMismatchedDtypesListAction(self):
-    with self.assertRaisesRegexp(TypeError, ".*dtype that doesn't match.*"):
+    with self.assertRaisesRegex(TypeError, ".*dtype that doesn't match.*"):
       policy = TFPolicyMismatchedDtypesListAction()
       observation = tf.constant([[1, 2], [3, 4]], dtype=tf.float32)
       time_step = ts.restart(observation)

@@ -218,7 +218,7 @@ class ScriptedPyPolicyTest(test_utils.TestCase):
     self.assertEqual(action_script[1][1], action_step.action)
     action_step = policy.action(self._time_step, action_step.state)
     self.assertEqual(action_script[1][1], action_step.action)
-    with self.assertRaisesRegexp(ValueError, '.*Episode is longer than.*'):
+    with self.assertRaisesRegex(ValueError, '.*Episode is longer than.*'):
       policy.action(self._time_step, action_step.state)
 
   def testPolicyStateSpecIsEmpty(self):
