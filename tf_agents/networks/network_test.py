@@ -125,7 +125,7 @@ class NetworkTest(tf.test.TestCase):
     self.assertEqual(3, network2.kwarg2)
 
   def test_too_many_args_raises_appropriate_error(self):
-    with self.assertRaisesRegexp(TypeError, '__init__.*given'):
+    with self.assertRaisesRegex(TypeError, '__init__.*given'):
       # pylint: disable=too-many-function-args
       MockNetwork(0, 1, 2, 3, 4, 5, 6)  # pytype: disable=wrong-arg-count
 

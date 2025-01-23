@@ -66,7 +66,7 @@ class RandomBanditEnvironmentTest(tf.test.TestCase, parameterized.TestCase):
         tf.zeros(overall_observation_shape[0]),
         tf.ones(overall_observation_shape[0]),
     )
-    with self.assertRaisesRegexp(
+    with self.assertRaisesRegex(
         ValueError,
         '`observation_distribution` must have batch shape with length 1',
     ):
@@ -88,7 +88,7 @@ class RandomBanditEnvironmentTest(tf.test.TestCase, parameterized.TestCase):
         ),
         reinterpreted_batch_ndims=batch_dims,
     )
-    with self.assertRaisesRegexp(
+    with self.assertRaisesRegex(
         ValueError, '`reward_distribution` must have batch shape with length 1'
     ):
       random_bandit_environment.RandomBanditEnvironment(
@@ -108,7 +108,7 @@ class RandomBanditEnvironmentTest(tf.test.TestCase, parameterized.TestCase):
             tf.zeros(overall_reward_shape), tf.ones(overall_reward_shape)
         )
     )
-    with self.assertRaisesRegexp(
+    with self.assertRaisesRegex(
         ValueError, '`reward_distribution` must have event_shape ()'
     ):
       random_bandit_environment.RandomBanditEnvironment(
@@ -133,7 +133,7 @@ class RandomBanditEnvironmentTest(tf.test.TestCase, parameterized.TestCase):
             tf.zeros(overall_reward_shape), tf.ones(overall_reward_shape)
         )
     )
-    with self.assertRaisesRegexp(
+    with self.assertRaisesRegex(
         ValueError,
         '`reward_distribution` and `observation_distribution` must have the '
         'same batch shape',

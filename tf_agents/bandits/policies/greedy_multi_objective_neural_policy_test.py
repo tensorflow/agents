@@ -140,7 +140,7 @@ class ScalarizeObjectivesTest(test_utils.TestCase):
 
   def testScalarizeObjectivesWrongInputRankRaisesError(self):
     objectives_tensor = tf.constant([1], dtype=tf.float32)
-    with self.assertRaisesRegexp(
+    with self.assertRaisesRegex(
         ValueError, 'The objectives_tensor should be rank-3, but is rank-1'
     ):
       greedy_multi_objective_policy.scalarize_objectives(
@@ -151,7 +151,7 @@ class ScalarizeObjectivesTest(test_utils.TestCase):
     objectives_tensor = tf.constant(
         [[[1, 2, 3]], [[4, 5, 6]]], dtype=tf.float32
     )
-    with self.assertRaisesRegexp(
+    with self.assertRaisesRegex(
         ValueError, 'The number of input objectives should be 3, but is 1'
     ):
       self.evaluate(
@@ -261,7 +261,7 @@ class GreedyRewardPredictionPolicyTest(test_utils.TestCase):
 
   def testMultipleActionsRaiseError(self):
     action_spec = [tensor_spec.BoundedTensorSpec((), tf.int32, 0, 2)] * 2
-    with self.assertRaisesRegexp(
+    with self.assertRaisesRegex(
         NotImplementedError,
         'action_spec can only contain a single BoundedTensorSpec',
     ):
@@ -273,7 +273,7 @@ class GreedyRewardPredictionPolicyTest(test_utils.TestCase):
       )
 
   def testTooFewNetworksRaiseError(self):
-    with self.assertRaisesRegexp(
+    with self.assertRaisesRegex(
         ValueError,
         'Number of objectives should be at least two, but found to be 1',
     ):
@@ -286,7 +286,7 @@ class GreedyRewardPredictionPolicyTest(test_utils.TestCase):
 
   def testWrongActionsRaiseError(self):
     action_spec = tensor_spec.BoundedTensorSpec((5, 6, 7), tf.float32, 0, 2)
-    with self.assertRaisesRegexp(
+    with self.assertRaisesRegex(
         NotImplementedError,
         'action_spec must be a BoundedTensorSpec of type int32.*',
     ):
@@ -307,7 +307,7 @@ class GreedyRewardPredictionPolicyTest(test_utils.TestCase):
     )
     observations = tf.constant([[1, 2], [2, 1]], dtype=tf.float32)
     time_step = ts.restart(observations, batch_size=2)
-    with self.assertRaisesRegexp(
+    with self.assertRaisesRegex(
         ValueError,
         r'The number of actions \(11\) does not match objective network 0'
         r' output size \(3\)\.',
@@ -323,7 +323,7 @@ class GreedyRewardPredictionPolicyTest(test_utils.TestCase):
     )
     observations = tf.constant([[1, 2], [2, 1]], dtype=tf.float32)
     time_step = ts.restart(observations, batch_size=2)
-    with self.assertRaisesRegexp(
+    with self.assertRaisesRegex(
         ValueError,
         'policy_state and policy_state_spec structures do not match:',
     ):
@@ -518,7 +518,7 @@ class GreedyRewardPredictionPolicyTest(test_utils.TestCase):
         )
         for _ in range(3)
     ]
-    with self.assertRaisesRegexp(
+    with self.assertRaisesRegex(
         ValueError,
         'time_step_spec should not be None for per-arm-features policies',
     ):

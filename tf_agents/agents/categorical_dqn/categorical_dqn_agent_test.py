@@ -198,7 +198,7 @@ class CategoricalDqnAgentTest(tf.test.TestCase):
     q_net = KerasLayersNet(
         self._time_step_spec.observation, self._action_spec, dense_layer
     )
-    with self.assertRaisesRegexp(
+    with self.assertRaisesRegex(
         ValueError, 'shares weights with the original network'
     ):
       categorical_dqn_agent.CategoricalDqnAgent(
@@ -213,7 +213,7 @@ class CategoricalDqnAgentTest(tf.test.TestCase):
     q_target_net = KerasLayersNet(
         self._time_step_spec.observation, self._action_spec, dense_layer
     )
-    with self.assertRaisesRegexp(
+    with self.assertRaisesRegex(
         ValueError, 'shares weights with the original network'
     ):
       categorical_dqn_agent.CategoricalDqnAgent(
@@ -243,7 +243,7 @@ class CategoricalDqnAgentTest(tf.test.TestCase):
         dense_layer_target,
         num_atoms=3,
     )
-    with self.assertRaisesRegexp(ValueError, 'have different numbers of atoms'):
+    with self.assertRaisesRegex(ValueError, 'have different numbers of atoms'):
       categorical_dqn_agent.CategoricalDqnAgent(
           self._time_step_spec,
           self._action_spec,

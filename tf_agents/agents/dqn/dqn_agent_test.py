@@ -116,7 +116,7 @@ class DqnAgentTest(test_utils.TestCase):
     q_net = networks_test_utils.KerasLayersNet(
         self._observation_spec, self._action_spec, dense_layer
     )
-    with self.assertRaisesRegexp(
+    with self.assertRaisesRegex(
         ValueError, 'shares weights with the original network'
     ):
       agent_class(
@@ -131,7 +131,7 @@ class DqnAgentTest(test_utils.TestCase):
     q_target_net = networks_test_utils.KerasLayersNet(
         self._observation_spec, self._action_spec, dense_layer
     )
-    with self.assertRaisesRegexp(
+    with self.assertRaisesRegex(
         ValueError, 'shares weights with the original network'
     ):
       agent_class(

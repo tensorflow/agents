@@ -33,7 +33,7 @@ class PiecewiseBernoulliBanditPyEnvironmentTest(
       yield 10
 
   def test_out_of_bound_parameter(self):
-    with self.assertRaisesRegexp(
+    with self.assertRaisesRegex(
         ValueError, r'All parameters should be floats in \[0, 1\]\.'
     ):
       pbe.PiecewiseBernoulliPyEnvironment(

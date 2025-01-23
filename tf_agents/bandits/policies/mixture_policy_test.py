@@ -86,7 +86,7 @@ class MixturePolicyTest(test_utils.TestCase):
     sub_policies.append(wrong_policy)
     weights = [0, 0, 0.2, 0, 0, -0.3, 0, 0, 0.5, 0]
     dist = tfd.Categorical(probs=weights)
-    with self.assertRaisesRegexp(
+    with self.assertRaisesRegex(
         AssertionError, 'Inconsistent time step specs'
     ):
       mixture_policy.MixturePolicy(dist, sub_policies)

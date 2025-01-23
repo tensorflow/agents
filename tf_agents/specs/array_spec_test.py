@@ -323,15 +323,15 @@ class ArraySpecTest(parameterized.TestCase):
 class BoundedArraySpecTest(parameterized.TestCase):
 
   def testInvalidMinimum(self):
-    with self.assertRaisesRegexp(ValueError, "not compatible"):
+    with self.assertRaisesRegex(ValueError, "not compatible"):
       array_spec.BoundedArraySpec((3, 5), np.uint8, (0, 0, 0), (1, 1))
 
   def testInvalidMaximum(self):
-    with self.assertRaisesRegexp(ValueError, "not compatible"):
+    with self.assertRaisesRegex(ValueError, "not compatible"):
       array_spec.BoundedArraySpec((3, 5), np.uint8, 0, (1, 1, 1))
 
   def testMinLargerThanMax(self):
-    with self.assertRaisesRegexp(ValueError, "min has values greater than max"):
+    with self.assertRaisesRegex(ValueError, "min has values greater than max"):
       array_spec.BoundedArraySpec((3,), np.uint8, (1, 2, 3), (3, 2, 1))
 
   def testHandleInfLimits(self):
@@ -357,9 +357,9 @@ class BoundedArraySpecTest(parameterized.TestCase):
 
   def testNotWriteable(self):
     spec = array_spec.BoundedArraySpec((1, 2, 3), np.float32, 0, (5, 5, 5))
-    with self.assertRaisesRegexp(ValueError, "read-only"):
+    with self.assertRaisesRegex(ValueError, "read-only"):
       spec.minimum[0] = -1
-    with self.assertRaisesRegexp(ValueError, "read-only"):
+    with self.assertRaisesRegex(ValueError, "read-only"):
       spec.maximum[0] = 100
 
   def testEqualBroadcastingBounds(self):

@@ -277,7 +277,7 @@ class MultiObjectiveAgentTest(tf.test.TestCase):
     self.assertAllEqual(agent._heteroscedastic, [False, False, True])
 
   def testCreateAgentWithTooFewObjectiveNetworksRaisesError(self):
-    with self.assertRaisesRegexp(
+    with self.assertRaisesRegex(
         ValueError,
         'Number of objectives should be at least two, but found to be 1',
     ):
@@ -293,7 +293,7 @@ class MultiObjectiveAgentTest(tf.test.TestCase):
 
   def testCreateAgentWithWrongActionsRaisesError(self):
     action_spec = tensor_spec.BoundedTensorSpec((5, 6, 7), tf.float32, 0, 2)
-    with self.assertRaisesRegexp(
+    with self.assertRaisesRegex(
         ValueError, 'Action spec must be a scalar; got shape'
     ):
       greedy_multi_objective_agent.GreedyMultiObjectiveNeuralAgent(
@@ -574,7 +574,7 @@ class MultiObjectiveAgentTest(tf.test.TestCase):
     )
     action_step = _get_action_step(actions)
     experience = _get_experience(initial_step, action_step, final_step)
-    with self.assertRaisesRegexp(
+    with self.assertRaisesRegex(
         ValueError,
         'The number of objectives in the objective_values tensor: 3 is '
         'different from the number of objective networks: 2',

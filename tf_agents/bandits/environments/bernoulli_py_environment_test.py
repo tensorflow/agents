@@ -35,7 +35,7 @@ class BernoulliBanditPyEnvironmentTest(tf.test.TestCase):
     self.assertAllEqual(len(reward_step.reward), 2)
 
   def test_out_of_bound_parameter(self):
-    with self.assertRaisesRegexp(
+    with self.assertRaisesRegex(
         ValueError, r'All parameters should be floats in \[0, 1\]\.'
     ):
       bernoulli_py_environment.BernoulliPyEnvironment(

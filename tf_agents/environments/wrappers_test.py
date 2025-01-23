@@ -740,7 +740,7 @@ class ActionDiscretizeWrapper(test_utils.TestCase):
     action_spec = array_spec.BoundedArraySpec((2, 2), np.float32, -10, 10)
     limits = np.array([[1, 5], [2, 2]])
 
-    with self.assertRaisesRegexp(ValueError, '.*size 2.'):
+    with self.assertRaisesRegex(ValueError, '.*size 2.'):
       env = random_py_environment.RandomPyEnvironment(
           obs_spec, action_spec=action_spec
       )
@@ -751,7 +751,7 @@ class ActionDiscretizeWrapper(test_utils.TestCase):
     action_spec = array_spec.BoundedArraySpec((2, 2), np.float32, -10, 10)
     limits = np.array([[2, 5], [2, 2]])
 
-    with self.assertRaisesRegexp(ValueError, '.*incorrect shape.*'):
+    with self.assertRaisesRegex(ValueError, '.*incorrect shape.*'):
       env = random_py_environment.RandomPyEnvironment(
           obs_spec, action_spec=action_spec
       )
@@ -905,21 +905,21 @@ class ActionOffsetWrapperTest(test_utils.TestCase):
             array_spec.BoundedArraySpec((2,), np.int32, -3, 3),
         ],
     ]
-    with self.assertRaisesRegexp(ValueError, 'single-array action specs'):
+    with self.assertRaisesRegex(ValueError, 'single-array action specs'):
       env = random_py_environment.RandomPyEnvironment(obs_spec, action_spec)
       env = wrappers.ActionOffsetWrapper(env)
 
   def test_unbounded(self):
     obs_spec = array_spec.BoundedArraySpec((2, 3), np.int32, -10, 10)
     action_spec = array_spec.ArraySpec((2,), np.int32)
-    with self.assertRaisesRegexp(ValueError, 'bounded action specs'):
+    with self.assertRaisesRegex(ValueError, 'bounded action specs'):
       env = random_py_environment.RandomPyEnvironment(obs_spec, action_spec)
       env = wrappers.ActionOffsetWrapper(env)
 
   def test_continuous(self):
     obs_spec = array_spec.BoundedArraySpec((2, 3), np.int32, -10, 10)
     action_spec = array_spec.BoundedArraySpec((2,), np.float32, -1, 1)
-    with self.assertRaisesRegexp(ValueError, 'discrete action specs'):
+    with self.assertRaisesRegex(ValueError, 'discrete action specs'):
       env = random_py_environment.RandomPyEnvironment(obs_spec, action_spec)
       env = wrappers.ActionOffsetWrapper(env)
 

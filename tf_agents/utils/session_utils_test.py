@@ -41,7 +41,7 @@ class TfRunnableTest(tf.test.TestCase):
 
   def testWithoutSession(self):
     session_user = MySessionUser()
-    with self.assertRaisesRegexp(AttributeError, "No TensorFlow session"):
+    with self.assertRaisesRegex(AttributeError, "No TensorFlow session"):
       session_user.run()
 
   def testSessionWithinContextManager(self):
@@ -59,7 +59,7 @@ class TfRunnableTest(tf.test.TestCase):
   def testSessionWithinMonitoredSessionContextManagerRaisesError(self):
     session_user = MySessionUser()
     with tf.compat.v1.train.MonitoredSession() as _:
-      with self.assertRaisesRegexp(AttributeError, "No TensorFlow session"):
+      with self.assertRaisesRegex(AttributeError, "No TensorFlow session"):
         session_user.run()
 
   def testSessionWithSingularMonitoredSession(self):

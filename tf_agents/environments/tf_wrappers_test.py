@@ -110,7 +110,7 @@ class OneHotActionWrapperTest(tf.test.TestCase):
 
   def test_raises_invalid_action_spec(self):
     action_spec = tensor_spec.BoundedTensorSpec((1, 1), tf.int32, 0, 4)
-    with self.assertRaisesRegexp(ValueError, 'at most one dimension'):
+    with self.assertRaisesRegex(ValueError, 'at most one dimension'):
       tf_wrappers.OneHotActionWrapper(_build_test_env(action_spec=action_spec))
 
   def test_step(self):

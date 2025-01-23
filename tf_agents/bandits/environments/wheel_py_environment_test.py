@@ -32,7 +32,7 @@ class WheelBanditPyEnvironmentTest(tf.test.TestCase, parameterized.TestCase):
       dict(testcase_name='_delta_2', delta=2.0),
   )
   def test_delta_out_of_bound_parameter(self, delta):
-    with self.assertRaisesRegexp(
+    with self.assertRaisesRegex(
         ValueError, r'Delta must be in \(0, 1\)\, but saw delta: %g' % delta
     ):
       wheel_py_environment.WheelPyEnvironment(
@@ -45,7 +45,7 @@ class WheelBanditPyEnvironmentTest(tf.test.TestCase, parameterized.TestCase):
 
   def test_mu_base_out_of_bound_parameter(self):
     mu_base = [1.2, 1.0, 1.0, 1.0, 1.0, 1.0]
-    with self.assertRaisesRegexp(
+    with self.assertRaisesRegex(
         ValueError, "The length of 'mu_base' must be 5, but saw 'mu_base':.*"
     ):
       wheel_py_environment.WheelPyEnvironment(
@@ -57,7 +57,7 @@ class WheelBanditPyEnvironmentTest(tf.test.TestCase, parameterized.TestCase):
       )
 
   def test_std_base_out_of_bound_parameter(self):
-    with self.assertRaisesRegexp(
+    with self.assertRaisesRegex(
         ValueError, r'The length of \'std_base\' must be 5\.'
     ):
       wheel_py_environment.WheelPyEnvironment(

@@ -197,7 +197,7 @@ class FutureTest(test_utils.TestCase, parameterized.TestCase):
     with run_mode():
       inputs, labels = input_fn()
       future = eager_utils.Future(func_or_method, inputs)
-      with self.assertRaisesRegexp(TypeError, 'argument'):
+      with self.assertRaisesRegex(TypeError, 'argument'):
         future(labels)
 
   def testArgsAtInitArgsReplacedAtCall(self, func_or_method, run_mode):

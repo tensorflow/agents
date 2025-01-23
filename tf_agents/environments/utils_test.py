@@ -83,7 +83,7 @@ class UtilsTest(test_utils.TestCase):
         ts.restart(np.array([0], dtype=np.int64)),
     )
 
-    with self.assertRaisesRegexp(ValueError, "does not match expected"):
+    with self.assertRaisesRegex(ValueError, "does not match expected"):
       utils.validate_py_environment(env, episodes=1)
 
   def testValidateWrongShape(self):
@@ -93,7 +93,7 @@ class UtilsTest(test_utils.TestCase):
         ts.restart(np.array([0, 1], dtype=np.int32)),
     )
 
-    with self.assertRaisesRegexp(ValueError, "does not match expected"):
+    with self.assertRaisesRegex(ValueError, "does not match expected"):
       utils.validate_py_environment(env, episodes=1)
 
   def testValidateWrongDTypeAndShape(self):
@@ -103,7 +103,7 @@ class UtilsTest(test_utils.TestCase):
         ts.restart(np.array([0, 1], dtype=np.int64)),
     )
 
-    with self.assertRaisesRegexp(ValueError, "does not match expected"):
+    with self.assertRaisesRegex(ValueError, "does not match expected"):
       utils.validate_py_environment(env, episodes=1)
 
   def testValidateOutOfBounds(self):
@@ -113,7 +113,7 @@ class UtilsTest(test_utils.TestCase):
         ts.restart(np.array([-11], dtype=np.int32)),
     )
 
-    with self.assertRaisesRegexp(ValueError, "does not match expected"):
+    with self.assertRaisesRegex(ValueError, "does not match expected"):
       utils.validate_py_environment(env, episodes=1)
 
   def testValidateBoundedSpecDistinctBounds(self):

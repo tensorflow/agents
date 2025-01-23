@@ -120,13 +120,13 @@ class NestExampleEncodeUtilsTest(tf.test.TestCase, parameterized.TestCase):
     tf.nest.map_structure(np.testing.assert_almost_equal, be_sample, recovered)
 
   def test_shape_validation(self):
-    with self.assertRaisesRegexp(ValueError, "is invalid"):
+    with self.assertRaisesRegex(ValueError, "is invalid"):
       example_encoding._validate_shape([1, 2, 3, -1])
 
-    with self.assertRaisesRegexp(ValueError, "is invalid"):
+    with self.assertRaisesRegex(ValueError, "is invalid"):
       example_encoding._validate_shape([1, None, 3])
 
-    with self.assertRaisesRegexp(ValueError, "is invalid"):
+    with self.assertRaisesRegex(ValueError, "is invalid"):
       example_encoding._validate_shape([1, 2.3, 3])
 
   def test_compress_image(self):
