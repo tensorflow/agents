@@ -47,6 +47,8 @@ flatten_up_to = nest.flatten_up_to
 flatten_with_tuple_paths = nest.flatten_with_tuple_paths
 map_structure_up_to = nest.map_structure_up_to
 map_structure_with_paths = nest.map_structure_with_paths
+assert_shallow_structure = nest.assert_shallow_structure
+is_nested = nest.is_nested
 
 
 class _Dot(object):
