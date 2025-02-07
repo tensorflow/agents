@@ -145,6 +145,71 @@ class RandomPyPolicyTest(test_utils.TestCase):
       if np_mask[index - action_spec.minimum]:
         self.assertIn(index, action_)
 
+  def testMaskingMultipleActions(self):
+    batch_size = 1000
+
+    time_step_spec = time_step.time_step_spec(
+        observation_spec={
+            'obs': array_spec.ArraySpec((1,), np.int32),
+            # BoundedArraySpec minimum and maximum are inclusive.
+            'output1_mask': array_spec.BoundedArraySpec(
+                (11,), np.int64, minimum=0, maximum=1
+            ),
+            'output2_mask': array_spec.BoundedArraySpec(
+                (11,), np.int64, minimum=0, maximum=1
+            ),
+        }
+    )
+    action_spec = {
+        'output1': array_spec.BoundedArraySpec((), np.int64, -5, 5),
+        'output2': array_spec.BoundedArraySpec((), np.int64, -5, 5),
+        'output3_nomask': array_spec.BoundedArraySpec((), np.int64, -2, 2),
+    }
+
+    policy = random_py_policy.RandomPyPolicy(
+        time_step_spec=time_step_spec,
+        action_spec=action_spec,
+        action_constraint_suffix='_mask',
+        outer_dims=(batch_size,)
+    )
+
+    my_time_step = time_step.restart(
+        {
+            'obs': np.array([1] * batch_size),
+            'output1_mask': np.random.randint(0, 2, size=(batch_size, 11)),
+            'output2_mask': np.random.randint(0, 2, size=(batch_size, 11)),
+        },
+        batch_size,
+    )
+    action_step = policy.action(my_time_step)
+    tf.nest.assert_same_structure(action_spec, action_step.action)
+
+    # Sample from the policy 1000 times, and ensure that actions considered
+    # invalid according to the mask are never chosen.
+    action_ = self.evaluate(action_step.action)
+    for output in ['output1', 'output2']:
+      output_mask = output + '_mask'
+      self.assertTrue(np.all(action_[output] >= -5))
+      self.assertTrue(np.all(action_[output] <= 5))
+      # All chosen actions should have a mask with value of 1.
+      self.assertAllEqual(
+          my_time_step.observation[output_mask][
+              np.arange(batch_size),
+              action_[output] - action_spec[output].minimum,
+          ],
+          np.ones([batch_size]),
+      )
+
+      # Ensure that all valid actions occur somewhere within the batch. Because
+      # we sample 1000 times, the chance of this failing for any particular
+      # action is (2/3)^1000, roughly 1e-176.
+      self.assertEqual(set(np.unique(action_[output])),
+                       set(range(action_spec[output].minimum,
+                                 action_spec[output].maximum + 1)))
+
+    self.assertEqual(set(np.unique(action_['output3_nomask'])),
+                     set(range(-2, 3)))
+
 
 if __name__ == '__main__':
   test_utils.main()

@@ -14,6 +14,7 @@
 # limitations under the License.
 
 """Policy implementation that generates random actions."""
+
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
@@ -25,6 +26,7 @@ import tensorflow as tf
 from tf_agents.distributions import masked
 from tf_agents.policies import py_policy
 from tf_agents.specs import array_spec
+from tf_agents.specs import tensor_spec
 from tf_agents.trajectories import policy_step
 from tf_agents.trajectories import time_step as ts
 from tf_agents.typing import types
@@ -45,6 +47,7 @@ class RandomPyPolicy(py_policy.PyPolicy):
       observation_and_action_constraint_splitter: Optional[
           types.Splitter
       ] = None,
+      action_constraint_suffix: Optional[str] = None,
   ):
     """Initializes the RandomPyPolicy.
 
@@ -79,10 +82,14 @@ class RandomPyPolicy(py_policy.PyPolicy):
         on the observation before passing to the network. If
         `observation_and_action_constraint_splitter` is None, action constraints
         are not applied.
+      action_constraint_suffix: Alternative to
+        observation_and_action_constraint_splitter. If provided, the observation
+        is expected to contain action constraints with the given suffix
+        corresponding to actions in the action spec. The policy will sample
+        respecting the constraints for those actions.
     """
     self._seed = seed
     self._outer_dims = outer_dims
-
     if observation_and_action_constraint_splitter is not None:
       if not isinstance(action_spec, array_spec.BoundedArraySpec):
         raise NotImplementedError(
@@ -100,6 +107,7 @@ class RandomPyPolicy(py_policy.PyPolicy):
         )
 
     self._rng = np.random.RandomState(seed)
+    self._action_constraint_suffix = action_constraint_suffix
     if time_step_spec is None:
       time_step_spec = ts.time_step_spec()
 
@@ -144,6 +152,24 @@ class RandomPyPolicy(py_policy.PyPolicy):
       # dimension so the final shape is (B, 1) rather than (B,).
       if len(self.action_spec.shape) == 1:
         random_action = tf.expand_dims(random_action, axis=-1)
+    elif self._action_constraint_suffix is not None:
+      random_action = {}
+      for key, spec in self.action_spec.items():
+        mask_key = f'{key}{self._action_constraint_suffix}'
+        if mask_key in time_step.observation:
+          mask = time_step.observation[mask_key]
+          zero_logits = tf.cast(tf.zeros_like(mask), tf.float32)
+          masked_categorical = masked.MaskedCategorical(zero_logits, mask)
+          random_action[key] = tf.cast(
+              masked_categorical.sample() + spec.minimum,
+              spec.dtype,
+          )
+          if len(spec.shape) == 1:
+            random_action[key] = tf.expand_dims(random_action[key], axis=-1)
+        else:
+          random_action[key] = tensor_spec.sample_bounded_spec(
+              spec, seed=self._seed, outer_dims=outer_dims
+          )
     else:
       random_action = array_spec.sample_spec_nest(
           self._action_spec, self._rng, outer_dims=outer_dims
