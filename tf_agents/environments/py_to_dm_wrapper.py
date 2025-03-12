@@ -19,6 +19,7 @@ from typing import Text
 
 import dm_env
 from dm_env import specs as dm_spec
+import numpy as np
 from tf_agents.environments import py_environment
 from tf_agents.specs import array_spec as tfa_spec
 from tf_agents.trajectories import time_step as ts
@@ -55,6 +56,33 @@ def _convert_spec(spec: tfa_spec.ArraySpec) -> dm_spec.Array:
     return dm_spec.Array(shape=spec.shape, dtype=spec.dtype, name=spec.name)
 
 
+def _convert_action_spec(spec: tfa_spec.ArraySpec) -> dm_spec.Array:
+  """Converts a TF Agents action spec to a DM action spec.
+
+  Similar to _convert_spec but changes discrete actions to DiscreteArray rather
+  than BoundedArray.
+
+  Args:
+    spec: The TF Agents action spec to convert.
+  Returns:
+    The converted DM action spec.
+  """
+  if (
+      isinstance(spec, tfa_spec.BoundedArraySpec)
+      and spec.shape == tuple()
+      and np.issubdtype(spec.dtype, np.integer)
+      and spec.minimum.item() == 0
+  ):
+    return dm_spec.DiscreteArray(
+        num_values=spec.maximum.item() - spec.minimum.item() + 1,
+        dtype=spec.dtype,
+        name=spec.name,
+    )
+
+  else:
+    return _convert_spec(spec)
+
+
 class PyToDMWrapper(dm_env.Environment):
   """Environment wrapper to convert TF environments in DM environments."""
 
@@ -68,7 +96,9 @@ class PyToDMWrapper(dm_env.Environment):
     self._observation_spec = tree.map_structure(
         _convert_spec, env.observation_spec()
     )
-    self._action_spec = tree.map_structure(_convert_spec, env.action_spec())
+    self._action_spec = tree.map_structure(
+        _convert_action_spec, env.action_spec()
+    )
     self._discount_spec = tree.map_structure(_convert_spec, env.discount_spec())
 
   def __getattr__(self, name: Text):
