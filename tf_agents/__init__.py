@@ -55,9 +55,9 @@ def _ensure_tf_install():  # pylint: disable=g-statement-before-imports
   required_tensorflow_version = "2.15.0"
 
   tf_version = tf.version.VERSION
-  if distutils.version.LooseVersion(
+  if distutils.version.LooseVersion(  # pytype: disable=module-attr
       tf_version
-  ) < distutils.version.LooseVersion(required_tensorflow_version):
+  ) < distutils.version.LooseVersion(required_tensorflow_version):  # pytype: disable=module-attr
     raise ImportError(
         "This version of TF Agents requires TensorFlow "
         "version >= {required}; Detected an installation of version {present}. "
