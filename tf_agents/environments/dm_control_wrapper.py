@@ -31,7 +31,7 @@ _as_float32_array = functools.partial(np.asarray, dtype=np.float32)
 
 
 def _maybe_float32(o):
-  if o.dtype == np.float64:
+  if isinstance(o, np.ndarray) and o.dtype == np.float64:
     return _as_float32_array(o)
   return o
 
