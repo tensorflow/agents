@@ -37,8 +37,8 @@ def _convert_timestep(timestep: ts.TimeStep) -> dm_env.TimeStep:
     raise ValueError(f'Invalid Step type: {timestep.step_type}')
   return dm_env.TimeStep(
       step_type=step_type,
-      reward=0.0 if timestep.is_first() else timestep.reward,
-      discount=1.0 if timestep.is_first() else timestep.discount,
+      reward=0.0 if timestep.is_first() else np.squeeze(timestep.reward),
+      discount=1.0 if timestep.is_first() else np.squeeze(timestep.discount),
       observation=timestep.observation,
   )
 
