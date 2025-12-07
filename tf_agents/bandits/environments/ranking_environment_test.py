@@ -101,7 +101,7 @@ class RankingPyEnvironmentTest(tf.test.TestCase, parameterized.TestCase):
     scores_weight_matrix = (
         np.reshape(
             np.arange(global_dim * item_dim, dtype=float),
-            newshape=[item_dim, global_dim],
+            [item_dim, global_dim],
         )
         - 10
     ) / 5
@@ -163,7 +163,7 @@ class RankingPyEnvironmentTest(tf.test.TestCase, parameterized.TestCase):
     scores_weight_matrix = (
         np.reshape(
             np.arange(global_dim * item_dim, dtype=float),
-            newshape=[item_dim, global_dim],
+            [item_dim, global_dim],
         )
         - 10
     ) / 5

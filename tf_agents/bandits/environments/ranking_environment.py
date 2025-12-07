@@ -265,11 +265,10 @@ class RankingPyEnvironment(bandit_py_environment.BanditPyEnvironment):
     left = np.matmul(item_obs, self._scores_weight_matrix)
     expanded_left = np.expand_dims(left, axis=-2)
     expanded_globals = np.reshape(
-        global_obs, newshape=[self._batch_size, 1, self._global_dim, 1]
+        global_obs, [self._batch_size, 1, self._global_dim, 1]
     )
     scores = np.reshape(
-        np.matmul(expanded_left, expanded_globals),
-        newshape=[self._batch_size, -1],
+        np.matmul(expanded_left, expanded_globals), [self._batch_size, -1]
     )
     return scores
 

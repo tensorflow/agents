@@ -623,7 +623,7 @@ class ActionDiscretizeWrapper(PyEnvironmentBaseWrapper):
       )
 
     mapped_action = [action_map[i][a] for i, a in enumerate(action.flatten())]
-    return np.reshape(mapped_action, newshape=self._original_spec.shape)
+    return np.reshape(mapped_action, self._original_spec.shape)
 
   def _step(self, action):
     """Steps the environment while remapping the actions.
