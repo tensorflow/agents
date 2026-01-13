@@ -59,7 +59,9 @@ class CategoricalProjectionNetwork(network.DistributionNetwork):
           'categorical projection if you need more flexibility.'
       )
 
-    output_shape = sample_spec.shape.concatenate([int(unique_num_actions)])
+    output_shape = sample_spec.shape.concatenate(
+        [int(unique_num_actions.item())]
+    )
     output_spec = self._output_distribution_spec(
         output_shape, sample_spec, name
     )
