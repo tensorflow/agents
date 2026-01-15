@@ -470,7 +470,7 @@ class PPOPolicyTest(parameterized.TestCase, test_utils.TestCase):
     self.evaluate(tf.compat.v1.global_variables_initializer())
     actions_ = self.evaluate(action_step.action)
     distribution_mean_ = self.evaluate(distribution_mean)
-    self.assertNear(actions_, distribution_mean_, 1e-6)
+    self.assertAllClose(actions_, distribution_mean_, atol=1e-6)
 
   def testGaussianDistribution(self):
     actor_network = DummyActorDistributionNet(self._action_spec)

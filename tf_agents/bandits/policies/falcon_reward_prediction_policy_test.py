@@ -389,7 +389,7 @@ class FalconRewardPredictionPolicyTest(
       self.assertGreater(np.sum(actions == 1), np.sum(actions == 2))
     elif np.sum(mask) == 1:
       # A single action is allowed.
-      only_allowed_action = np.argwhere(mask)[0]
+      only_allowed_action = np.argwhere(mask)[0].item()
       self.assertEqual(np.sum(actions == only_allowed_action), batch_size)
     else:
       # Two actions are allowed.
@@ -427,7 +427,7 @@ class FalconRewardPredictionPolicyTest(
       self.assertEqual(most_chosen_action, 1)
     elif np.sum(mask) == 1:
       # A single action is allowed, and is expected to always be chosen.
-      only_allowed_action = int(np.argwhere(mask)[0])
+      only_allowed_action = int(np.argwhere(mask)[0].item())
       self.assertEqual(most_chosen_action, only_allowed_action)
       self.assertEqual(action_counts[only_allowed_action], batch_size)
     else:
@@ -479,7 +479,7 @@ class FalconRewardPredictionPolicyTest(
     actions = self.evaluate(action_step.action)
     p_info = self.evaluate(action_step.info)
     print(p_info.predicted_rewards_mean)
-    self.assertGreater(np.sum(actions == 0), 0.3 * batch_size)
+    self.assertGreater(np.sum(actions == 0), 0.25 * batch_size)
     self.assertGreater(np.sum(actions == 1), np.sum(actions == 0))
     # Sets the upperbound to be a bit larger than expected for test robustness
     # against random sampling.

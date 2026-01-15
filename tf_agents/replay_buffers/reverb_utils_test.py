@@ -101,9 +101,9 @@ class ReverbTableTests(test_utils.TestCase):
 
     iterator = iter(dataset)
     counts = [0] * 3
-    for i in range(1000):
+    for _ in range(1000):
       item_0 = next(iterator)[0].numpy()  # This is a matrix shaped 1x1.
-      counts[int(item_0)] += 1
+      counts[int(item_0.item())] += 1
 
     # Comparing against 200 to avoid flakyness
     self.assertGreater(counts[0], 200)
@@ -142,10 +142,10 @@ class ReverbTableTests(test_utils.TestCase):
     self.assertTrue(table.can_sample(3))
     iterator = iter(dataset)
     counts = [0] * 3
-    for i in range(10):
+    for _ in range(10):
       item_0 = next(iterator)[0].numpy()  # This is a matrix shaped 1x3.
       for item in item_0:
-        counts[int(item)] += 1
+        counts[int(item.item())] += 1
     self.assertFalse(table.can_sample(3))
 
     # Same number of counts due to limit on max_times_sampled
@@ -185,9 +185,9 @@ class ReverbTableTests(test_utils.TestCase):
 
     iterator = iter(dataset)
     counts = [0] * 3
-    for i in range(1000):
+    for _ in range(1000):
       item_0 = next(iterator)[0].numpy()  # This is a matrix shaped 1x1.
-      counts[int(item_0)] += 1
+      counts[int(item_0.item())] += 1
 
     self.assertEqual(counts[0], 0)  # priority 0
     self.assertGreater(counts[1], 250)  # priority 1
@@ -225,10 +225,10 @@ class ReverbTableTests(test_utils.TestCase):
     self.assertTrue(table.can_sample(3))
     iterator = iter(dataset)
     counts = [0] * 3
-    for i in range(10):
+    for _ in range(10):
       item_0 = next(iterator)[0].numpy()  # This is a matrix shaped 1x3.
       for item in item_0:
-        counts[int(item)] += 1
+        counts[int(item.item())] += 1
     self.assertFalse(table.can_sample(3))
 
     # Same number of counts due to limit on max_times_sampled
