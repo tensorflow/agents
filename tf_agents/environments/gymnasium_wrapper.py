@@ -87,7 +87,7 @@ def spec_from_gym_space(
         shape=(), dtype=np.int64, minimum=0, maximum=maximum, name=name
     )
   elif isinstance(space, gym.spaces.MultiDiscrete):
-    dtype = np.integer
+    dtype = np.int64
     maximum = try_simplify_array_to_value(
         np.asarray(space.nvec - 1, dtype=dtype)
     )
